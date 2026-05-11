@@ -93,10 +93,10 @@ const api = {
       }
 
       const isVideo = ['video/mp4','video/quicktime','video/webm','video/avi','video/x-msvideo','video/x-matroska'].includes(file.type) || /\.(mp4|mov|webm|avi|mkv)$/i.test(file.name);
-      // Videos always go through backend (signed upload) — unsigned Cloudinary presets block large videos
-      if (sig.cloud_name && sig.upload_preset && !isVideo) {
-        const resourceType = 'image';
-        const CHUNK_SIZE = 20 * 1024 * 1024; // 20MB
+      if (sig.cloud_name && sig.api_key && sig.signature) {
+        // Signed direct upload — works for all file sizes, bypasses backend timeout
+        const resourceType = isVideo ? 'video' : 'image';
+        const CHUNK_SIZE = 20 * 1024 * 1024; // 20MB chunks
         const uploadUrl = `https://api.cloudinary.com/v1_1/${sig.cloud_name}/${resourceType}/upload`;
 
         const doXhr = (formData, headers = {}) => new Promise((res, rej) => {
@@ -120,26 +120,30 @@ const api = {
           xhr.send(formData);
         });
 
+        const buildForm = (chunk, extra = {}) => {
+          const form = new FormData();
+          form.append('file', chunk);
+          form.append('api_key', sig.api_key);
+          form.append('timestamp', sig.timestamp);
+          form.append('folder', sig.folder);
+          form.append('signature', sig.signature);
+          Object.entries(extra).forEach(([k, v]) => form.append(k, v));
+          return form;
+        };
+
         try {
           if (file.size <= CHUNK_SIZE) {
-            // Small file — single upload
-            const form = new FormData();
-            form.append('file', file);
-            form.append('upload_preset', sig.upload_preset);
-            const r = await doXhr(form);
+            const r = await doXhr(buildForm(file));
             if (r.secure_url) { resolve({ url: r.secure_url, filename: r.original_filename || file.name }); }
             else { reject(new Error(`Upload failed: ${r.error?.message || 'Unknown error'}`)); }
           } else {
-            // Large file — chunked upload
+            // Chunked signed upload for large files
             const uploadId = `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
             let offset = 0;
             let lastResult = null;
             while (offset < file.size) {
               const end = Math.min(offset + CHUNK_SIZE, file.size);
-              const form = new FormData();
-              form.append('file', file.slice(offset, end));
-              form.append('upload_preset', sig.upload_preset);
-              const r = await doXhr(form, {
+              const r = await doXhr(buildForm(file.slice(offset, end)), {
                 'X-Unique-Upload-Id': uploadId,
                 'Content-Range': `bytes ${offset}-${end - 1}/${file.size}`,
               });
