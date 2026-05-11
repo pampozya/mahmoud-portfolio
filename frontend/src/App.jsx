@@ -1401,8 +1401,29 @@ function PortfolioManager({ portfolio, categories, token, onUpdate, settings }) 
     try {
       if (isVideo && file.size > LIMIT) {
         const origMB = (file.size / 1024 / 1024).toFixed(0);
-        setUploadFilename(`Uploading ${origMB}MB video…`);
         setUploadProgress(2);
+        const wcSupported = typeof VideoEncoder !== 'undefined' && typeof AudioEncoder !== 'undefined';
+        if (wcSupported) {
+          try {
+            setUploadFilename(`🎵 Reading audio from ${origMB}MB file…`);
+            setUploadProgress(5);
+            const audioCtx = new AudioContext();
+            const audioBuffer = await audioCtx.decodeAudioData(await file.slice(0).arrayBuffer());
+            audioCtx.close();
+            setUploadProgress(10);
+            setUploadFilename(`⚡ Hardware compressing ${origMB}MB…`);
+            file = await compressWithWebCodecs(file, p => setUploadProgress(10 + Math.round(p * 0.88)), audioBuffer);
+            const newMB = (file.size / 1024 / 1024).toFixed(0);
+            setUploadFilename(`Uploading compressed (${origMB}MB → ${newMB}MB)…`);
+          } catch (wcErr) {
+            console.warn('WebCodecs failed, trying FFmpeg:', wcErr);
+            setUploadProgress(2);
+            file = await compressWithFFmpeg(file, origMB, p => setUploadProgress(p), setUploadFilename);
+          }
+        } else {
+          file = await compressWithFFmpeg(file, origMB, p => setUploadProgress(p), setUploadFilename);
+        }
+        setUploadProgress(0);
       }
 
       const res = await api.uploadFile(token, file, p => setUploadProgress(p));
