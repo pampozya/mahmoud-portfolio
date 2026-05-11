@@ -92,9 +92,10 @@ const api = {
         throw new Error(sig.detail || `Upload signature failed (${sigResp.status})`);
       }
 
-      if (sig.cloud_name && sig.upload_preset) {
-        const VIDEO_TYPES = ['video/mp4','video/quicktime','video/webm','video/avi','video/x-msvideo','video/x-matroska'];
-        const resourceType = VIDEO_TYPES.includes(file.type) || /\.(mp4|mov|webm|avi|mkv)$/i.test(file.name) ? 'video' : 'image';
+      const isVideo = ['video/mp4','video/quicktime','video/webm','video/avi','video/x-msvideo','video/x-matroska'].includes(file.type) || /\.(mp4|mov|webm|avi|mkv)$/i.test(file.name);
+      // Videos always go through backend (signed upload) — unsigned Cloudinary presets block large videos
+      if (sig.cloud_name && sig.upload_preset && !isVideo) {
+        const resourceType = 'image';
         const CHUNK_SIZE = 20 * 1024 * 1024; // 20MB
         const uploadUrl = `https://api.cloudinary.com/v1_1/${sig.cloud_name}/${resourceType}/upload`;
 
@@ -155,12 +156,13 @@ const api = {
       }
     } catch (e) { console.warn('Direct upload failed, trying backend:', e); }
 
-    // Fallback: small files only via backend
+    // Backend upload (signed Cloudinary — works for all file sizes including large videos)
     const form = new FormData();
     form.append('file', file);
     const xhr = new XMLHttpRequest();
     xhr.open('POST', `${API_URL}/upload`);
     xhr.setRequestHeader('Authorization', `Bearer ${token}`);
+    xhr.timeout = 300000; // 5 min timeout for large videos
     xhr.upload.onprogress = (e) => {
       if (e.lengthComputable && onProgress) onProgress(Math.round((e.loaded / e.total) * 100));
     };
@@ -177,6 +179,7 @@ const api = {
         reject(new Error(`Upload failed: Invalid response from server (${xhr.status})`));
       }
     };
+    xhr.ontimeout = () => reject(new Error('Upload timed out — file may be too large, try a smaller video'));
     xhr.onerror = () => reject(new Error('Upload network error'));
     xhr.send(form);
   }),
