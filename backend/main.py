@@ -753,16 +753,17 @@ ALLOWED_EXTENSIONS = {
 def get_upload_signature(email: str = Depends(verify_token)):
     """Return signed Cloudinary upload params for direct browser upload (supports large files)."""
     import cloudinary
-    import hashlib
+    import cloudinary.utils
     cloud_name = os.getenv("CLOUDINARY_CLOUD_NAME")
     api_key = os.getenv("CLOUDINARY_API_KEY")
     api_secret = os.getenv("CLOUDINARY_API_SECRET")
     if not all([cloud_name, api_key, api_secret]):
         raise HTTPException(status_code=503, detail="Cloudinary not configured.")
+    cloudinary.config(cloud_name=cloud_name, api_key=api_key, api_secret=api_secret, secure=True)
     timestamp = int(datetime.utcnow().timestamp())
     folder = "lensmania"
-    params = f"folder={folder}&timestamp={timestamp}{api_secret}"
-    signature = hashlib.sha256(params.encode()).hexdigest()
+    params = {"folder": folder, "timestamp": timestamp}
+    signature = cloudinary.utils.api_sign_request(params, api_secret)
     return {
         "cloud_name": cloud_name,
         "api_key": api_key,

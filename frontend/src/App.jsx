@@ -155,10 +155,10 @@ const api = {
             if (lastResult?.secure_url) { resolve({ url: lastResult.secure_url, filename: lastResult.original_filename || file.name }); }
             else { reject(new Error('No URL from Cloudinary')); }
           }
-        } catch (e) { reject(e); }
+        } catch (e) { reject(e); return; }
         return;
       }
-    } catch (e) { console.warn('Direct upload failed, trying backend:', e); }
+    } catch (e) { console.warn('Cloudinary config failed, trying backend:', e); }
 
     // Backend upload (signed Cloudinary — works for all file sizes including large videos)
     const form = new FormData();
