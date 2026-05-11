@@ -648,7 +648,7 @@ function LeaveReviewForm({ lang, isAr }) {
           <div className="star-picker">
             {[1,2,3,4,5].map(n => (
               <button key={n} type="button" onClick={() => setForm({ ...form, rating: n })}
-                style={{ fontSize: '1.6rem', background: 'none', border: 'none', cursor: 'pointer', opacity: n <= form.rating ? 1 : 0.3 }}>★</button>
+                style={{ fontSize: '1.6rem', background: 'none', border: 'none', cursor: 'pointer', color: n <= form.rating ? '#FFA781' : '#444', transition: 'color 0.15s' }}>★</button>
             ))}
           </div>
           <textarea placeholder={isAr ? 'رأيك *' : 'Your review *'} value={form.text} onChange={e => setForm({ ...form, text: e.target.value })} required />
@@ -1397,31 +1397,8 @@ function PortfolioManager({ portfolio, categories, token, onUpdate, settings }) 
     try {
       if (isVideo && file.size > LIMIT) {
         const origMB = (file.size / 1024 / 1024).toFixed(0);
+        setUploadFilename(`Uploading ${origMB}MB video…`);
         setUploadProgress(2);
-        const wcSupported = typeof VideoEncoder !== 'undefined' && typeof AudioEncoder !== 'undefined';
-        if (wcSupported) {
-          try {
-            // Step 1: decode audio (shows progress so user knows it's working)
-            setUploadFilename(`🎵 Reading audio from ${origMB}MB file…`);
-            setUploadProgress(5);
-            const audioCtx = new AudioContext();
-            const audioBuffer = await audioCtx.decodeAudioData(await file.slice(0).arrayBuffer());
-            audioCtx.close();
-            setUploadProgress(10);
-            // Step 2: hardware encode video + audio
-            setUploadFilename(`⚡ Hardware compressing ${origMB}MB…`);
-            file = await compressWithWebCodecs(file, p => setUploadProgress(10 + Math.round(p * 0.88)), audioBuffer);
-            const newMB = (file.size / 1024 / 1024).toFixed(0);
-            setUploadFilename(`Uploading (${origMB}MB → ${newMB}MB)…`);
-          } catch (wcErr) {
-            console.warn('WebCodecs failed, using FFmpeg:', wcErr);
-            setUploadProgress(2);
-            file = await compressWithFFmpeg(file, origMB, p => setUploadProgress(p), setUploadFilename);
-          }
-        } else {
-          file = await compressWithFFmpeg(file, origMB, p => setUploadProgress(p), setUploadFilename);
-        }
-        setUploadProgress(0);
       }
 
       const res = await api.uploadFile(token, file, p => setUploadProgress(p));
@@ -1962,7 +1939,7 @@ function TestimonialsManager({ token }) {
           <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1rem' }}>
             {[1,2,3,4,5].map(n => (
               <button key={n} type="button" onClick={() => setForm({ ...form, rating: n })}
-                style={{ fontSize: '1.5rem', background: 'none', border: 'none', cursor: 'pointer', opacity: n <= form.rating ? 1 : 0.3 }}>★</button>
+                style={{ fontSize: '1.5rem', background: 'none', border: 'none', cursor: 'pointer', color: n <= form.rating ? '#FFA781' : '#444', transition: 'color 0.15s' }}>★</button>
             ))}
           </div>
           <label className="field-label">Client Photo (optional)</label>
