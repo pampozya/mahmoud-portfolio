@@ -52,6 +52,7 @@ ALLOWED_ORIGINS = [
     "http://localhost:5173",
     "https://lensmania.ae",
     "https://www.lensmania.ae",
+    "https://portfolio.lensmania.ae",
 ]
 extra = os.getenv("EXTRA_ORIGINS", "")
 if extra:
