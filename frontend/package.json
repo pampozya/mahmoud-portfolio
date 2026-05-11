@@ -4,6 +4,11 @@
   "description": "Professional portfolio website with admin dashboard",
   "private": true,
   "dependencies": {
+    "@ffmpeg/ffmpeg": "^0.12.15",
+    "@ffmpeg/util": "^0.12.2",
+    "jspdf": "^4.2.1",
+    "mp4-muxer": "^5.2.2",
+    "qrcode": "^1.5.4",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "react-scripts": "5.0.1"
@@ -31,5 +36,6 @@
       "last 1 safari version"
     ]
   },
-  "proxy": "http://localhost:8000"
+  "proxy": "http://localhost:8000",
+  "homepage": "."
 }
