@@ -25,7 +25,7 @@ echo "📤 Uploading to Hostinger..."
 rsync -avz \
   -e "ssh -i ~/.ssh/hostinger_key -p 65002" \
   frontend/build/ \
-  u268111151@145.79.58.45:portfolio/ \
+  u268111151@145.79.58.45:domains/lensmania.ae/public_html/portfolio/ \
   --delete
 
 echo ""
