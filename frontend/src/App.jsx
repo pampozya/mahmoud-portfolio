@@ -805,9 +805,6 @@ function PublicSite({ onAdminClick }) {
         {showreelEmbed && <div className="showreel-bg"><iframe src={showreelEmbed} frameBorder="0" allowFullScreen title="Showreel" /></div>}
         <div className="hero-overlay" />
         <div className="hero-content">
-          {settings?.available_for_booking !== undefined && (
-            <AvailabilityBadge available={settings.available_for_booking} text={settings.availability_text} lang={lang} />
-          )}
           <h1 className="hero-title">{siteTitle}</h1>
           <p className="hero-tagline">{siteDesc}</p>
           <a href="#portfolio" className="hero-cta">View Portfolio</a>
