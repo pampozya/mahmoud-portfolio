@@ -66,6 +66,16 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Prevent browser/CDN caching of API responses so admin edits show up immediately
+@app.middleware("http")
+async def add_no_cache_headers(request: Request, call_next):
+    response = await call_next(request)
+    if request.url.path.startswith("/api/"):
+        response.headers["Cache-Control"] = "no-store, no-cache, must-revalidate"
+        response.headers["Pragma"] = "no-cache"
+        response.headers["Expires"] = "0"
+    return response
+
 # Database setup
 engine = create_engine(
     DATABASE_URL,

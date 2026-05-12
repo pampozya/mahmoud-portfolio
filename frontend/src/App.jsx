@@ -16,7 +16,7 @@ const api = {
     fetch(`${API_URL}/auth/login`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email, password }) }).then(r => r.json()),
   changePassword: (token, data) =>
     fetch(`${API_URL}/auth/change-password`, { method: 'PUT', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` }, body: JSON.stringify(data) }).then(r => r.json()),
-  getCategories: () => fetch(`${API_URL}/categories`).then(r => r.json()),
+  getCategories: () => fetch(`${API_URL}/categories`, { cache: 'no-store' }).then(r => r.json()),
   createCategory: (token, data) =>
     fetch(`${API_URL}/categories`, { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` }, body: JSON.stringify(data) }).then(r => r.json()),
   reorderCategories: (token, ids) =>
@@ -26,7 +26,7 @@ const api = {
   deleteCategory: (token, id) =>
     fetch(`${API_URL}/categories/${id}`, { method: 'DELETE', headers: { Authorization: `Bearer ${token}` } }).then(r => r.json()),
   getPortfolio: (sort) =>
-    fetch(`${API_URL}/portfolio${sort ? `?sort=${sort}` : ''}`).then(r => r.json()),
+    fetch(`${API_URL}/portfolio${sort ? `?sort=${sort}` : ''}`, { cache: 'no-store' }).then(r => r.json()),
   createPortfolio: (token, data) =>
     fetch(`${API_URL}/portfolio`, { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` }, body: JSON.stringify(data) }).then(r => r.json()),
   updatePortfolio: (token, id, data) =>
@@ -37,10 +37,10 @@ const api = {
     fetch(`${API_URL}/portfolio/${id}/duplicate`, { method: 'POST', headers: { Authorization: `Bearer ${token}` } }).then(r => r.json()),
   likePortfolio: (id) =>
     fetch(`${API_URL}/portfolio/${id}/like`, { method: 'POST' }).then(r => r.json()),
-  getSettings: () => fetch(`${API_URL}/settings`).then(r => r.json()),
+  getSettings: () => fetch(`${API_URL}/settings`, { cache: 'no-store' }).then(r => r.json()),
   updateSettings: (token, data) =>
     fetch(`${API_URL}/settings`, { method: 'PUT', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` }, body: JSON.stringify(data) }).then(r => r.json()),
-  getTestimonials: () => fetch(`${API_URL}/testimonials`).then(r => r.json()),
+  getTestimonials: () => fetch(`${API_URL}/testimonials`, { cache: 'no-store' }).then(r => r.json()),
   getAllTestimonials: (token) => fetch(`${API_URL}/testimonials/all`, { headers: { Authorization: `Bearer ${token}` } }).then(r => r.json()),
   createTestimonial: (token, data) =>
     fetch(`${API_URL}/testimonials`, { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` }, body: JSON.stringify(data) }).then(r => r.json()),
@@ -54,7 +54,7 @@ const api = {
     fetch(`${API_URL}/testimonials/${id}/toggle-active`, { method: 'PUT', headers: { Authorization: `Bearer ${token}` } }).then(r => r.json()),
   deleteTestimonial: (token, id) =>
     fetch(`${API_URL}/testimonials/${id}`, { method: 'DELETE', headers: { Authorization: `Bearer ${token}` } }).then(r => r.json()),
-  getClientLogos: () => fetch(`${API_URL}/client-logos`).then(r => r.json()),
+  getClientLogos: () => fetch(`${API_URL}/client-logos`, { cache: 'no-store' }).then(r => r.json()),
   getAllClientLogos: (token) => fetch(`${API_URL}/client-logos/all`, { headers: { Authorization: `Bearer ${token}` } }).then(r => r.json()),
   createClientLogo: (token, data) =>
     fetch(`${API_URL}/client-logos`, { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` }, body: JSON.stringify(data) }).then(r => r.json()),
@@ -612,10 +612,20 @@ function VideoModal({ item, onClose, lang }) {
 // ==================== LEAVE REVIEW FORM ====================
 
 function LeaveReviewForm({ lang, isAr }) {
-  const [open, setOpen] = useState(false);
+  const autoOpen = typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('review') === '1';
+  const [open, setOpen] = useState(autoOpen);
   const [form, setForm] = useState({ name: '', role: '', text: '', rating: 5 });
   const [submitted, setSubmitted] = useState(false);
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (autoOpen) {
+      setTimeout(() => {
+        const el = document.getElementById('testimonials');
+        if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }, 400);
+    }
+  }, [autoOpen]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -1986,12 +1996,39 @@ function TestimonialsManager({ token }) {
     api.getAllTestimonials(token).then(setList);
   };
 
+  const reviewShareUrl = `${window.location.origin}/?review=1`;
+  const [showShareQR, setShowShareQR] = useState(false);
+  const [copyTip, setCopyTip] = useState('');
+  const copyShareLink = async () => {
+    try { await navigator.clipboard.writeText(reviewShareUrl); setCopyTip('✅ Copied!'); setTimeout(() => setCopyTip(''), 1800); }
+    catch { setCopyTip('Press Cmd+C to copy'); }
+  };
+
   return (
     <div className="manager-section">
       <div className="section-header">
         <h2>Client Testimonials ({list.length})</h2>
-        {!showForm && <button className="btn-primary" onClick={() => { setShowForm(true); setEditId(null); setForm(EMPTY_T); }}>➕ Add Review</button>}
+        <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+          {!showForm && <button className="btn-primary" onClick={() => { setShowForm(true); setEditId(null); setForm(EMPTY_T); }}>➕ Add Review</button>}
+        </div>
       </div>
+
+      <div style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 8, padding: '1rem 1.25rem', marginBottom: '1.5rem' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.75rem' }}>
+          <div>
+            <h3 style={{ color: 'var(--color-peach)', fontSize: '0.95rem', marginBottom: '0.3rem' }}>📨 Share review link with clients</h3>
+            <p style={{ color: 'var(--color-text-muted)', fontSize: '0.82rem' }}>Send this link or QR to past clients — opens directly to the testimonial form.</p>
+          </div>
+          <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+            <button className="btn-secondary btn-sm" onClick={copyShareLink}>{copyTip || '🔗 Copy Link'}</button>
+            <button className="btn-secondary btn-sm" onClick={() => setShowShareQR(true)}>📱 QR Code</button>
+          </div>
+        </div>
+        <code style={{ display: 'block', marginTop: '0.6rem', background: 'rgba(0,0,0,0.35)', padding: '0.5rem 0.75rem', borderRadius: 4, fontSize: '0.78rem', color: 'var(--color-light)', wordBreak: 'break-all' }}>{reviewShareUrl}</code>
+      </div>
+
+      {showShareQR && <QRModal url={reviewShareUrl} title="Leave a Review" onClose={() => setShowShareQR(false)} />}
+
       {showForm && (
         <form className="portfolio-form" onSubmit={handleSubmit}>
           <label className="field-label">Client Name *</label>
