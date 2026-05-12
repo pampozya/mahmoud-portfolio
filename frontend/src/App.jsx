@@ -612,7 +612,7 @@ function VideoModal({ item, onClose, lang }) {
 // ==================== LEAVE REVIEW FORM ====================
 
 function LeaveReviewForm({ lang, isAr }) {
-  const autoOpen = typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('review') === '1';
+  const autoOpen = typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('leave-review') === '1';
   const [open, setOpen] = useState(autoOpen);
   const [form, setForm] = useState({ name: '', role: '', text: '', rating: 5 });
   const [submitted, setSubmitted] = useState(false);
@@ -1996,7 +1996,8 @@ function TestimonialsManager({ token }) {
     api.getAllTestimonials(token).then(setList);
   };
 
-  const reviewShareUrl = `${window.location.origin}/?review=1`;
+  const reviewShareUrl = `${window.location.origin}/?leave-review=1`;
+  const showQrPageUrl = `${window.location.origin}/?qr=review`;
   const [showShareQR, setShowShareQR] = useState(false);
   const [copyTip, setCopyTip] = useState('');
   const copyShareLink = async () => {
@@ -2021,10 +2022,12 @@ function TestimonialsManager({ token }) {
           </div>
           <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
             <button className="btn-secondary btn-sm" onClick={copyShareLink}>{copyTip || '🔗 Copy Link'}</button>
-            <button className="btn-secondary btn-sm" onClick={() => setShowShareQR(true)}>📱 QR Code</button>
+            <button className="btn-secondary btn-sm" onClick={() => setShowShareQR(true)}>📱 Show QR</button>
+            <a href="/?qr=review" target="_blank" rel="noopener noreferrer" className="btn-secondary btn-sm" style={{ textDecoration: 'none', display: 'inline-block' }}>📲 Mobile View</a>
           </div>
         </div>
         <code style={{ display: 'block', marginTop: '0.6rem', background: 'rgba(0,0,0,0.35)', padding: '0.5rem 0.75rem', borderRadius: 4, fontSize: '0.78rem', color: 'var(--color-light)', wordBreak: 'break-all' }}>{reviewShareUrl}</code>
+        <p style={{ color: 'var(--color-text-muted)', fontSize: '0.75rem', marginTop: '0.5rem' }}>💡 <strong>Mobile View</strong> opens a fullscreen QR — bookmark on your phone home screen to show clients after every shoot.</p>
       </div>
 
       {showShareQR && <QRModal url={reviewShareUrl} title="Leave a Review" onClose={() => setShowShareQR(false)} />}
@@ -3188,15 +3191,72 @@ function DeliveryPage({ deliveryToken }) {
   );
 }
 
+// ==================== REVIEW QR PAGE (mobile-optimized) ====================
+function ReviewQRPage() {
+  const canvasRef = useRef(null);
+  const reviewUrl = `${window.location.origin}/?leave-review=1`;
+  const [siteName, setSiteName] = useState('');
+
+  useEffect(() => {
+    api.getSettings().then(s => setSiteName(s?.site_title || 'Mahmoud Adel')).catch(() => setSiteName('Mahmoud Adel'));
+  }, []);
+
+  useEffect(() => {
+    if (canvasRef.current) {
+      QRCode.toCanvas(canvasRef.current, reviewUrl, {
+        width: Math.min(window.innerWidth, window.innerHeight) * 0.7,
+        margin: 2,
+        color: { dark: '#000000', light: '#ffffff' },
+      });
+    }
+  }, [reviewUrl]);
+
+  return (
+    <div style={{
+      minHeight: '100vh',
+      background: '#0a0a0a',
+      color: '#fff',
+      display: 'flex',
+      flexDirection: 'column',
+      alignItems: 'center',
+      justifyContent: 'center',
+      padding: '2rem 1.25rem',
+      textAlign: 'center',
+      fontFamily: "'Inter', sans-serif",
+    }}>
+      <div style={{ fontFamily: "'DM Mono', 'Inter', monospace", fontSize: '0.75rem', letterSpacing: '0.3em', color: 'rgba(255,255,255,0.5)', marginBottom: '1.5rem', textTransform: 'uppercase' }}>
+        {siteName} — Client Review
+      </div>
+      <h1 style={{ fontFamily: "'Playfair Display', serif", fontSize: 'clamp(2rem, 7vw, 3.5rem)', fontWeight: 900, lineHeight: 1.1, marginBottom: '0.75rem' }}>
+        Scan to leave a review
+      </h1>
+      <p style={{ color: 'rgba(255,255,255,0.65)', fontSize: '1rem', maxWidth: 460, marginBottom: '2rem', lineHeight: 1.5 }}>
+        Open your phone camera and point it at the code below. Tap the link that appears, then share your experience.
+      </p>
+      <div style={{ background: '#fff', padding: '1.25rem', borderRadius: 16, boxShadow: '0 0 0 1px rgba(255,255,255,0.15), 0 30px 60px rgba(0,0,0,0.6)', display: 'inline-block' }}>
+        <canvas ref={canvasRef} style={{ display: 'block' }} />
+      </div>
+      <p style={{ fontFamily: "'DM Mono', monospace", fontSize: '0.75rem', color: 'rgba(255,255,255,0.4)', marginTop: '1.5rem', wordBreak: 'break-all', maxWidth: 500 }}>
+        {reviewUrl}
+      </p>
+      <a href="/" style={{ marginTop: '2rem', color: 'rgba(255,255,255,0.5)', fontSize: '0.85rem', textDecoration: 'none', border: '1px solid rgba(255,255,255,0.2)', padding: '0.5rem 1.25rem', borderRadius: 999 }}>
+        ← Back to site
+      </a>
+    </div>
+  );
+}
+
 function App() {
   const [token, setToken] = useState(localStorage.getItem('token'));
   const [page, setPage] = useState('public');
   const params = new URLSearchParams(window.location.search);
   const reviewToken = params.get('review');
   const deliveryToken = params.get('delivery');
+  const qrMode = params.get('qr');
   const handleLogin = (t) => { setToken(t); setPage('admin'); };
   const handleLogout = () => { localStorage.removeItem('token'); setToken(null); setPage('public'); };
   const handleAdminClick = () => setPage(token ? 'admin' : 'login');
+  if (qrMode === 'review') return <ReviewQRPage />;
   if (deliveryToken) return <DeliveryPage deliveryToken={deliveryToken} />;
   if (reviewToken) return <ReviewPortal reviewToken={reviewToken} />;
   if (page === 'login') return <LoginPage onLogin={handleLogin} onBack={() => setPage('public')} />;
