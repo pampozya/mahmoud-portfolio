@@ -762,13 +762,15 @@ def get_upload_signature(email: str = Depends(verify_token)):
     cloudinary.config(cloud_name=cloud_name, api_key=api_key, api_secret=api_secret, secure=True)
     timestamp = int(datetime.utcnow().timestamp())
     folder = "lensmania"
-    params = {"folder": folder, "timestamp": timestamp}
+    public_id = str(uuid.uuid4())
+    params = {"folder": folder, "public_id": public_id, "timestamp": timestamp}
     signature = cloudinary.utils.api_sign_request(params, api_secret)
     return {
         "cloud_name": cloud_name,
         "api_key": api_key,
         "timestamp": timestamp,
         "folder": folder,
+        "public_id": public_id,
         "signature": signature,
     }
 

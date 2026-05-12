@@ -126,6 +126,7 @@ const api = {
           form.append('api_key', sig.api_key);
           form.append('timestamp', sig.timestamp);
           form.append('folder', sig.folder);
+          form.append('public_id', sig.public_id);
           form.append('signature', sig.signature);
           Object.entries(extra).forEach(([k, v]) => form.append(k, v));
           return form;
