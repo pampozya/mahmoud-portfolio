@@ -1,0 +1,36 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -15 500 490" width="500" height="490">
+
+  <!-- Outer legs -->
+  <line x1="80" y1="118" x2="80" y2="288" stroke="white" stroke-width="19" stroke-linecap="round"/>
+  <line x1="420" y1="118" x2="420" y2="288" stroke="white" stroke-width="19" stroke-linecap="round"/>
+
+  <!-- Three arches -->
+  <path d="M 80,118 C 80,22 193,22 193,118" fill="none" stroke="white" stroke-width="19" stroke-linecap="round"/>
+  <path d="M 193,118 C 193,22 307,22 307,118" fill="none" stroke="white" stroke-width="19" stroke-linecap="round"/>
+  <path d="M 307,118 C 307,22 420,22 420,118" fill="none" stroke="white" stroke-width="19" stroke-linecap="round"/>
+
+  <!-- Inner stems + connecting U-curve -->
+  <path d="M 193,118 L 193,205 Q 193,248 250,248 Q 307,248 307,205 L 307,118"
+        fill="none" stroke="white" stroke-width="19" stroke-linecap="round" stroke-linejoin="round"/>
+
+  <!-- 4-pointed star above middle arch -->
+  <path d="M 250,-2 L 259,11 L 272,15 L 259,19 L 250,32 L 241,19 L 228,15 L 241,11 Z"
+        fill="#E84920"/>
+
+  <!-- Mahmoud Adel -->
+  <text x="250" y="368"
+        text-anchor="middle"
+        fill="white"
+        font-family="Georgia, 'Times New Roman', serif"
+        font-weight="bold"
+        font-size="52">Mahmoud Adel</text>
+
+  <!-- Videographer -->
+  <text x="250" y="420"
+        text-anchor="middle"
+        fill="#E84920"
+        font-family="Georgia, 'Times New Roman', serif"
+        font-size="22"
+        letter-spacing="7">Videographer</text>
+
+</svg>

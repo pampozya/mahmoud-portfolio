@@ -77,19 +77,25 @@ const api = {
     return fetch(`${API_URL}/track`, { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ utm_source: utm }) }).catch(() => {});
   },
   getAnalytics: (token) => fetch(`${API_URL}/analytics`, { headers: { Authorization: `Bearer ${token}` } }).then(r => r.json()),
-  getUploadSignature: (token) =>
-    fetch(`${API_URL}/upload-signature`, { method: 'POST', headers: { Authorization: `Bearer ${token}` } }).then(r => r.json()),
+  getUploadSignature: async (token) => {
+    const r = await fetch('https://lensmania-sign.pampozya.workers.dev/', {
+      method: 'POST', headers: { Authorization: `Bearer ${token}` }
+    });
+    const data = await r.json();
+    if (!r.ok) throw new Error(data.error || `Signature failed (${r.status})`);
+    return data;
+  },
 
-  uploadFile: (token, file, onProgress) => new Promise(async (resolve, reject) => {
+  uploadFile: (token, file, onProgress, preSig = null) => new Promise(async (resolve, reject) => {
     try {
-      // Get Cloudinary config from backend
-      const sigResp = await fetch(`${API_URL}/upload-signature`, {
-        method: 'POST', headers: { Authorization: `Bearer ${token}` }
-      });
-      const sig = await sigResp.json();
-
-      if (!sigResp.ok) {
-        throw new Error(sig.detail || `Upload signature failed (${sigResp.status})`);
+      // Use pre-fetched signature if provided, else fetch fresh
+      let sig = preSig;
+      if (!sig) {
+        const r = await fetch('https://lensmania-sign.pampozya.workers.dev/', {
+          method: 'POST', headers: { Authorization: `Bearer ${token}` }
+        });
+        sig = await r.json();
+        if (!r.ok) throw new Error(sig.error || `Signature failed (${r.status})`);
       }
 
       const isVideo = ['video/mp4','video/quicktime','video/webm','video/avi','video/x-msvideo','video/x-matroska'].includes(file.type) || /\.(mp4|mov|webm|avi|mkv)$/i.test(file.name);
@@ -159,34 +165,9 @@ const api = {
         } catch (e) { reject(e); return; }
         return;
       }
-    } catch (e) { console.warn('Cloudinary config failed, trying backend:', e); }
-
-    // Backend upload (signed Cloudinary — works for all file sizes including large videos)
-    const form = new FormData();
-    form.append('file', file);
-    const xhr = new XMLHttpRequest();
-    xhr.open('POST', `${API_URL}/upload`);
-    xhr.setRequestHeader('Authorization', `Bearer ${token}`);
-    xhr.timeout = 300000; // 5 min timeout for large videos
-    xhr.upload.onprogress = (e) => {
-      if (e.lengthComputable && onProgress) onProgress(Math.round((e.loaded / e.total) * 100));
-    };
-    xhr.onload = () => {
-      try {
-        const data = JSON.parse(xhr.responseText);
-        if (xhr.status >= 200 && xhr.status < 300) {
-          resolve(data);
-        } else {
-          const errorMsg = data.detail || data.message || 'Upload failed';
-          reject(new Error(`Upload failed (${xhr.status}): ${errorMsg}`));
-        }
-      } catch (e) {
-        reject(new Error(`Upload failed: Invalid response from server (${xhr.status})`));
-      }
-    };
-    xhr.ontimeout = () => reject(new Error('Upload timed out — file may be too large, try a smaller video'));
-    xhr.onerror = () => reject(new Error('Upload network error'));
-    xhr.send(form);
+      // Signature missing — Cloudinary not configured on server
+      reject(new Error('Cloudinary not configured. Contact admin.'));
+    } catch (e) { reject(new Error(`Upload failed: ${e.message}`)); }
   }),
   // Review portal
   createReviewSession: (token, data) =>
@@ -737,7 +718,7 @@ function PublicSite({ onAdminClick }) {
 
   const siteTitle = isAr && settings?.site_title_ar ? settings.site_title_ar : (settings?.site_title || 'Mahmoud Adel');
   const siteDesc = isAr && settings?.site_description_ar ? settings.site_description_ar : (settings?.site_description || 'Professional Videographer');
-  const heroImg = settings?.hero_image ? resolveUrl(settings.hero_image) : '/portfolio/hero.jpg';
+  const heroImg = settings?.hero_image ? resolveUrl(settings.hero_image) : '/hero.jpg';
   const showreelEmbed = getShowreelEmbed(settings?.showreel_url);
 
   const handleLike = (e, item) => {
@@ -796,7 +777,7 @@ function PublicSite({ onAdminClick }) {
       <header className="public-header">
         <div className="header-inner">
           <a href="#" className="site-logo">
-            <img src="/portfolio/logo.png" alt={siteTitle} className="header-logo-img" onError={e => { e.target.style.display='none'; e.target.nextSibling.style.display='block'; }} />
+            <img src="/logo.png" alt={siteTitle} className="header-logo-img" onError={e => { e.target.style.display='none'; e.target.nextSibling.style.display='block'; }} />
             <span style={{ display: 'none' }}>{siteTitle}</span>
           </a>
           <nav className="header-nav">
@@ -1157,14 +1138,24 @@ async function compressWithWebCodecs(file, onProgress, audioBuffer) {
     target: new ArrayBufferTarget(),
     video: { codec: 'avc', width: tw, height: th },
     audio: { codec: 'aac', sampleRate, numberOfChannels: numChannels },
+    fastStart: 'in-memory',
+    firstTimestampBehavior: 'offset',
   });
 
-  // Video encoder — hardware accelerated
+  // Video encoder — check hardware support first, fall back to software
+  const vcConfig = { codec: 'avc1.4D0028', width: tw, height: th, bitrate: 2_500_000, framerate: 30, hardwareAcceleration: 'prefer-hardware' };
+  const vcSupport = await VideoEncoder.isConfigSupported(vcConfig);
+  if (!vcSupport.supported) throw new Error('VideoEncoder config not supported on this device');
+
+  const FRAME_DUR_US = Math.round(1_000_000 / 30);
   const videoEncoder = new VideoEncoder({
-    output: (chunk, meta) => muxer.addVideoChunk(chunk, meta),
+    output: (chunk, meta) => {
+      const dur = (chunk.duration != null && chunk.duration > 0) ? chunk.duration : FRAME_DUR_US;
+      muxer.addVideoChunk(chunk, meta, undefined, dur);
+    },
     error: e => { throw e; },
   });
-  videoEncoder.configure({ codec: 'avc1.4D0028', width: tw, height: th, bitrate: 2_500_000, framerate: 30, hardwareAcceleration: 'prefer-hardware' });
+  videoEncoder.configure(vcConfig);
 
   // Audio encoder — hardware accelerated AAC
   const audioEncoder = new AudioEncoder({
@@ -1195,9 +1186,11 @@ async function compressWithWebCodecs(file, onProgress, audioBuffer) {
 
   await new Promise((resolve, reject) => {
     video.playbackRate = 16;
+    const FRAME_DUR_US = Math.round(1_000_000 / 30);
     const onFrame = (now, meta) => {
       ctx.drawImage(video, 0, 0, tw, th);
-      const frame = new VideoFrame(canvas, { timestamp: Math.round((meta?.mediaTime ?? video.currentTime) * 1_000_000) });
+      const ts = Math.round((meta?.mediaTime ?? video.currentTime) * 1_000_000);
+      const frame = new VideoFrame(canvas, { timestamp: ts, duration: FRAME_DUR_US });
       videoEncoder.encode(frame, { keyFrame: frameNum % 60 === 0 });
       frame.close(); frameNum++;
       if (onProgress) onProgress(Math.min(99, Math.round((video.currentTime / duration) * 100)));
@@ -1223,7 +1216,7 @@ function fmtEta(ms) {
 
 async function compressWithFFmpeg(file, origMB, onProgress, setLabel) {
   setLabel(`🔄 Compressing ${origMB}MB video…`);
-  const TIMEOUT_MS = 120000; // 2 minute timeout
+  const TIMEOUT_MS = 240000; // 4 minute timeout
   const timeoutPromise = new Promise((_, reject) =>
     setTimeout(() => reject(new Error('Compression timeout — uploading original file')), TIMEOUT_MS)
   );
@@ -1277,7 +1270,7 @@ async function compressWithFFmpeg(file, origMB, onProgress, setLabel) {
     ]);
 
     await Promise.race([
-      ffmpeg.exec(['-i', `in.${ext}`, '-threads', '0', '-c:v', 'libx264', '-crf', '30', '-preset', 'ultrafast', '-tune', 'zerolatency', '-vf', 'scale=-2:min(ih\\,720)', '-c:a', 'aac', '-b:a', '96k', '-ac', '2', 'out.mp4']),
+      ffmpeg.exec(['-i', `in.${ext}`, '-c:v', 'libx264', '-crf', '23', '-preset', 'ultrafast', '-vf', 'scale=-2:min(ih\\,720)', '-c:a', 'aac', '-b:a', '128k', '-ac', '2', '-movflags', '+faststart', 'out.mp4']),
       timeoutPromise
     ]);
 
@@ -1365,6 +1358,7 @@ function PortfolioManager({ portfolio, categories, token, onUpdate, settings }) 
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState(EMPTY_FORM);
   const [editId, setEditId] = useState(null);
+  const [adminSort, setAdminSort] = useState('order');
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(null);
   const [uploadFilename, setUploadFilename] = useState('');
@@ -1402,32 +1396,16 @@ function PortfolioManager({ portfolio, categories, token, onUpdate, settings }) 
     try {
       if (isVideo && file.size > LIMIT) {
         const origMB = (file.size / 1024 / 1024).toFixed(0);
+        setUploadFilename(`🔌 Preparing upload server…`);
         setUploadProgress(2);
-        const wcSupported = typeof VideoEncoder !== 'undefined' && typeof AudioEncoder !== 'undefined';
-        if (wcSupported) {
-          try {
-            setUploadFilename(`🎵 Reading audio from ${origMB}MB file…`);
-            setUploadProgress(5);
-            const audioCtx = new AudioContext();
-            const audioBuffer = await audioCtx.decodeAudioData(await file.slice(0).arrayBuffer());
-            audioCtx.close();
-            setUploadProgress(10);
-            setUploadFilename(`⚡ Hardware compressing ${origMB}MB…`);
-            file = await compressWithWebCodecs(file, p => setUploadProgress(10 + Math.round(p * 0.88)), audioBuffer);
-            const newMB = (file.size / 1024 / 1024).toFixed(0);
-            setUploadFilename(`Uploading compressed (${origMB}MB → ${newMB}MB)…`);
-          } catch (wcErr) {
-            console.warn('WebCodecs failed, trying FFmpeg:', wcErr);
-            setUploadProgress(2);
-            file = await compressWithFFmpeg(file, origMB, p => setUploadProgress(p), setUploadFilename);
-          }
-        } else {
-          file = await compressWithFFmpeg(file, origMB, p => setUploadProgress(p), setUploadFilename);
-        }
-        setUploadProgress(0);
+        // Warm up Render (result discarded — fresh signature is fetched post-compression)
+        try { await api.getUploadSignature(token); } catch {}
+        file = await compressWithFFmpeg(file, origMB, p => setUploadProgress(p), setUploadFilename);
+        setUploadFilename(`📤 Uploading to Cloudinary…`);
+        setUploadProgress(1);
       }
 
-      const res = await api.uploadFile(token, file, p => setUploadProgress(p));
+      const res = await api.uploadFile(token, file, p => setUploadProgress(Math.max(1, p)));
       if (res.url) { set({ [field]: res.url }); setUploadProgress(100); setUploadStatus('done'); }
       else setUploadStatus('error');
     } catch (e) {
@@ -1482,7 +1460,13 @@ function PortfolioManager({ portfolio, categories, token, onUpdate, settings }) 
     <div className="manager-section">
       <div className="section-header">
         <h2>Portfolio Items ({portfolio.length})</h2>
-        <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
+        <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', alignItems: 'center' }}>
+          <select value={adminSort} onChange={e => setAdminSort(e.target.value)} style={{ padding: '0.35rem 0.7rem', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.12)', color: '#aaa', borderRadius: 4, fontSize: '0.85rem' }}>
+            <option value="order">Sort: Default</option>
+            <option value="views">Sort: Most Views</option>
+            <option value="likes">Sort: Most Likes</option>
+            <option value="newest">Sort: Newest</option>
+          </select>
           <PDFExportButton portfolio={portfolio} settings={settings} />
           {!showForm && <button className="btn-primary" onClick={() => { setShowForm(true); setEditId(null); setForm(EMPTY_FORM); setBtsPhotos([]); }}>➕ Add New Item</button>}
         </div>
@@ -1599,7 +1583,7 @@ function PortfolioManager({ portfolio, categories, token, onUpdate, settings }) 
                       }
                       setAutoFrames(frames);
                     }} disabled={uploading}>🎞 Extract 6 Frames</button>
-                    <button type="button" className="btn-capture" style={{ background: 'rgba(255,167,129,0.15)', borderColor: 'var(--color-peach)' }} onClick={async () => {
+                    <button type="button" className="btn-capture" style={{ background: 'rgba(255,255,255,0.08)', borderColor: 'var(--color-peach)' }} onClick={async () => {
                       const video = videoPreviewRef.current; if (!video) return;
                       setUploading(true); setUploadStatus('');
                       setUploadFilename('AI analyzing frames…'); setUploadProgress(10);
@@ -1749,7 +1733,12 @@ function PortfolioManager({ portfolio, categories, token, onUpdate, settings }) 
       )}
 
       <div className="portfolio-list">
-        {portfolio.map(item => {
+        {[...portfolio].sort((a, b) => {
+          if (adminSort === 'views') return (b.views ?? 0) - (a.views ?? 0);
+          if (adminSort === 'likes') return (b.likes ?? 0) - (a.likes ?? 0);
+          if (adminSort === 'newest') return b.id - a.id;
+          return (a.order ?? 0) - (b.order ?? 0);
+        }).map(item => {
           const thumb = getThumbnail(item);
           return (
             <div key={item.id} className="portfolio-item-card">
@@ -1757,9 +1746,11 @@ function PortfolioManager({ portfolio, categories, token, onUpdate, settings }) 
               <div className="card-body-admin">
                 <h3>{item.title}</h3>
                 {item.description && <p>{item.description}</p>}
+                <div style={{ display: 'flex', gap: '0.75rem', margin: '0.5rem 0', padding: '0.5rem 0.75rem', background: 'rgba(255,255,255,0.04)', borderRadius: 6, border: '1px solid rgba(255,255,255,0.08)' }}>
+                  <span style={{ fontFamily: 'monospace', fontSize: '0.95rem', color: '#fff', fontWeight: 600 }}>👁 {item.views ?? 0}</span>
+                  <span style={{ fontFamily: 'monospace', fontSize: '0.95rem', color: '#aaa', fontWeight: 500 }}>❤️ {item.likes || 0}</span>
+                </div>
                 <div className="item-meta">
-                  <span>👁 {item.views}</span>
-                  <span>❤️ {item.likes || 0}</span>
                   <span className="type-badge">{PLATFORMS[item.video_type]?.label || item.video_type}</span>
                   <span className="type-badge">{item.aspect_ratio}</span>
                   {item.featured && <span>⭐</span>}
@@ -2929,7 +2920,7 @@ function DeliveryPage({ deliveryToken }) {
   if (data.locked) return (
     <div style={{ minHeight:'100vh', background:'#080808', display:'flex', alignItems:'center', justifyContent:'center', padding:'2rem' }}>
       <div style={{ background:'#111', border:'1px solid rgba(255,255,255,0.1)', borderRadius:14, padding:'2.5rem', maxWidth:420, width:'100%', textAlign:'center' }}>
-        <img src="/portfolio/logo.png" alt="" style={{ height:60, marginBottom:'1rem' }} />
+        <img src="/logo.png" alt="" style={{ height:60, marginBottom:'1rem' }} />
         <div style={{ fontSize:'2rem', marginBottom:'0.5rem' }}>🔒</div>
         <h2 style={{ color:'#d4b896', marginBottom:'0.4rem' }}>Password Protected</h2>
         <p style={{ color:'rgba(255,255,255,0.5)', fontSize:'0.85rem', marginBottom:'1.4rem' }}>
@@ -2950,7 +2941,7 @@ function DeliveryPage({ deliveryToken }) {
     <div style={{ minHeight:'100vh', background:'linear-gradient(180deg,#080808 0%,#111 100%)', padding:'2rem 1rem' }}>
       <div style={{ maxWidth:760, margin:'0 auto' }}>
         <div style={{ textAlign:'center', marginBottom:'2.5rem' }}>
-          <img src="/portfolio/logo.png" alt="Mahmoud Adel" style={{ height:64, marginBottom:'1rem' }} />
+          <img src="/logo.png" alt="Mahmoud Adel" style={{ height:64, marginBottom:'1rem' }} />
           <div style={{ display:'inline-block', background:'rgba(212,184,150,0.12)', color:'#d4b896', padding:'0.3rem 0.9rem', borderRadius:999, fontSize:'0.75rem', letterSpacing:'0.08em', textTransform:'uppercase', fontWeight:700, marginBottom:'1rem' }}>
             Client Delivery
           </div>

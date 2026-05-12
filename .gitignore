@@ -9,6 +9,11 @@ backend/.env
 # Node
 frontend/node_modules/
 frontend/build/
+frontend/.env
+
+# Cloudflare Worker
+worker/node_modules/
+worker/.wrangler/
 
 # OS
 .DS_Store
