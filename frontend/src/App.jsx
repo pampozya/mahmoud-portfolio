@@ -832,7 +832,8 @@ function PublicSite({ onAdminClick }) {
         </div>
       </header>
 
-      <section className="hero" style={{ backgroundImage: `url(${heroImg})` }}>
+      <section className="hero">
+        <img src={heroImg} alt={siteTitle} className="hero-bg-img" />
         {showreelEmbed && <div className="showreel-bg"><iframe src={showreelEmbed} frameBorder="0" allowFullScreen title="Showreel" /></div>}
         <div className="hero-overlay" />
         <div className="hero-content">
@@ -2258,7 +2259,7 @@ function DeliveriesManager({ token }) {
   const [form, setForm] = useState(EMPTY_DELIVERY);
   const [savedLink, setSavedLink] = useState(null);
 
-  const load = () => api.listDeliveries(token).then(setList).finally(() => setLoading(false));
+  const load = () => api.listDeliveries(token).then(d => setList(Array.isArray(d) ? d : [])).catch(() => setList([])).finally(() => setLoading(false));
   useEffect(() => { load(); }, [token]); // eslint-disable-line
 
   const set = patch => setForm(prev => ({ ...prev, ...patch }));
@@ -2396,33 +2397,36 @@ function AnalyticsDashboard({ token }) {
     ]).then(([a, s]) => { setData(a); setSources(s); }).finally(() => setLoading(false));
   }, [token]);
   if (loading) return <div className="manager-section"><p>Loading analytics…</p></div>;
-  if (!data) return <div className="manager-section"><p style={{ color: '#fca5a5' }}>Could not load analytics.</p></div>;
-  const maxDay = Math.max(...(data.by_day.map(d => d.count)), 1);
+  if (!data || typeof data !== 'object') return <div className="manager-section"><p style={{ color: '#fca5a5' }}>Could not load analytics.</p></div>;
+  const byDay = Array.isArray(data.by_day) ? data.by_day : [];
+  const byCountry = Array.isArray(data.by_country) ? data.by_country : [];
+  const total = typeof data.total === 'number' ? data.total : 0;
+  const maxDay = Math.max(...(byDay.map(d => d.count)), 1);
   return (
     <div>
       <div className="analytics-cards">
-        <div className="analytics-card"><div className="analytics-number">{data.total.toLocaleString()}</div><div className="analytics-label">Total Visits</div></div>
-        <div className="analytics-card"><div className="analytics-number">{data.by_day.length > 0 ? data.by_day[data.by_day.length - 1].count : 0}</div><div className="analytics-label">Today</div></div>
-        <div className="analytics-card"><div className="analytics-number">{data.by_country.length}</div><div className="analytics-label">Countries</div></div>
+        <div className="analytics-card"><div className="analytics-number">{total.toLocaleString()}</div><div className="analytics-label">Total Visits</div></div>
+        <div className="analytics-card"><div className="analytics-number">{byDay.length > 0 ? byDay[byDay.length - 1].count : 0}</div><div className="analytics-label">Today</div></div>
+        <div className="analytics-card"><div className="analytics-number">{byCountry.length}</div><div className="analytics-label">Countries</div></div>
       </div>
       <div className="manager-section">
         <h2>Visits — Last 30 Days</h2>
         <div className="bar-chart">
-          {data.by_day.map(d => (
+          {byDay.map(d => (
             <div key={d.date} className="bar-col">
               <div className="bar-tooltip">{d.count}</div>
               <div className="bar-fill" style={{ height: `${Math.round((d.count / maxDay) * 100)}%` }} />
               <div className="bar-label">{d.date.slice(5)}</div>
             </div>
           ))}
-          {data.by_day.length === 0 && <p className="state-text">No data yet</p>}
+          {byDay.length === 0 && <p className="state-text">No data yet</p>}
         </div>
       </div>
       <div className="analytics-two-col">
         <div className="manager-section">
           <h2>Top Countries</h2>
           <div className="country-list">
-            {data.by_country.map(c => (
+            {byCountry.map(c => (
               <div key={c.country} className="country-row">
                 <span className="country-name">{c.country}</span>
                 <span className="country-count">{c.count}</span>
@@ -2433,7 +2437,7 @@ function AnalyticsDashboard({ token }) {
         <div className="manager-section">
           <h2>Recent Visitors</h2>
           <div className="visits-table">
-            {data.recent.map(v => (
+            {(Array.isArray(data.recent) ? data.recent : []).map(v => (
               <div key={v.id} className="visit-row">
                 <div className="visit-time">{v.timestamp}</div>
                 <div className="visit-location">{v.city}, {v.country}</div>
@@ -2443,9 +2447,9 @@ function AnalyticsDashboard({ token }) {
           </div>
         </div>
       </div>
-      {sources && (sources.contact_sources.length > 0 || sources.utm_sources.length > 0) && (
+      {sources && ((Array.isArray(sources.contact_sources) && sources.contact_sources.length > 0) || (Array.isArray(sources.utm_sources) && sources.utm_sources.length > 0)) && (
         <div className="analytics-two-col">
-          {sources.contact_sources.length > 0 && (
+          {Array.isArray(sources.contact_sources) && sources.contact_sources.length > 0 && (
             <div className="manager-section">
               <h2>📬 Inquiry Sources</h2>
               <div className="country-list">
@@ -2458,7 +2462,7 @@ function AnalyticsDashboard({ token }) {
               </div>
             </div>
           )}
-          {sources.utm_sources.length > 0 && (
+          {Array.isArray(sources.utm_sources) && sources.utm_sources.length > 0 && (
             <div className="manager-section">
               <h2>🔗 Link Sources (UTM)</h2>
               <div className="country-list">

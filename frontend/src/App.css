@@ -248,8 +248,38 @@ body::after {
 .theme-toggle-btn:hover { border-color: var(--color-peach); }
 
 /* HERO */
-.hero { min-height: 100vh; display: flex; align-items: center; justify-content: center; text-align: center; padding: 4rem 2rem; position: relative; background-size: cover !important; background-position: center center !important; background-repeat: no-repeat !important; background-attachment: fixed; }
-@media (max-width: 768px) { .hero { background-attachment: scroll; min-height: 100svh; } }
+.hero {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  position: relative;
+  width: 100%;
+  background-color: var(--color-dark);
+}
+.hero-bg-img {
+  width: 100%;
+  height: auto;
+  display: block;
+  object-fit: contain;
+}
+.hero .hero-overlay,
+.hero .hero-content,
+.hero .showreel-bg {
+  position: absolute;
+}
+.hero .hero-content {
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+  z-index: 2;
+}
+@media (max-width: 768px) {
+  .hero .hero-content { padding: 1.5rem 1rem; }
+}
 .hero-overlay { position: absolute; inset: 0; background: linear-gradient(135deg, rgba(15,15,15,0.82) 0%, rgba(20,20,20,0.65) 100%); z-index: 0; }
 .hero-content { max-width: 700px; position: relative; z-index: 1; }
 .hero-title { font-size: clamp(2.5rem, 6vw, 5rem); font-weight: 900; color: var(--color-peach); letter-spacing: -0.02em; line-height: 1.1; margin-bottom: 1.25rem; font-family: 'Playfair Display', serif; }
