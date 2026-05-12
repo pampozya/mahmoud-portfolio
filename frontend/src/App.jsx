@@ -54,6 +54,16 @@ const api = {
     fetch(`${API_URL}/testimonials/${id}/toggle-active`, { method: 'PUT', headers: { Authorization: `Bearer ${token}` } }).then(r => r.json()),
   deleteTestimonial: (token, id) =>
     fetch(`${API_URL}/testimonials/${id}`, { method: 'DELETE', headers: { Authorization: `Bearer ${token}` } }).then(r => r.json()),
+  getClientLogos: () => fetch(`${API_URL}/client-logos`).then(r => r.json()),
+  getAllClientLogos: (token) => fetch(`${API_URL}/client-logos/all`, { headers: { Authorization: `Bearer ${token}` } }).then(r => r.json()),
+  createClientLogo: (token, data) =>
+    fetch(`${API_URL}/client-logos`, { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` }, body: JSON.stringify(data) }).then(r => r.json()),
+  updateClientLogo: (token, id, data) =>
+    fetch(`${API_URL}/client-logos/${id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` }, body: JSON.stringify(data) }).then(r => r.json()),
+  deleteClientLogo: (token, id) =>
+    fetch(`${API_URL}/client-logos/${id}`, { method: 'DELETE', headers: { Authorization: `Bearer ${token}` } }).then(r => r.json()),
+  reorderClientLogos: (token, ids) =>
+    fetch(`${API_URL}/client-logos/reorder`, { method: 'PUT', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` }, body: JSON.stringify({ ids }) }).then(r => r.json()),
   exportData: (token) => fetch(`${API_URL}/export`, { headers: { Authorization: `Bearer ${token}` } }).then(r => r.json()),
   aiChat: (token, message, context) =>
     fetch(`${API_URL}/ai/chat`, { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` }, body: JSON.stringify({ message, context }) }).then(r => r.json()),
@@ -672,14 +682,16 @@ function PublicSite({ onAdminClick }) {
   const [gridMode, setGridMode] = useState('masonry');
   const [qrItem, setQrItem] = useState(null);
   const [hoveredVideo, setHoveredVideo] = useState(null);
+  const [clientLogos, setClientLogos] = useState([]);
 
 
   useEffect(() => {
     api.trackVisit();
-    Promise.all([api.getCategories(), api.getPortfolio(), api.getSettings(), api.getTestimonials()])
-      .then(([cats, items, sett, tests]) => {
+    Promise.all([api.getCategories(), api.getPortfolio(), api.getSettings(), api.getTestimonials(), api.getClientLogos()])
+      .then(([cats, items, sett, tests, logos]) => {
         setCategories(cats || []); setPortfolio(Array.isArray(items) ? items : []);
         setSettings(sett); setTestimonials(tests || []);
+        setClientLogos(Array.isArray(logos) ? logos : []);
       }).finally(() => setLoading(false));
   }, []);
 
@@ -703,6 +715,20 @@ function PublicSite({ onAdminClick }) {
       window.gtag('js', new Date()); window.gtag('config', settings.ga_tracking_id);
     }
   }, [settings?.ga_tracking_id]);
+
+  // Scroll-triggered fade-ins
+  useEffect(() => {
+    const obs = new IntersectionObserver((entries) => {
+      entries.forEach(e => {
+        if (e.isIntersecting) {
+          e.target.classList.add('visible');
+          obs.unobserve(e.target);
+        }
+      });
+    }, { threshold: 0.12, rootMargin: '0px 0px -80px 0px' });
+    document.querySelectorAll('.fade-in-section').forEach(el => obs.observe(el));
+    return () => obs.disconnect();
+  }, [portfolio]);
 
   const sortedPortfolio = [...portfolio].sort((a, b) => {
     if (sort === 'views') return b.views - a.views;
@@ -800,6 +826,22 @@ function PublicSite({ onAdminClick }) {
         </div>
       </section>
 
+      {clientLogos.length > 0 && (
+        <section className="client-logos-bar fade-in-section" aria-label="Trusted by">
+          <div className="client-logos-label">{isAr ? 'موثوق به من قبل' : 'TRUSTED BY'}</div>
+          <div className="client-logos-marquee">
+            <div className="client-logos-track">
+              {[...clientLogos, ...clientLogos].map((logo, i) => {
+                const img = <img src={resolveUrl(logo.image_url)} alt={logo.name} title={logo.name} loading="lazy" />;
+                return logo.link_url
+                  ? <a key={`${logo.id}-${i}`} href={logo.link_url} target="_blank" rel="noopener noreferrer" className="client-logo">{img}</a>
+                  : <div key={`${logo.id}-${i}`} className="client-logo">{img}</div>;
+              })}
+            </div>
+          </div>
+        </section>
+      )}
+
       {portfolio.filter(p => p.featured).length > 0 && (
         <FeaturedCarousel items={portfolio.filter(p => p.featured).slice(0, 5)} onSelect={openItem} lang={lang} />
       )}
@@ -810,7 +852,8 @@ function PublicSite({ onAdminClick }) {
         const romCat = categories.find(c => c.id === reelOfMonth.category_id);
         const romPadding = getAspectPadding(reelOfMonth.aspect_ratio || '16:9');
         return (
-          <section className="reel-of-month">
+          <section className="reel-of-month fade-in-section">
+            <span className="ghost-watermark ghost-watermark--right" aria-hidden="true">SPOTLIGHT</span>
             <div className="section-inner">
               <div className="spotlight-label">{isAr ? '✨ في الواجهة' : '✨ Spotlight'}</div>
               <div className="spotlight-card" onClick={() => openItem(reelOfMonth)}>
@@ -840,7 +883,8 @@ function PublicSite({ onAdminClick }) {
         );
       })()}
 
-      <section className="portfolio-section" id="portfolio">
+      <section className="portfolio-section fade-in-section" id="portfolio">
+        <span className="ghost-watermark ghost-watermark--right" aria-hidden="true">WORK</span>
         <div className="section-inner">
           <div className="portfolio-header">
             <h2 className="section-title">{isAr ? 'الأعمال' : 'Portfolio'}</h2>
@@ -936,7 +980,8 @@ function PublicSite({ onAdminClick }) {
       </section>
 
       {settings?.about_text && (
-        <section className="about-section" id="about">
+        <section className="about-section fade-in-section" id="about">
+          <span className="ghost-watermark ghost-watermark--left" aria-hidden="true">ABOUT</span>
           <div className="section-inner about-inner">
             {settings.about_image && <div className="about-img-wrap"><img src={resolveUrl(settings.about_image)} alt={siteTitle} className="about-img" /></div>}
             <div className="about-text">
@@ -947,7 +992,8 @@ function PublicSite({ onAdminClick }) {
         </section>
       )}
 
-      <section className="testimonials-section" id="testimonials">
+      <section className="testimonials-section fade-in-section" id="testimonials">
+        <span className="ghost-watermark ghost-watermark--right" aria-hidden="true">REVIEWS</span>
         <div className="section-inner">
           <h2 className="section-title">{isAr ? 'آراء العملاء' : 'Client Reviews'}</h2>
           {testimonials.length > 0 && (
@@ -971,7 +1017,8 @@ function PublicSite({ onAdminClick }) {
         </div>
       </section>
 
-      <section className="contact-section" id="contact">
+      <section className="contact-section fade-in-section" id="contact">
+        <span className="ghost-watermark ghost-watermark--left" aria-hidden="true">CONTACT</span>
         <div className="section-inner">
           <h2 className="section-title">{isAr ? 'تواصل معي' : 'Get In Touch'}</h2>
           <div className="contact-layout">
@@ -1096,7 +1143,7 @@ function AdminDashboard({ token, onLogout, onBack }) {
         <button className="logout-btn" onClick={onLogout}>Logout</button>
       </header>
       <nav className="admin-nav">
-        {[['portfolio','📹 Portfolio'],['categories','📁 Categories'],['testimonials','⭐ Testimonials'],['deliveries','📦 Deliveries'],['analytics','📊 Analytics'],['notifications','🔔'],['settings','⚙️ Settings']].map(([tab, label]) => (
+        {[['portfolio','📹 Portfolio'],['categories','📁 Categories'],['testimonials','⭐ Testimonials'],['logos','🏷 Clients'],['deliveries','📦 Deliveries'],['analytics','📊 Analytics'],['notifications','🔔'],['settings','⚙️ Settings']].map(([tab, label]) => (
           <button key={tab} className={activeTab === tab ? 'active' : ''} onClick={() => setActiveTab(tab)}>{label}</button>
         ))}
       </nav>
@@ -1105,6 +1152,7 @@ function AdminDashboard({ token, onLogout, onBack }) {
         {activeTab === 'portfolio' && <PortfolioManager portfolio={portfolio} categories={categories} token={token} onUpdate={loadData} settings={settings} />}
         {activeTab === 'categories' && <CategoriesManager categories={categories} token={token} onUpdate={loadData} />}
         {activeTab === 'testimonials' && <TestimonialsManager token={token} />}
+        {activeTab === 'logos' && <ClientLogosManager token={token} />}
         {activeTab === 'deliveries' && <DeliveriesManager token={token} />}
         {activeTab === 'analytics' && <AnalyticsDashboard token={token} />}
         {activeTab === 'notifications' && <NotificationCenter token={token} />}
@@ -2019,6 +2067,125 @@ function TestimonialsManager({ token }) {
           </div>
         ))}
       </div>
+    </div>
+  );
+}
+
+// ==================== CLIENT LOGOS MANAGER ====================
+
+const EMPTY_LOGO = { name: '', image_url: '', link_url: '', order: 0, active: true };
+
+function ClientLogosManager({ token }) {
+  const [list, setList] = useState([]);
+  const [showForm, setShowForm] = useState(false);
+  const [form, setForm] = useState(EMPTY_LOGO);
+  const [editId, setEditId] = useState(null);
+  const [uploading, setUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(null);
+  const [uploadFilename, setUploadFilename] = useState('');
+  const [uploadStatus, setUploadStatus] = useState('');
+
+  const reload = useCallback(() => api.getAllClientLogos(token).then(d => setList(Array.isArray(d) ? d : [])).catch(() => {}), [token]);
+  useEffect(() => { reload(); }, [reload]);
+
+  const handleUpload = async (e) => {
+    const file = e.target.files[0]; if (!file) return;
+    setUploading(true); setUploadFilename(file.name); setUploadProgress(0); setUploadStatus('');
+    try {
+      const res = await api.uploadFile(token, file, p => setUploadProgress(p));
+      if (res.url) { setForm(prev => ({ ...prev, image_url: res.url })); setUploadProgress(100); setUploadStatus('done'); }
+      else setUploadStatus('error');
+    } catch { setUploadStatus('error'); } finally { setUploading(false); }
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (!form.image_url || !form.name) return;
+    if (editId) await api.updateClientLogo(token, editId, form);
+    else await api.createClientLogo(token, { ...form, order: list.length });
+    setShowForm(false); setEditId(null); setForm(EMPTY_LOGO); setUploadStatus('');
+    reload();
+  };
+
+  const handleDelete = async (id) => {
+    if (!window.confirm('Delete this logo?')) return;
+    await api.deleteClientLogo(token, id); reload();
+  };
+
+  const toggleActive = async (logo) => {
+    await api.updateClientLogo(token, logo.id, { ...logo, active: !logo.active }); reload();
+  };
+
+  const openEdit = (logo) => {
+    setEditId(logo.id); setForm({ name: logo.name, image_url: logo.image_url, link_url: logo.link_url || '', order: logo.order, active: logo.active });
+    setShowForm(true); setUploadStatus('');
+  };
+
+  return (
+    <div className="manager-section">
+      <div className="section-header">
+        <h2>Client Logos ({list.length})</h2>
+        {!showForm && <button className="btn-primary" onClick={() => { setShowForm(true); setEditId(null); setForm(EMPTY_LOGO); }}>➕ Add Logo</button>}
+      </div>
+
+      <p style={{ color: 'var(--color-text-muted)', fontSize: '0.85rem', marginBottom: '1rem' }}>
+        Logos appear in a scrolling strip under the hero. Use transparent PNG or SVG for best look. They display grayscale and turn full-color on hover.
+      </p>
+
+      {showForm && (
+        <form className="portfolio-form" onSubmit={handleSubmit}>
+          <h3 style={{ marginBottom: '1.25rem', color: 'var(--color-peach)' }}>{editId ? '✏️ Edit Logo' : '➕ New Logo'}</h3>
+
+          <label className="field-label">Brand Name *</label>
+          <input type="text" placeholder="e.g. Emaar" value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} required />
+
+          <label className="field-label">Logo Image * <span style={{ color: 'var(--color-text-muted)', fontSize: '0.78rem', fontWeight: 400 }}>— transparent PNG or SVG works best</span></label>
+          <div className="upload-area">
+            <label className="upload-label">
+              <input type="file" accept="image/png,image/svg+xml,image/jpeg,image/webp" onChange={handleUpload} disabled={uploading} />
+              <span>{uploading ? `Uploading… ${uploadProgress || 0}%` : '📤 Upload Logo'}</span>
+            </label>
+            {form.image_url && <div className="thumb-preview" style={{ background: 'rgba(255,255,255,0.05)', padding: '0.75rem', display: 'inline-block', marginLeft: '0.75rem' }}><img src={resolveUrl(form.image_url)} alt="preview" style={{ maxHeight: 50 }} /></div>}
+          </div>
+          <UploadProgress progress={uploadProgress} filename={uploadFilename} done={uploadStatus === 'done'} error={uploadStatus === 'error'} />
+
+          <label className="field-label">Brand Website (optional)</label>
+          <input type="url" placeholder="https://emaar.com" value={form.link_url} onChange={e => setForm({ ...form, link_url: e.target.value })} />
+
+          <label className="featured-label">
+            <input type="checkbox" checked={form.active} onChange={e => setForm({ ...form, active: e.target.checked })} />
+            <span>Active (visible on site)</span>
+          </label>
+
+          <div className="form-buttons">
+            <button type="submit" className="btn-primary" disabled={!form.name || !form.image_url}>💾 {editId ? 'Update' : 'Add'}</button>
+            <button type="button" className="btn-secondary" onClick={() => { setShowForm(false); setEditId(null); setForm(EMPTY_LOGO); }}>Cancel</button>
+          </div>
+        </form>
+      )}
+
+      {list.length === 0 ? (
+        <p style={{ color: 'var(--color-text-muted)' }}>No logos yet. Add the first one to build your "Trusted by" strip.</p>
+      ) : (
+        <div className="portfolio-list">
+          {list.map(logo => (
+            <div key={logo.id} className="portfolio-item-card" style={{ opacity: logo.active ? 1 : 0.5 }}>
+              <div style={{ background: 'rgba(255,255,255,0.05)', padding: '1.25rem', borderRadius: 6, display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: 80 }}>
+                <img src={resolveUrl(logo.image_url)} alt={logo.name} style={{ maxHeight: 60, maxWidth: '100%', objectFit: 'contain' }} />
+              </div>
+              <div className="card-body-admin">
+                <h3>{logo.name}</h3>
+                {logo.link_url && <p style={{ fontSize: '0.78rem' }}>🔗 {logo.link_url}</p>}
+              </div>
+              <div className="card-actions">
+                <button className="btn-secondary btn-sm" onClick={() => openEdit(logo)}>✏️ Edit</button>
+                <button className="btn-secondary btn-sm" onClick={() => toggleActive(logo)}>{logo.active ? '👁 Hide' : '👁 Show'}</button>
+                <button className="btn-danger btn-sm" onClick={() => handleDelete(logo.id)}>🗑</button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

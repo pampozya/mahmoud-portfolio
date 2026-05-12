@@ -178,6 +178,16 @@ class Testimonial(Base):
     approved = Column(Boolean, default=False)
     created_at = Column(DateTime, default=datetime.utcnow)
 
+class ClientLogo(Base):
+    __tablename__ = "client_logos"
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String, nullable=False)  # brand name shown in admin
+    image_url = Column(String, nullable=False)  # logo image URL
+    link_url = Column(String, nullable=True)  # optional brand site link
+    order = Column(Integer, default=0)
+    active = Column(Boolean, default=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
 class Notification(Base):
     __tablename__ = "notifications"
     id = Column(Integer, primary_key=True, index=True)
@@ -1016,6 +1026,57 @@ def delete_testimonial(tid: int, email: str = Depends(verify_token), db: Session
     item = db.query(Testimonial).filter(Testimonial.id == tid).first()
     if not item: raise HTTPException(404, "Not found")
     db.delete(item); db.commit()
+    return {"ok": True}
+
+# ==================== CLIENT LOGOS ====================
+
+@app.get("/api/client-logos")
+def list_client_logos(db: Session = Depends(get_db)):
+    rows = db.query(ClientLogo).filter(ClientLogo.active == True).order_by(ClientLogo.order, ClientLogo.id).all()
+    return [{"id": r.id, "name": r.name, "image_url": r.image_url, "link_url": r.link_url, "order": r.order, "active": r.active} for r in rows]
+
+@app.get("/api/client-logos/all")
+def list_all_client_logos(email: str = Depends(verify_token), db: Session = Depends(get_db)):
+    rows = db.query(ClientLogo).order_by(ClientLogo.order, ClientLogo.id).all()
+    return [{"id": r.id, "name": r.name, "image_url": r.image_url, "link_url": r.link_url, "order": r.order, "active": r.active} for r in rows]
+
+class ClientLogoCreate(BaseModel):
+    name: str
+    image_url: str
+    link_url: Optional[str] = None
+    order: int = 0
+    active: bool = True
+
+@app.post("/api/client-logos")
+def create_client_logo(data: ClientLogoCreate, email: str = Depends(verify_token), db: Session = Depends(get_db)):
+    item = ClientLogo(**data.dict())
+    db.add(item); db.commit(); db.refresh(item)
+    return {"id": item.id, "name": item.name, "image_url": item.image_url, "link_url": item.link_url, "order": item.order, "active": item.active}
+
+@app.put("/api/client-logos/{lid}")
+def update_client_logo(lid: int, data: ClientLogoCreate, email: str = Depends(verify_token), db: Session = Depends(get_db)):
+    item = db.query(ClientLogo).filter(ClientLogo.id == lid).first()
+    if not item: raise HTTPException(404, "Not found")
+    for k, v in data.dict().items(): setattr(item, k, v)
+    db.commit(); db.refresh(item)
+    return {"id": item.id, "name": item.name, "image_url": item.image_url, "link_url": item.link_url, "order": item.order, "active": item.active}
+
+@app.delete("/api/client-logos/{lid}")
+def delete_client_logo(lid: int, email: str = Depends(verify_token), db: Session = Depends(get_db)):
+    item = db.query(ClientLogo).filter(ClientLogo.id == lid).first()
+    if not item: raise HTTPException(404, "Not found")
+    db.delete(item); db.commit()
+    return {"ok": True}
+
+class ClientLogoReorder(BaseModel):
+    ids: List[int]
+
+@app.put("/api/client-logos/reorder")
+def reorder_client_logos(data: ClientLogoReorder, email: str = Depends(verify_token), db: Session = Depends(get_db)):
+    for idx, lid in enumerate(data.ids):
+        item = db.query(ClientLogo).filter(ClientLogo.id == lid).first()
+        if item: item.order = idx
+    db.commit()
     return {"ok": True}
 
 # ==================== LIKES ====================
