@@ -618,15 +618,6 @@ function LeaveReviewForm({ lang, isAr }) {
   const [submitted, setSubmitted] = useState(false);
   const [loading, setLoading] = useState(false);
 
-  useEffect(() => {
-    if (autoOpen) {
-      setTimeout(() => {
-        const el = document.getElementById('testimonials');
-        if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
-      }, 400);
-    }
-  }, [autoOpen]);
-
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
@@ -704,6 +695,21 @@ function PublicSite({ onAdminClick }) {
         setClientLogos(Array.isArray(logos) ? logos : []);
       }).finally(() => setLoading(false));
   }, []);
+
+  // If URL is ?leave-review=1, scroll to testimonials after content settles
+  useEffect(() => {
+    const wantsReview = new URLSearchParams(window.location.search).get('leave-review') === '1';
+    if (!wantsReview || loading) return;
+    const scrollToReview = () => {
+      const el = document.getElementById('testimonials');
+      if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    };
+    // Multiple attempts — layout shifts as images/iframes load
+    const t1 = setTimeout(scrollToReview, 300);
+    const t2 = setTimeout(scrollToReview, 900);
+    const t3 = setTimeout(scrollToReview, 1800);
+    return () => { clearTimeout(t1); clearTimeout(t2); clearTimeout(t3); };
+  }, [loading]);
 
   // Apply custom theme colors from settings
   useEffect(() => {
@@ -1970,7 +1976,11 @@ function TestimonialsManager({ token }) {
   const [uploadFilename, setUploadFilename] = useState('');
   const [uploadStatus, setUploadStatus] = useState('');
 
-  useEffect(() => { api.getAllTestimonials(token).then(setList).catch(() => {}); }, [token]);
+  useEffect(() => {
+    api.getAllTestimonials(token)
+      .then(data => setList(Array.isArray(data) ? data : []))
+      .catch(() => setList([]));
+  }, [token]);
 
   const handleUpload = async (e) => {
     const file = e.target.files[0]; if (!file) return;
@@ -2044,7 +2054,7 @@ function TestimonialsManager({ token }) {
           <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1rem' }}>
             {[1,2,3,4,5].map(n => (
               <button key={n} type="button" onClick={() => setForm({ ...form, rating: n })}
-                style={{ fontSize: '1.5rem', background: 'none', border: 'none', cursor: 'pointer', color: n <= form.rating ? '#FFA781' : '#444', transition: 'color 0.15s' }}>★</button>
+                style={{ fontSize: '1.5rem', background: 'none', border: 'none', cursor: 'pointer', color: n <= form.rating ? '#fbbf24' : '#444', transition: 'color 0.15s' }}>★</button>
             ))}
           </div>
           <label className="field-label">Client Photo (optional)</label>
@@ -2084,6 +2094,12 @@ function TestimonialsManager({ token }) {
       )}
 
       <h3 style={{ color: 'var(--color-peach)', marginBottom: '0.75rem', fontSize: '1rem' }}>✅ Approved ({list.filter(t => t.approved).length})</h3>
+      {list.filter(t => t.approved).length === 0 && list.filter(t => !t.approved).length === 0 && (
+        <div style={{ background: 'rgba(255,255,255,0.03)', border: '1px dashed rgba(255,255,255,0.15)', borderRadius: 8, padding: '2rem', textAlign: 'center', color: 'var(--color-text-muted)' }}>
+          <p style={{ fontSize: '1rem', marginBottom: '0.5rem' }}>No testimonials yet</p>
+          <p style={{ fontSize: '0.85rem' }}>Share the review link above with clients, or click "Add Review" to add one manually.</p>
+        </div>
+      )}
       <div className="portfolio-list">
         {list.filter(t => t.approved).map(t => (
           <div key={t.id} className="portfolio-item-card">
