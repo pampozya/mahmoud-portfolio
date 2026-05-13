@@ -1,0 +1,22 @@
+# LiteSpeed cache control
+<IfModule LiteSpeed>
+  # Don't cache /finance
+  CacheDisable /finance
+</IfModule>
+
+# Rewrite rules
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+
+  # Don't rewrite real files and directories
+  RewriteCond %{REQUEST_FILENAME} -f
+  RewriteRule ^ - [L]
+  RewriteCond %{REQUEST_FILENAME} -d
+  RewriteRule ^ - [L]
+
+  # Explicitly allow /finance directory
+  RewriteRule ^finance(/.*)?$ - [L]
+
+  # Everything else goes to index.html
+  RewriteRule ^(.*)$ /index.html [L,QSA]
+</IfModule>

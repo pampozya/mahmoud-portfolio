@@ -1,0 +1,2583 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>Lens Mania — Finance Tracker</title>
+
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#0f1419">
+    <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
+    <link rel="icon" type="image/png" sizes="512x512" href="icon-512.png">
+
+    <link rel="apple-touch-icon" href="apple-touch.png">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-title" content="Finance">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black">
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        html, body {
+            -webkit-tap-highlight-color: transparent;
+            -webkit-user-select: none;
+            user-select: none;
+            -webkit-touch-callout: none;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #0f1419 0%, #1a1f2e 100%);
+            color: #e0e0e0;
+            min-height: 100vh;
+            padding: 20px;
+            padding-top: max(20px, env(safe-area-inset-top));
+            padding-bottom: max(20px, env(safe-area-inset-bottom));
+            padding-left: max(20px, env(safe-area-inset-left));
+            padding-right: max(20px, env(safe-area-inset-right));
+        }
+
+        input, textarea { -webkit-user-select: text; user-select: text; }
+
+        .container { max-width: 1200px; margin: 0 auto; }
+
+        header { margin-bottom: 20px; }
+
+        h1 {
+            font-size: 28px;
+            font-weight: 300;
+            color: #fff;
+            letter-spacing: 0.5px;
+            margin-bottom: 8px;
+        }
+
+        .header-meta {
+            font-size: 13px;
+            color: #888;
+            display: flex;
+            gap: 12px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .sync-indicator {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 3px 10px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: 500;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            background: rgba(255, 255, 255, 0.06);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            color: #888;
+        }
+
+        .sync-indicator::before {
+            content: '';
+            width: 7px;
+            height: 7px;
+            border-radius: 50%;
+            background: currentColor;
+        }
+
+        .sync-indicator.synced { color: #4caf50; border-color: rgba(76, 175, 80, 0.3); }
+        .sync-indicator.syncing { color: #ffc107; border-color: rgba(255, 193, 7, 0.3); }
+        .sync-indicator.error { color: #f44336; border-color: rgba(244, 67, 54, 0.3); }
+        .sync-indicator.offline { color: #888; }
+
+        .version-badge {
+            position: fixed;
+            top: max(8px, env(safe-area-inset-top));
+            right: max(8px, env(safe-area-inset-right));
+            font-size: 10px;
+            color: #666;
+            background: rgba(0, 0, 0, 0.4);
+            padding: 3px 8px;
+            border-radius: 4px;
+            z-index: 1000;
+            font-family: monospace;
+        }
+
+        .tabs {
+            display: flex;
+            gap: 4px;
+            margin-bottom: 20px;
+            background: rgba(255, 255, 255, 0.04);
+            padding: 4px;
+            border-radius: 10px;
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+        }
+
+        .tab-btn {
+            padding: 10px 18px;
+            border: none;
+            background: transparent;
+            color: #888;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            border-radius: 7px;
+            white-space: nowrap;
+            transition: all 0.2s;
+            font-family: inherit;
+        }
+
+        .tab-btn.active {
+            color: #fff;
+            background: rgba(255, 255, 255, 0.08);
+        }
+
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+
+        /* Summary card at top of each tab */
+        .summary-bar {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 12px;
+            margin-bottom: 20px;
+        }
+
+        .summary-stat {
+            background: rgba(255, 255, 255, 0.04);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 10px;
+            padding: 14px 16px;
+        }
+
+        .summary-stat-label {
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: #888;
+            margin-bottom: 6px;
+            font-weight: 500;
+        }
+
+        .summary-stat-value {
+            font-size: 22px;
+            font-weight: 500;
+            color: #fff;
+        }
+
+        .summary-stat-percent {
+            font-size: 12px;
+            margin-top: 4px;
+            color: #888;
+        }
+
+        .summary-stat.paid .summary-stat-value { color: #76d776; }
+        .summary-stat.remaining .summary-stat-value { color: #ffa726; }
+
+        /* Compact data table */
+        .data-list {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            border-radius: 12px;
+            overflow: hidden;
+            margin-bottom: 20px;
+        }
+
+        .category-block { border-bottom: 1px solid rgba(255, 255, 255, 0.06); }
+        .category-block:last-child { border-bottom: none; }
+
+        .category-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 12px;
+            padding: 14px 16px;
+            background: rgba(255, 255, 255, 0.04);
+            font-weight: 600;
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: #ddd;
+            cursor: pointer;
+            user-select: none;
+            transition: background 0.15s;
+        }
+
+        .category-header:hover { background: rgba(255, 255, 255, 0.08); }
+        .category-header:focus { outline: 2px solid rgba(118, 215, 118, 0.3); outline-offset: -2px; }
+
+        .category-arrow {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 10px;
+            color: #888;
+            transition: transform 0.2s;
+            flex-shrink: 0;
+            width: 16px;
+        }
+
+        .category-name {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .category-content {
+            display: block;
+            transition: all 0.2s;
+        }
+
+        .category-totals {
+            display: flex;
+            gap: 14px;
+            font-size: 11px;
+            color: #888;
+            font-weight: 400;
+            text-transform: none;
+            letter-spacing: 0;
+            flex-shrink: 0;
+        }
+
+        .category-totals .paid { color: #76d776; }
+
+        .row-list { display: flex; flex-direction: column; }
+
+        .row {
+            display: grid;
+            grid-template-columns: 1.6fr 1fr 1fr 1fr 60px 44px;
+            gap: 8px;
+            padding: 12px 16px;
+            align-items: center;
+            border-top: 1px solid rgba(255, 255, 255, 0.04);
+            transition: background 0.15s;
+        }
+
+        .row:hover { background: rgba(255, 255, 255, 0.02); }
+
+        .row-description {
+            color: #e0e0e0;
+            font-size: 14px;
+            min-width: 0;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .row-cell {
+            font-size: 13px;
+            text-align: right;
+            color: #aaa;
+            font-variant-numeric: tabular-nums;
+        }
+
+        .row-cell.paid { color: #76d776; font-weight: 500; }
+        .row-cell.remaining { color: #aaa; }
+        .row-cell.percent { color: #ffa726; font-size: 12px; }
+
+        .edit-btn {
+            width: 36px;
+            height: 36px;
+            border: none;
+            background: rgba(255, 255, 255, 0.06);
+            color: #aaa;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.15s;
+            font-family: inherit;
+            justify-self: end;
+        }
+
+        .edit-btn:active, .edit-btn:hover {
+            background: rgba(118, 215, 118, 0.15);
+            color: #76d776;
+        }
+
+        .row-list-header {
+            display: grid;
+            grid-template-columns: 1.6fr 1fr 1fr 1fr 60px 44px;
+            gap: 8px;
+            padding: 8px 16px;
+            font-size: 11px;
+            text-transform: uppercase;
+            color: #666;
+            background: rgba(0, 0, 0, 0.2);
+        }
+
+        .row-list-header > div { text-align: right; }
+        .row-list-header > div:first-child { text-align: left; }
+
+        .add-item-row {
+            padding: 10px 16px;
+            border-top: 1px solid rgba(255, 255, 255, 0.04);
+        }
+
+        .add-item-btn {
+            width: 100%;
+            padding: 10px;
+            background: rgba(118, 215, 118, 0.08);
+            color: #76d776;
+            border: 1px dashed rgba(118, 215, 118, 0.3);
+            border-radius: 8px;
+            font-size: 13px;
+            cursor: pointer;
+            font-family: inherit;
+            transition: background 0.15s;
+        }
+
+        .add-item-btn:active { background: rgba(118, 215, 118, 0.18); }
+
+        .filter-btn {
+            padding: 8px 14px;
+            background: rgba(255, 255, 255, 0.08);
+            color: #fff;
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            border-radius: 6px;
+            font-size: 12px;
+            cursor: pointer;
+            font-family: inherit;
+            transition: all 0.15s;
+            white-space: nowrap;
+        }
+
+        .filter-btn:hover { background: rgba(255, 255, 255, 0.12); }
+        .filter-btn.active { background: rgba(118, 215, 118, 0.15); color: #76d776; border-color: rgba(118, 215, 118, 0.3); }
+
+        /* Modal */
+        .modal {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.7);
+            z-index: 100;
+            align-items: flex-end;
+            justify-content: center;
+            padding: 0;
+            padding-bottom: env(safe-area-inset-bottom);
+        }
+
+        .modal.active { display: flex; }
+
+        @media (min-width: 600px) {
+            .modal { align-items: center; padding: 20px; }
+        }
+
+        .modal-content {
+            background: #1a1f2e;
+            border-radius: 16px 16px 0 0;
+            padding: 24px;
+            width: 100%;
+            max-width: 540px;
+            max-height: 90vh;
+            overflow-y: auto;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            animation: slideUp 0.3s ease-out;
+        }
+
+        @media (min-width: 600px) {
+            .modal-content { border-radius: 16px; }
+        }
+
+        @keyframes slideUp {
+            from { transform: translateY(100%); }
+            to { transform: translateY(0); }
+        }
+
+        .modal-title {
+            font-size: 18px;
+            font-weight: 500;
+            margin-bottom: 4px;
+            color: #fff;
+        }
+
+        .modal-subtitle {
+            font-size: 12px;
+            color: #888;
+            margin-bottom: 18px;
+        }
+
+        .modal-section-title {
+            font-size: 11px;
+            text-transform: uppercase;
+            color: #888;
+            letter-spacing: 0.5px;
+            margin: 18px 0 10px;
+            padding-bottom: 6px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+        }
+
+        .modal-field { margin-bottom: 12px; }
+
+        .modal-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+        }
+
+        .modal-label {
+            display: block;
+            font-size: 11px;
+            text-transform: uppercase;
+            color: #888;
+            margin-bottom: 6px;
+            font-weight: 500;
+            letter-spacing: 0.3px;
+        }
+
+        .modal-input {
+            width: 100%;
+            padding: 10px 12px;
+            background: rgba(255, 255, 255, 0.06);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            color: #fff;
+            font-size: 14px;
+            font-family: inherit;
+        }
+
+        .modal-input:focus {
+            outline: none;
+            border-color: #76d776;
+            background: rgba(76, 175, 80, 0.08);
+        }
+
+        select.modal-input {
+            appearance: none;
+            -webkit-appearance: none;
+            background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23888' stroke-width='2'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
+            background-repeat: no-repeat;
+            background-position: right 12px center;
+            padding-right: 32px;
+        }
+
+        .modal-stats {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 8px;
+            margin: 14px 0;
+            padding: 12px;
+            background: rgba(0, 0, 0, 0.25);
+            border-radius: 8px;
+        }
+
+        .modal-stat { text-align: center; }
+
+        .modal-stat-label {
+            font-size: 10px;
+            text-transform: uppercase;
+            color: #888;
+            margin-bottom: 4px;
+        }
+
+        .modal-stat-value {
+            font-size: 15px;
+            font-weight: 600;
+            font-variant-numeric: tabular-nums;
+        }
+
+        .modal-stat-value.paid { color: #76d776; }
+        .modal-stat-value.remaining { color: #ffa726; }
+        .modal-stat-value.percent { color: #ffc107; }
+
+        /* Day grid in modal */
+        .day-grid {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 4px;
+            margin: 8px 0 14px;
+        }
+
+        .day-cell {
+            aspect-ratio: 1;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            background: rgba(255, 255, 255, 0.03);
+            border-radius: 6px;
+            padding: 4px;
+            cursor: pointer;
+            text-align: center;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            min-height: 44px;
+            transition: all 0.15s;
+            font-family: inherit;
+        }
+
+        .day-cell:active, .day-cell:hover {
+            background: rgba(118, 215, 118, 0.1);
+            border-color: rgba(118, 215, 118, 0.3);
+        }
+
+        .day-cell.has-value {
+            background: rgba(118, 215, 118, 0.12);
+            border-color: rgba(118, 215, 118, 0.25);
+        }
+
+        .day-cell-num {
+            font-size: 10px;
+            color: #888;
+            line-height: 1;
+        }
+
+        .day-cell.has-value .day-cell-num { color: #aaa; }
+
+        .day-cell-value {
+            font-size: 11px;
+            color: #76d776;
+            font-weight: 500;
+            margin-top: 2px;
+            line-height: 1.1;
+            font-variant-numeric: tabular-nums;
+        }
+
+        .day-cell-value.empty { color: #555; }
+
+        .quick-add {
+            display: grid;
+            grid-template-columns: 1fr 1fr auto;
+            gap: 8px;
+            align-items: end;
+            padding: 12px;
+            background: rgba(118, 215, 118, 0.05);
+            border: 1px solid rgba(118, 215, 118, 0.15);
+            border-radius: 8px;
+            margin-bottom: 14px;
+        }
+
+        .quick-add-btn {
+            padding: 10px 14px;
+            background: #76d776;
+            color: #000;
+            border: none;
+            border-radius: 8px;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            font-family: inherit;
+            white-space: nowrap;
+        }
+
+        .quick-add-btn:active { background: #5ac75a; }
+
+        .modal-buttons {
+            display: flex;
+            gap: 8px;
+            margin-top: 20px;
+            flex-wrap: wrap;
+        }
+
+        .modal-btn {
+            flex: 1;
+            padding: 12px;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-family: inherit;
+            min-width: 100px;
+        }
+
+        .modal-btn.primary { background: #76d776; color: #000; }
+        .modal-btn.primary:active { background: #5ac75a; }
+
+        .modal-btn.secondary {
+            background: rgba(255, 255, 255, 0.1);
+            color: #fff;
+            border: 1px solid rgba(255, 255, 255, 0.15);
+        }
+
+        .modal-btn.secondary:active { background: rgba(255, 255, 255, 0.18); }
+
+        .modal-btn.danger {
+            background: rgba(244, 67, 54, 0.1);
+            color: #f44336;
+            border: 1px solid rgba(244, 67, 54, 0.2);
+        }
+
+        .modal-btn.danger:active { background: rgba(244, 67, 54, 0.25); }
+
+        /* Dashboard */
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 16px;
+            margin-bottom: 20px;
+        }
+
+        .card {
+            background: rgba(255, 255, 255, 0.04);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 12px;
+            padding: 18px;
+        }
+
+        .card-title {
+            font-size: 12px;
+            font-weight: 600;
+            color: #aaa;
+            text-transform: uppercase;
+            margin-bottom: 14px;
+            letter-spacing: 0.5px;
+        }
+
+        .progress-item { margin-bottom: 14px; }
+        .progress-item:last-child { margin-bottom: 0; }
+
+        .progress-label {
+            display: flex;
+            justify-content: space-between;
+            font-size: 13px;
+            margin-bottom: 6px;
+        }
+
+        .progress-label-name { color: #ddd; }
+        .progress-label-value { color: #888; font-variant-numeric: tabular-nums; }
+
+        .progress-bar {
+            height: 6px;
+            background: rgba(255, 255, 255, 0.08);
+            border-radius: 3px;
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #76d776, #5ac75a);
+            border-radius: 3px;
+            transition: width 0.3s ease;
+        }
+
+        .chart-container {
+            position: relative;
+            height: 280px;
+            margin-top: 12px;
+        }
+
+        .expenses-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 12px;
+        }
+
+        .expenses-header #expenseSummaryBar { flex: 1; }
+
+        @media (max-width: 600px) {
+            .expenses-header {
+                flex-direction: column;
+                gap: 8px;
+                align-items: stretch;
+            }
+            .expenses-header #expenseSummaryBar { width: 100%; }
+            .expenses-header #filterPendingBtn { width: 100%; margin-left: 0; }
+        }
+
+        /* Team payouts */
+        .team-member-card {
+            background: rgba(255, 255, 255, 0.04);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 10px;
+            padding: 16px;
+            margin-bottom: 12px;
+        }
+
+        .team-member-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+            padding-bottom: 12px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+        }
+
+        .team-member-name {
+            font-size: 16px;
+            color: #fff;
+            font-weight: 600;
+            letter-spacing: 0.3px;
+        }
+
+        .team-member-stats {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            justify-content: flex-end;
+        }
+
+        .stat-badge {
+            font-size: 11px;
+            padding: 4px 10px;
+            border-radius: 6px;
+            font-weight: 500;
+            white-space: nowrap;
+        }
+
+        .stat-badge.owed {
+            background: rgba(255, 167, 38, 0.15);
+            color: #ffa726;
+        }
+
+        .stat-badge.paid {
+            background: rgba(118, 215, 118, 0.15);
+            color: #76d776;
+        }
+
+        .team-member-payouts {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .team-payout-item {
+            background: rgba(255, 255, 255, 0.02);
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            border-radius: 8px;
+            padding: 12px;
+            display: grid;
+            grid-template-columns: 1fr auto;
+            gap: 8px;
+            align-items: center;
+        }
+
+        .team-payout-item.owed {
+            border-color: rgba(255, 167, 38, 0.2);
+            background: rgba(255, 167, 38, 0.05);
+        }
+
+        .team-payout-item.paid {
+            border-color: rgba(118, 215, 118, 0.2);
+            background: rgba(118, 215, 118, 0.05);
+            opacity: 0.7;
+        }
+
+        .payout-details { min-width: 0; }
+        .payout-project { font-size: 13px; color: #fff; font-weight: 500; }
+        .payout-amount { font-size: 14px; color: #ffa726; font-weight: 600; margin-top: 2px; font-variant-numeric: tabular-nums; }
+        .team-payout-item.paid .payout-amount { color: #76d776; }
+
+        .payout-actions { display: flex; gap: 6px; }
+
+        .payout-btn {
+            padding: 6px 10px;
+            border: none;
+            background: rgba(255, 255, 255, 0.08);
+            color: #fff;
+            border-radius: 5px;
+            font-size: 11px;
+            cursor: pointer;
+            font-family: inherit;
+            white-space: nowrap;
+        }
+
+        .payout-btn.mark-paid { background: rgba(118, 215, 118, 0.15); color: #76d776; }
+        .payout-btn.mark-owed { background: rgba(255, 167, 38, 0.15); color: #ffa726; }
+        .payout-btn.edit { background: rgba(100, 181, 246, 0.15); color: #64b5f6; }
+        .payout-btn.danger { background: rgba(244, 67, 54, 0.12); color: #f44336; }
+
+        .income-cards-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 12px;
+        }
+
+        .income-card {
+            background: rgba(255, 255, 255, 0.04);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 10px;
+            padding: 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .income-card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .income-project-name {
+            font-size: 15px;
+            color: #fff;
+            font-weight: 600;
+            flex: 1;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .income-card .edit-btn {
+            padding: 6px 8px;
+            font-size: 14px;
+            flex-shrink: 0;
+        }
+
+        .income-card-stats {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 8px;
+        }
+
+        .income-stat {
+            background: rgba(255, 255, 255, 0.02);
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            border-radius: 6px;
+            padding: 8px;
+            text-align: center;
+        }
+
+        .income-stat .stat-label {
+            font-size: 10px;
+            color: #888;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+            margin-bottom: 4px;
+        }
+
+        .income-stat .stat-value {
+            font-size: 14px;
+            color: #ffa726;
+            font-weight: 600;
+            font-variant-numeric: tabular-nums;
+        }
+
+        .income-stat .stat-value.earned { color: #76d776; }
+        .income-stat .stat-value.pending { color: #64b5f6; }
+
+        .income-progress-bar {
+            height: 6px;
+            background: rgba(255, 255, 255, 0.06);
+            border-radius: 3px;
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #76d776 0%, #4caf50 100%);
+            border-radius: 3px;
+            transition: width 0.3s ease;
+        }
+
+        .income-percent {
+            font-size: 12px;
+            color: #888;
+            text-align: center;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 30px 20px;
+            color: #666;
+            font-size: 14px;
+        }
+
+        .toast {
+            position: fixed;
+            bottom: 20px;
+            bottom: max(20px, calc(env(safe-area-inset-bottom) + 20px));
+            left: 50%;
+            transform: translateX(-50%);
+            background: #76d776;
+            color: #000;
+            padding: 10px 18px;
+            border-radius: 8px;
+            font-size: 13px;
+            font-weight: 600;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s, transform 0.3s;
+            z-index: 200;
+        }
+
+        .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+        /* Extra small phones (iPhone SE, etc) */
+        @media (max-width: 430px) {
+            body { padding: 12px; }
+            h1 { font-size: 20px; margin-bottom: 6px; }
+            .header-meta { font-size: 12px; }
+
+            .dashboard-grid { grid-template-columns: 1fr; gap: 10px; }
+            .card { padding: 12px; }
+            .card-title { font-size: 11px; margin-bottom: 10px; }
+
+            .income-cards-grid { grid-template-columns: 1fr; gap: 8px; }
+            .income-card { padding: 12px; gap: 10px; }
+
+            .summary-bar { grid-template-columns: 1fr; gap: 8px; }
+            .summary-stat { padding: 10px; }
+            .summary-stat-value { font-size: 16px; }
+            .summary-stat-percent { font-size: 11px; }
+
+            .row {
+                grid-template-columns: 1.5fr 1fr 44px;
+                grid-template-rows: auto auto;
+                gap: 4px 6px;
+                padding: 10px 12px;
+            }
+
+            .row-description { grid-column: 1 / 3; grid-row: 1; font-size: 13px; font-weight: 500; }
+            .row-cell.expected { grid-column: 1; grid-row: 2; text-align: left; font-size: 10px; }
+            .row-cell.expected::before { content: 'Exp: '; }
+            .row-cell.paid { grid-column: 2; grid-row: 2; text-align: right; font-size: 12px; }
+            .row-cell.paid::before { content: ''; }
+            .row-cell.remaining { display: none; }
+            .row-cell.percent { display: none; }
+            .edit-btn { width: 44px; height: 44px; min-height: 44px; grid-column: 3; grid-row: 1 / 4; }
+
+            .row-list-header { display: none; }
+
+            .day-grid { grid-template-columns: repeat(7, 1fr); gap: 2px; }
+            .day-cell-value { font-size: 8px; }
+            .day-cell-num { font-size: 8px; }
+
+            .chart-container { height: 200px; margin-top: 8px; }
+
+            .add-item-btn, .filter-btn {
+                min-height: 44px;
+                font-size: 13px;
+                padding: 8px 12px;
+                width: 100%;
+            }
+
+            .tab-btn { padding: 8px 12px; min-height: 44px; font-size: 13px; }
+            .tabs { gap: 4px; }
+
+            .modal-content { padding: 16px; max-height: 85vh; border-radius: 12px 12px 0 0; }
+            .modal-row { grid-template-columns: 1fr; gap: 12px; }
+            .quick-add { grid-template-columns: 1fr 1fr; gap: 8px; }
+            .quick-add-btn { grid-column: 1 / 3; }
+
+            .progress-label { font-size: 12px; }
+            .progress-label-value { font-size: 12px; }
+        }
+
+        /* Small phones (430px - 600px) */
+        @media (min-width: 431px) and (max-width: 600px) {
+            body { padding: 14px; }
+            h1 { font-size: 22px; }
+
+            .dashboard-grid { grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 10px; }
+            .card { padding: 14px; }
+
+            .income-cards-grid { grid-template-columns: 1fr; gap: 10px; }
+
+            .summary-bar { grid-template-columns: 1fr; gap: 8px; }
+            .summary-stat-value { font-size: 18px; }
+
+            .row {
+                grid-template-columns: 1.5fr 1fr 44px;
+                grid-template-rows: auto auto;
+                gap: 6px 8px;
+                padding: 12px 14px;
+            }
+
+            .row-description { grid-column: 1 / 3; grid-row: 1; font-weight: 500; }
+            .row-cell.expected { grid-column: 1; grid-row: 2; text-align: left; font-size: 11px; }
+            .row-cell.expected::before { content: 'Expected: '; }
+            .row-cell.paid { grid-column: 2; grid-row: 2; text-align: right; font-size: 13px; }
+            .row-cell.paid::before { content: ''; }
+            .row-cell.remaining { display: none; }
+            .row-cell.percent { display: none; }
+            .edit-btn { width: 44px; height: 44px; min-height: 44px; grid-column: 3; grid-row: 1 / 4; }
+
+            .row-list-header { display: none; }
+
+            .day-grid { grid-template-columns: repeat(7, 1fr); gap: 3px; }
+            .day-cell-value { font-size: 9px; }
+            .day-cell-num { font-size: 9px; }
+
+            .chart-container { height: 220px; }
+
+            .add-item-btn, .filter-btn { min-height: 44px; width: 100%; }
+            .tab-btn { min-height: 44px; padding: 10px 12px; }
+
+            .modal-row { grid-template-columns: 1fr; }
+            .quick-add { grid-template-columns: 1fr 1fr; }
+            .quick-add-btn { grid-column: 1 / 3; }
+        }
+
+        /* Tablets (iPad mini 768px - 1023px) */
+        @media (min-width: 601px) and (max-width: 1023px) {
+            .dashboard-grid { grid-template-columns: repeat(2, 1fr); gap: 14px; }
+            .income-cards-grid { grid-template-columns: repeat(2, 1fr); gap: 12px; }
+
+            .summary-bar { grid-template-columns: repeat(2, 1fr); gap: 12px; }
+
+            .row { grid-template-columns: 1.8fr 1fr 1fr 50px 44px; gap: 6px; padding: 14px 16px; }
+            .row-list-header { grid-template-columns: 1.8fr 1fr 1fr 50px 44px; }
+
+            .chart-container { height: 260px; }
+        }
+
+        /* Landscape mode adjustments */
+        @media (orientation: landscape) and (max-height: 500px) {
+            .chart-container { height: 180px; }
+            body { padding: 10px; }
+            h1 { font-size: 18px; margin-bottom: 4px; }
+            .modal-content { max-height: 95vh; border-radius: 8px; padding: 14px; }
+        }
+
+        .install-btn {
+            display: none;
+            padding: 6px 12px;
+            background: rgba(118, 215, 118, 0.15);
+            color: #76d776;
+            border: 1px solid rgba(118, 215, 118, 0.3);
+            border-radius: 8px;
+            font-size: 12px;
+            font-weight: 500;
+            cursor: pointer;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            font-family: inherit;
+            transition: all 0.2s;
+            white-space: nowrap;
+        }
+
+        .install-btn:hover {
+            background: rgba(118, 215, 118, 0.25);
+            border-color: rgba(118, 215, 118, 0.5);
+        }
+
+        .install-btn.show { display: inline-block; }
+
+        .refresh-btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 36px;
+            height: 36px;
+            padding: 0;
+            background: rgba(255, 255, 255, 0.06);
+            color: #888;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            font-size: 16px;
+            cursor: pointer;
+            font-family: inherit;
+            transition: all 0.2s;
+        }
+
+        .refresh-btn:hover {
+            background: rgba(255, 255, 255, 0.1);
+            color: #aaa;
+        }
+
+        .refresh-btn.spinning {
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+
+        @media (max-width: 600px) {
+            .refresh-btn { width: 40px; height: 40px; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <div style="display: flex; justify-content: space-between; align-items: center; gap: 8px;">
+                <div>
+                    <h1>Finance Tracker</h1>
+                    <div class="header-meta">
+                        <span id="monthDisplay">May 2026</span>
+                        <span class="sync-indicator" id="syncIndicator">Loading...</span>
+                    </div>
+                </div>
+                <div style="display: flex; gap: 8px; align-items: center;">
+                    <button class="install-btn" id="installBtn">Install App</button>
+                    <button class="refresh-btn" id="refreshBtn" title="Hard refresh—bypass cache">↻</button>
+                </div>
+            </div>
+        </header>
+
+        <div class="tabs">
+            <button class="tab-btn active" data-tab="dashboard">Dashboard</button>
+            <button class="tab-btn" data-tab="expenses">Expenses</button>
+            <button class="tab-btn" data-tab="income">Income</button>
+            <button class="tab-btn" data-tab="payouts">Team Payouts</button>
+        </div>
+
+        <!-- Dashboard -->
+        <div id="dashboard" class="tab-content active">
+            <div id="dashboardSummary"></div>
+            <div class="dashboard-grid">
+                <div class="card">
+                    <div class="card-title">Expenses by Category</div>
+                    <div id="expenseSummary"></div>
+                </div>
+                <div class="card">
+                    <div class="card-title">Income by Client</div>
+                    <div id="incomeSummary"></div>
+                </div>
+                <div class="card">
+                    <div class="card-title">Team Payouts</div>
+                    <div id="payoutsSummary"></div>
+                </div>
+            </div>
+            <div class="card">
+                <div class="card-title">Daily Spend Trend</div>
+                <div class="chart-container">
+                    <canvas id="trendChart"></canvas>
+                </div>
+            </div>
+            <div class="dashboard-grid">
+                <div class="card">
+                    <div class="card-title">Top 3 Expense Categories</div>
+                    <div id="topCategoriesSummary"></div>
+                </div>
+                <div class="card">
+                    <div class="card-title">Pending vs Paid</div>
+                    <div id="pendingPaidSummary"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Expenses -->
+        <div id="expenses" class="tab-content">
+            <div class="expenses-header">
+                <div class="summary-bar" id="expenseSummaryBar"></div>
+                <button id="filterPendingBtn" class="filter-btn">Show Pending Only</button>
+            </div>
+            <div class="data-list" id="expensesList"></div>
+        </div>
+
+        <!-- Income -->
+        <div id="income" class="tab-content">
+            <div class="summary-bar" id="incomeSummaryBar"></div>
+            <div class="data-list" id="incomeList"></div>
+            <button class="add-item-btn" id="addIncomeBtn" style="margin-top: 12px;">+ Add Income Project</button>
+        </div>
+
+        <!-- Team Payouts -->
+        <div id="payouts" class="tab-content">
+            <div class="summary-bar" id="payoutsSummaryBar"></div>
+            <div id="payoutsList"></div>
+            <button class="add-item-btn" id="addPayoutBtn" style="margin-top: 12px;">+ Add Team Payout</button>
+        </div>
+    </div>
+
+    <!-- Row Edit Modal -->
+    <!-- Consolidated Income Editor -->
+    <div id="consolidatedIncomeModal" class="modal">
+        <div class="modal-content" style="max-width: 500px; max-height: 80vh; overflow-y: auto;">
+            <div class="modal-title" id="consolidatedIncomeTitle">Edit Projects</div>
+            <div id="consolidatedIncomeList" style="margin: 16px 0;"></div>
+            <div class="modal-buttons">
+                <button class="modal-btn secondary" id="consolidatedIncomeClose">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="rowEditModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-title" id="rowEditTitle">Edit Item</div>
+            <div class="modal-subtitle" id="rowEditSubtitle"></div>
+
+            <div class="modal-stats" id="rowEditStats"></div>
+
+            <div class="modal-row">
+                <div class="modal-field">
+                    <label class="modal-label">Description</label>
+                    <input type="text" id="editDescription" class="modal-input">
+                </div>
+                <div class="modal-field">
+                    <label class="modal-label">Expected</label>
+                    <input type="number" id="editExpected" class="modal-input" inputmode="decimal" step="0.01">
+                </div>
+            </div>
+            <div class="modal-field">
+                <label class="modal-label">Payday (optional)</label>
+                <input type="text" id="editPayday" class="modal-input" placeholder="e.g., 15 or 1, 15">
+            </div>
+
+            <div class="modal-section-title">Add Daily Entry</div>
+            <div class="quick-add">
+                <div>
+                    <label class="modal-label">Day</label>
+                    <select id="quickAddDay" class="modal-input"></select>
+                </div>
+                <div>
+                    <label class="modal-label">Amount</label>
+                    <input type="number" id="quickAddAmount" class="modal-input" inputmode="decimal" step="0.01" placeholder="0.00">
+                </div>
+                <button class="quick-add-btn" id="quickAddBtn">+ Add</button>
+            </div>
+
+            <div class="modal-section-title">All Days</div>
+            <div class="day-grid" id="dayGrid"></div>
+
+            <div class="modal-buttons">
+                <button class="modal-btn primary" id="rowEditSave">Save</button>
+                <button class="modal-btn danger" id="rowEditDelete">Delete</button>
+                <button class="modal-btn secondary" id="rowEditCancel">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Day Cell Edit (within row edit modal) -->
+    <div id="dayEditModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-title" id="dayEditTitle">Edit Day</div>
+            <div class="modal-field">
+                <label class="modal-label">Amount for that day</label>
+                <input type="number" id="dayEditInput" class="modal-input" inputmode="decimal" step="0.01">
+            </div>
+            <div class="modal-buttons">
+                <button class="modal-btn primary" id="dayEditSave">Save</button>
+                <button class="modal-btn secondary" id="dayEditCancel">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add Item Modal -->
+    <div id="addItemModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-title" id="addItemTitle">Add Item</div>
+            <div class="modal-subtitle" id="addItemSubtitle"></div>
+
+            <!-- For Expenses -->
+            <div id="expenseFields" style="display:none;">
+                <div class="modal-field">
+                    <label class="modal-label">Description / Name</label>
+                    <input type="text" id="newItemDescription" class="modal-input" placeholder="e.g., Internet">
+                </div>
+            </div>
+
+            <!-- For Income -->
+            <div id="incomeFields" style="display:none;">
+                <div class="modal-field">
+                    <label class="modal-label">Client Name</label>
+                    <input type="text" id="newItemClient" class="modal-input" placeholder="e.g., Cinemagic">
+                </div>
+                <div class="modal-field">
+                    <label class="modal-label">Project Name</label>
+                    <input type="text" id="newItemProject" class="modal-input" placeholder="e.g., Int'l Family Drama">
+                </div>
+            </div>
+
+            <div class="modal-row">
+                <div class="modal-field">
+                    <label class="modal-label">Expected Amount</label>
+                    <input type="number" id="newItemExpected" class="modal-input" inputmode="decimal" step="0.01" placeholder="0.00">
+                </div>
+                <div class="modal-field">
+                    <label class="modal-label">Payday (optional)</label>
+                    <input type="text" id="newItemPayday" class="modal-input" placeholder="e.g., 15">
+                </div>
+            </div>
+            <div class="modal-buttons">
+                <button class="modal-btn primary" id="addItemSave">Add</button>
+                <button class="modal-btn secondary" id="addItemCancel">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Payout Modal -->
+    <div id="payoutModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-title">Team Payout</div>
+            <div class="modal-field">
+                <label class="modal-label">Project</label>
+                <input type="text" id="payoutProject" class="modal-input" placeholder="Project name">
+            </div>
+            <div class="modal-row">
+                <div class="modal-field">
+                    <label class="modal-label">Person</label>
+                    <input type="text" id="payoutPerson" class="modal-input" placeholder="Name">
+                </div>
+                <div class="modal-field">
+                    <label class="modal-label">Role</label>
+                    <input type="text" id="payoutRole" class="modal-input" placeholder="Editor, Videographer...">
+                </div>
+            </div>
+            <div class="modal-field">
+                <label class="modal-label">Amount Owed</label>
+                <input type="number" id="payoutAmount" class="modal-input" inputmode="decimal" step="0.01" placeholder="0.00">
+            </div>
+            <div class="modal-buttons">
+                <button class="modal-btn primary" id="payoutSave">Save</button>
+                <button class="modal-btn secondary" id="payoutCancel">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="payoutEditModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-title">Edit Team Payout</div>
+            <div class="modal-field">
+                <label class="modal-label">Project</label>
+                <input type="text" id="editPayoutProject" class="modal-input">
+            </div>
+            <div class="modal-row">
+                <div class="modal-field">
+                    <label class="modal-label">Person</label>
+                    <input type="text" id="editPayoutPerson" class="modal-input">
+                </div>
+                <div class="modal-field">
+                    <label class="modal-label">Role</label>
+                    <input type="text" id="editPayoutRole" class="modal-input">
+                </div>
+            </div>
+            <div class="modal-row">
+                <div class="modal-field">
+                    <label class="modal-label">Amount</label>
+                    <input type="number" id="editPayoutAmount" class="modal-input" inputmode="decimal" step="0.01">
+                </div>
+                <div class="modal-field">
+                    <label class="modal-label">Status</label>
+                    <select id="editPayoutStatus" class="modal-input">
+                        <option value="owed">Owed</option>
+                        <option value="paid">Paid</option>
+                    </select>
+                </div>
+            </div>
+            <div class="modal-row">
+                <div class="modal-field">
+                    <label class="modal-label">Entry Date</label>
+                    <input type="date" id="editPayoutDateEntry" class="modal-input">
+                </div>
+                <div class="modal-field">
+                    <label class="modal-label">Payment Date</label>
+                    <input type="date" id="editPayoutDatePaid" class="modal-input">
+                </div>
+            </div>
+            <div class="modal-buttons">
+                <button class="modal-btn primary" id="payoutEditSave">Save</button>
+                <button class="modal-btn secondary" id="payoutEditCancel">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="version-badge" id="versionBadge">v0.2 · 2026-05-13</div>
+    <div class="toast" id="toast">Saved</div>
+
+    <script>
+        const VERSION = 'v0.2';
+        const DEPLOY_DATE = '2026-05-13';
+        const API_URL = 'api.php';
+        const PENDING_TRACKER_API = '/api.php';
+        const AUTH_TOKEN = 'xZwQp8mKL9cVf2nRoJ4tYsH6bGuA5dE';
+
+        let appData = { month: '2026-05', expenses: {}, income: [], payouts: [] };
+        let editingRow = null;        // { type: 'expense'|'income', category, itemIdx }
+        let editingDayIdx = null;
+        let editingPayoutIdx = null;  // for delete
+        let addingTo = null;          // { type, category }
+        let lastModalOpenedAt = 0;
+        let pollTimer = null;
+        let showPendingOnly = false;  // expenses filter
+        let importedIds = new Set();
+
+        // ---- Init ----
+        document.addEventListener('DOMContentLoaded', async () => {
+            registerSW();
+            document.getElementById('versionBadge').textContent = `${VERSION} · ${DEPLOY_DATE}`;
+            setupTabs();
+            setupListeners();
+            populateDayDropdown();
+            await loadData();
+            renderAll();
+            pollPendingTracker();
+            pollTimer = setInterval(pollPendingTracker, 10000);
+        });
+
+        let installPrompt = null;
+
+        async function registerSW() {
+            if (!('serviceWorker' in navigator)) return;
+            try {
+                const reg = await navigator.serviceWorker.register('sw.js');
+                reg.addEventListener('updatefound', () => {
+                    const newWorker = reg.installing;
+                    newWorker.addEventListener('statechange', () => {
+                        if (newWorker.state === 'activated') {
+                            showToast('Update available—refresh to get latest', 'info');
+                        }
+                    });
+                });
+            } catch (e) { console.log('SW failed:', e); }
+        }
+
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault();
+            installPrompt = e;
+            updateInstallButton();
+        });
+
+        function promptInstall() {
+            if (!installPrompt) return;
+            installPrompt.prompt();
+            installPrompt.userChoice.then((choiceResult) => {
+                if (choiceResult.outcome === 'accepted') {
+                    showToast('Installing app...', 'success');
+                }
+                installPrompt = null;
+                updateInstallButton();
+            });
+        }
+
+        window.addEventListener('appinstalled', () => {
+            showToast('App installed successfully!', 'success');
+            installPrompt = null;
+            updateInstallButton();
+        });
+
+        // Online/offline detection
+        window.addEventListener('online', () => {
+            updateSync('synced');
+            loadData();
+            showToast('Back online—syncing...', 'success');
+        });
+
+        window.addEventListener('offline', () => {
+            updateSync('offline');
+            showToast('Offline—using cached data', 'info');
+        });
+
+        function setupTabs() {
+            document.querySelectorAll('.tab-btn').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const tab = btn.dataset.tab;
+                    document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+                    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+                    document.getElementById(tab).classList.add('active');
+                    btn.classList.add('active');
+                });
+            });
+        }
+
+        function populateDayDropdown() {
+            const sel = document.getElementById('quickAddDay');
+            const days = ['Fri','Sat','Sun','Mon','Tue','Wed','Thu','Fri','Sat','Sun','Mon','Tue','Wed','Thu','Fri','Sat','Sun','Mon','Tue','Wed','Thu','Fri','Sat','Sun','Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+            sel.innerHTML = days.map((d, i) => `<option value="${i}">Day ${i + 1} (${d})</option>`).join('');
+            const today = new Date();
+            if (today.getFullYear() === 2026 && today.getMonth() === 4) {
+                sel.value = today.getDate() - 1;
+            }
+        }
+
+        function setupListeners() {
+            // Close modal on backdrop click (with iOS ghost-click guard)
+            ['rowEditModal', 'dayEditModal', 'addItemModal', 'payoutModal', 'payoutEditModal', 'consolidatedIncomeModal'].forEach(id => {
+                document.getElementById(id).addEventListener('click', (e) => {
+                    if (e.target.id === id && Date.now() - lastModalOpenedAt > 400) {
+                        closeModal(id);
+                    }
+                });
+            });
+
+            document.getElementById('rowEditSave').addEventListener('click', saveRowEdit);
+            document.getElementById('rowEditDelete').addEventListener('click', deleteRow);
+            document.getElementById('rowEditCancel').addEventListener('click', () => closeModal('rowEditModal'));
+            document.getElementById('quickAddBtn').addEventListener('click', quickAddDailyEntry);
+
+            document.getElementById('dayEditSave').addEventListener('click', saveDayEdit);
+            document.getElementById('dayEditCancel').addEventListener('click', () => closeModal('dayEditModal'));
+
+            document.getElementById('addItemSave').addEventListener('click', saveNewItem);
+            document.getElementById('addItemCancel').addEventListener('click', () => closeModal('addItemModal'));
+            document.getElementById('consolidatedIncomeClose').addEventListener('click', () => closeModal('consolidatedIncomeModal'));
+
+            document.getElementById('addIncomeBtn').addEventListener('click', () => openAddItemModal({ type: 'income' }));
+            document.getElementById('addPayoutBtn').addEventListener('click', openPayoutModal);
+
+            document.getElementById('filterPendingBtn').addEventListener('click', () => {
+                showPendingOnly = !showPendingOnly;
+                document.getElementById('filterPendingBtn').classList.toggle('active', showPendingOnly);
+                renderExpenses();
+            });
+
+            document.getElementById('payoutSave').addEventListener('click', saveNewPayout);
+            document.getElementById('payoutCancel').addEventListener('click', () => closeModal('payoutModal'));
+            document.getElementById('payoutEditSave').addEventListener('click', savePayoutEdit);
+            document.getElementById('payoutEditCancel').addEventListener('click', () => closeModal('payoutEditModal'));
+
+            document.getElementById('installBtn').addEventListener('click', promptInstall);
+            document.getElementById('refreshBtn').addEventListener('click', hardRefresh);
+        }
+
+        async function hardRefresh() {
+            const btn = document.getElementById('refreshBtn');
+            btn.classList.add('spinning');
+            try {
+                if ('caches' in window) {
+                    const cacheNames = await caches.keys();
+                    await Promise.all(cacheNames.map(name => caches.delete(name)));
+                }
+                updateSync('syncing');
+                await new Promise(r => setTimeout(r, 800));
+                window.location.reload(true);
+            } catch (e) {
+                console.error('Refresh failed:', e);
+                btn.classList.remove('spinning');
+                showToast('Refresh failed', 'error');
+            }
+        }
+
+        // Show install button when install prompt is available
+        function updateInstallButton() {
+            if (installPrompt) {
+                document.getElementById('installBtn').classList.add('show');
+            } else {
+                document.getElementById('installBtn').classList.remove('show');
+            }
+        }
+
+        function openModal(id) {
+            lastModalOpenedAt = Date.now();
+            // Defer activation 1 frame to let click event finish bubbling (iOS ghost-click fix)
+            requestAnimationFrame(() => {
+                document.getElementById(id).classList.add('active');
+            });
+        }
+
+        function closeModal(id) {
+            document.getElementById(id).classList.remove('active');
+        }
+
+        // ---- Data load/save ----
+        async function loadData() {
+            updateSync('syncing');
+            try {
+                const r = await fetch(API_URL);
+                if (!r.ok) throw new Error('load failed');
+                appData = await r.json();
+                normalizeData();
+                updateSync('synced');
+            } catch (e) {
+                console.log('Load fail, trying cache:', e);
+                const cached = localStorage.getItem('financeData');
+                if (cached) {
+                    appData = JSON.parse(cached);
+                    normalizeData();
+                    updateSync('offline');
+                } else {
+                    try {
+                        const r = await fetch('data-seed.json');
+                        appData = await r.json();
+                        normalizeData();
+                        updateSync('offline');
+                    } catch (e2) {
+                        updateSync('error');
+                    }
+                }
+            }
+        }
+
+        function normalizeData() {
+            if (!appData.expenses) appData.expenses = {};
+            if (!appData.income) appData.income = [];
+            if (!appData.payouts) appData.payouts = [];
+            if (!appData.importedIds) appData.importedIds = [];
+            importedIds = new Set(appData.importedIds);
+
+            Object.values(appData.expenses).forEach(items => {
+                items.forEach(item => {
+                    if (!Array.isArray(item.days) || item.days.length !== 31) {
+                        item.days = Array.from({ length: 31 }, (_, i) => (item.days && item.days[i]) || 0);
+                    }
+                    item.days = item.days.map(v => Number(v) || 0);
+                    recalcItem(item);
+                });
+            });
+
+            appData.income.forEach(p => {
+                if (!Array.isArray(p.days) || p.days.length !== 31) {
+                    p.days = Array.from({ length: 31 }, (_, i) => (p.days && p.days[i]) || 0);
+                }
+                p.days = p.days.map(v => Number(v) || 0);
+                recalcIncome(p);
+            });
+        }
+
+        function recalcItem(item) {
+            item.paid = item.days.reduce((s, v) => s + v, 0);
+            item.remaining = (item.expected || 0) - item.paid;
+            item.percentPaid = item.expected > 0 ? (item.paid / item.expected) * 100 : 0;
+        }
+
+        function recalcIncome(p) {
+            p.earned = p.days.reduce((s, v) => s + v, 0);
+            p.remaining = (p.expected || 0) - p.earned;
+            p.percentEarned = p.expected > 0 ? (p.earned / p.expected) * 100 : 0;
+        }
+
+        async function saveData(showToast = true) {
+            localStorage.setItem('financeData', JSON.stringify(appData));
+            updateSync('syncing');
+            try {
+                const r = await fetch(API_URL, {
+                    method: 'POST',
+                    headers: { 'X-Auth': AUTH_TOKEN, 'Content-Type': 'application/json' },
+                    body: JSON.stringify(appData)
+                });
+                if (r.ok) {
+                    updateSync('synced');
+                    if (showToast) toast('Saved');
+                } else {
+                    updateSync('error');
+                }
+            } catch (e) {
+                console.log('Save fail:', e);
+                updateSync('error');
+            }
+        }
+
+        function updateSync(status) {
+            const el = document.getElementById('syncIndicator');
+            el.className = `sync-indicator ${status}`;
+            el.textContent = { syncing: 'Syncing', synced: 'Synced', error: 'Error', offline: 'Offline' }[status] || status;
+        }
+
+        function toast(msg) {
+            const t = document.getElementById('toast');
+            t.textContent = msg;
+            t.classList.add('show');
+            setTimeout(() => t.classList.remove('show'), 1500);
+        }
+
+        function fmt(n) {
+            return Number(n || 0).toLocaleString('en', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
+        }
+
+        // ---- Render ----
+        function renderAll() {
+            renderExpenses();
+            renderIncome();
+            renderPayouts();
+            renderDashboard();
+        }
+
+        function calcExpenseTotals() {
+            let expected = 0, paid = 0;
+            Object.values(appData.expenses).forEach(items => {
+                items.forEach(i => { expected += i.expected || 0; paid += i.paid || 0; });
+            });
+            const remaining = expected - paid;
+            const percent = expected > 0 ? (paid / expected) * 100 : 0;
+            return { expected, paid, remaining, percent };
+        }
+
+        function calcIncomeTotals() {
+            let expected = 0, earned = 0;
+            appData.income.forEach(p => { expected += p.expected || 0; earned += p.earned || 0; });
+            const remaining = expected - earned;
+            const percent = expected > 0 ? (earned / expected) * 100 : 0;
+            return { expected, earned, remaining, percent };
+        }
+
+        function calcPayoutTotals() {
+            let owed = 0, paid = 0;
+            appData.payouts.forEach(p => {
+                if (p.status === 'paid') paid += p.amountOwed;
+                else owed += p.amountOwed;
+            });
+            return { owed, paid, total: owed + paid };
+        }
+
+        function renderExpenses() {
+            const tot = calcExpenseTotals();
+
+            // Calculate pending-only totals
+            let pendingTot = { expected: 0, paid: 0, remaining: 0, percent: 0 };
+            if (showPendingOnly) {
+                Object.values(appData.expenses).forEach(items => {
+                    items.forEach(item => {
+                        if (item.remaining > 0) {
+                            pendingTot.expected += item.expected;
+                            pendingTot.paid += item.paid;
+                            pendingTot.remaining += item.remaining;
+                        }
+                    });
+                });
+                pendingTot.percent = pendingTot.expected > 0 ? (pendingTot.paid / pendingTot.expected) * 100 : 0;
+            }
+
+            const displayTot = showPendingOnly ? pendingTot : tot;
+            document.getElementById('expenseSummaryBar').innerHTML = `
+                <div class="summary-stat">
+                    <div class="summary-stat-label">${showPendingOnly ? 'Pending Budget' : 'Total Budget'}</div>
+                    <div class="summary-stat-value">${fmt(displayTot.expected)}</div>
+                </div>
+                <div class="summary-stat paid">
+                    <div class="summary-stat-label">Paid</div>
+                    <div class="summary-stat-value">${fmt(displayTot.paid)}</div>
+                    <div class="summary-stat-percent">${displayTot.percent.toFixed(1)}%</div>
+                </div>
+                <div class="summary-stat remaining">
+                    <div class="summary-stat-label">Remaining</div>
+                    <div class="summary-stat-value">${fmt(displayTot.remaining)}</div>
+                    <div class="summary-stat-percent">${(100 - displayTot.percent).toFixed(1)}% left</div>
+                </div>
+            `;
+
+            const list = document.getElementById('expensesList');
+            list.innerHTML = '';
+
+            Object.entries(appData.expenses).forEach(([cat, items]) => {
+                // Filter items if pending-only mode
+                const displayItems = showPendingOnly ? items.filter(i => i.remaining > 0) : items;
+                if (displayItems.length === 0) return;
+
+                const catPaid = displayItems.reduce((s, i) => s + i.paid, 0);
+                const catExpected = displayItems.reduce((s, i) => s + i.expected, 0);
+                const catPct = catExpected > 0 ? (catPaid / catExpected) * 100 : 0;
+
+                const block = document.createElement('div');
+                block.className = 'category-block';
+                block.dataset.category = cat;
+                block.dataset.expanded = 'true';
+                block.innerHTML = `
+                    <div class="category-header" role="button" aria-expanded="true" tabindex="0">
+                        <span class="category-arrow">▼</span>
+                        <span class="category-name">${cat}</span>
+                        <span class="category-totals">
+                            <span><span class="paid">${fmt(catPaid)}</span> / ${fmt(catExpected)}</span>
+                            <span>${catPct.toFixed(0)}%</span>
+                        </span>
+                    </div>
+                    <div class="category-content">
+                        <div class="row-list-header">
+                            <div>Item</div>
+                            <div>Expected</div>
+                            <div>Paid</div>
+                            <div>Remaining</div>
+                            <div>%</div>
+                            <div></div>
+                        </div>
+                        <div class="row-list"></div>
+                        <div class="add-item-row">
+                            <button class="add-item-btn" data-category="${cat}">+ Add item to ${cat}</button>
+                        </div>
+                    </div>
+                `;
+
+                const header = block.querySelector('.category-header');
+                const content = block.querySelector('.category-content');
+                const arrow = block.querySelector('.category-arrow');
+
+                header.addEventListener('click', () => {
+                    const expanded = block.dataset.expanded === 'true';
+                    block.dataset.expanded = !expanded;
+                    content.style.display = expanded ? 'none' : 'block';
+                    arrow.style.transform = expanded ? 'rotate(-90deg)' : 'rotate(0deg)';
+                    header.setAttribute('aria-expanded', !expanded);
+                });
+
+                header.addEventListener('keydown', (e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        header.click();
+                    }
+                });
+
+                const rowList = block.querySelector('.row-list');
+                displayItems.forEach((item, displayIdx) => {
+                    const actualIdx = items.indexOf(item);
+                    const row = document.createElement('div');
+                    row.className = 'row';
+                    row.innerHTML = `
+                        <div class="row-description">${item.description}</div>
+                        <div class="row-cell expected">${fmt(item.expected)}</div>
+                        <div class="row-cell paid">${fmt(item.paid)}</div>
+                        <div class="row-cell remaining">${fmt(item.remaining)}</div>
+                        <div class="row-cell percent">${item.percentPaid.toFixed(0)}%</div>
+                        <button class="edit-btn" title="Edit">✏️</button>
+                    `;
+                    row.querySelector('.edit-btn').addEventListener('click', () => {
+                        openRowEditModal({ type: 'expense', category: cat, itemIdx: actualIdx });
+                    });
+                    rowList.appendChild(row);
+                });
+
+                block.querySelector('.add-item-btn').addEventListener('click', (e) => {
+                    openAddItemModal({ type: 'expense', category: e.currentTarget.dataset.category });
+                });
+
+                list.appendChild(block);
+            });
+        }
+
+        function renderIncome() {
+            const tot = calcIncomeTotals();
+            document.getElementById('incomeSummaryBar').innerHTML = `
+                <div class="summary-stat">
+                    <div class="summary-stat-label">Expected Income</div>
+                    <div class="summary-stat-value">${fmt(tot.expected)}</div>
+                </div>
+                <div class="summary-stat paid">
+                    <div class="summary-stat-label">Earned</div>
+                    <div class="summary-stat-value">${fmt(tot.earned)}</div>
+                    <div class="summary-stat-percent">${tot.percent.toFixed(1)}% of expected</div>
+                </div>
+                <div class="summary-stat remaining">
+                    <div class="summary-stat-label">Pending</div>
+                    <div class="summary-stat-value">${fmt(tot.remaining)}</div>
+                    <div class="summary-stat-percent">${(100 - tot.percent).toFixed(1)}% to collect</div>
+                </div>
+            `;
+
+            const list = document.getElementById('incomeList');
+            list.innerHTML = '';
+
+            if (appData.income.length === 0) {
+                list.innerHTML = '<div class="empty-state">No income projects yet. Add one below, or wait for completed projects from the Pending Tracker to auto-import.</div>';
+                return;
+            }
+
+            // Group by base project name (before " — ")
+            const byProject = {};
+            appData.income.forEach((p, idx) => {
+                const baseName = p.projectName.split(' — ')[0];
+                if (!byProject[baseName]) {
+                    byProject[baseName] = { indices: [], expected: 0, earned: 0, remaining: 0 };
+                }
+                byProject[baseName].indices.push(idx);
+                byProject[baseName].expected += p.expected;
+                byProject[baseName].earned += p.earned;
+                byProject[baseName].remaining += p.remaining;
+            });
+
+            const cardsContainer = document.createElement('div');
+            cardsContainer.className = 'income-cards-grid';
+
+            Object.entries(byProject).forEach(([baseName, data]) => {
+                const percentEarned = data.expected > 0 ? (data.earned / data.expected) * 100 : 0;
+                const subCount = data.indices.length;
+                const card = document.createElement('div');
+                card.className = 'income-card';
+                card.innerHTML = `
+                    <div class="income-card-header">
+                        <div class="income-project-name">${baseName}${subCount > 1 ? ` (${subCount} projects)` : ''}</div>
+                        <button class="edit-btn">✏️</button>
+                    </div>
+                    <div class="income-card-stats">
+                        <div class="income-stat">
+                            <div class="stat-label">Expected</div>
+                            <div class="stat-value">${fmt(data.expected)}</div>
+                        </div>
+                        <div class="income-stat">
+                            <div class="stat-label">Earned</div>
+                            <div class="stat-value earned">${fmt(data.earned)}</div>
+                        </div>
+                        <div class="income-stat">
+                            <div class="stat-label">Pending</div>
+                            <div class="stat-value pending">${fmt(data.remaining)}</div>
+                        </div>
+                    </div>
+                    <div class="income-progress-bar">
+                        <div class="progress-fill" style="width: ${percentEarned}%"></div>
+                    </div>
+                    <div class="income-percent">${percentEarned.toFixed(0)}% collected</div>
+                `;
+                card.querySelector('.edit-btn').addEventListener('click', () => {
+                    if (subCount > 1) {
+                        openConsolidatedIncomeEditor(baseName, data.indices);
+                    } else {
+                        openRowEditModal({ type: 'income', itemIdx: data.indices[0] });
+                    }
+                });
+                cardsContainer.appendChild(card);
+            });
+            list.appendChild(cardsContainer);
+        }
+
+        function renderPayouts() {
+            const tot = calcPayoutTotals();
+            document.getElementById('payoutsSummaryBar').innerHTML = `
+                <div class="summary-stat">
+                    <div class="summary-stat-label">Total</div>
+                    <div class="summary-stat-value">${fmt(tot.total)}</div>
+                </div>
+                <div class="summary-stat paid">
+                    <div class="summary-stat-label">Paid</div>
+                    <div class="summary-stat-value">${fmt(tot.paid)}</div>
+                </div>
+                <div class="summary-stat remaining">
+                    <div class="summary-stat-label">Owed</div>
+                    <div class="summary-stat-value">${fmt(tot.owed)}</div>
+                </div>
+            `;
+
+            const list = document.getElementById('payoutsList');
+            list.innerHTML = '';
+            if (appData.payouts.length === 0) {
+                list.innerHTML = '<div class="empty-state">No team payouts yet. Add one below.</div>';
+                return;
+            }
+
+            // Group payouts by person
+            const byPerson = {};
+            appData.payouts.forEach((p, i) => {
+                if (!byPerson[p.person]) byPerson[p.person] = [];
+                byPerson[p.person].push({ p, i });
+            });
+
+            // Sort people by name
+            const people = Object.keys(byPerson).sort();
+
+            people.forEach(personName => {
+                const personPayouts = byPerson[personName];
+                let personOwed = 0, personPaid = 0;
+                personPayouts.forEach(({ p }) => {
+                    if (p.status === 'owed') personOwed += p.amountOwed;
+                    else personPaid += p.amountOwed;
+                });
+
+                // Create team member card
+                const memberCard = document.createElement('div');
+                memberCard.className = 'team-member-card';
+                memberCard.innerHTML = `
+                    <div class="team-member-header">
+                        <div class="team-member-name">${personName}</div>
+                        <div class="team-member-stats">
+                            <span class="stat-badge owed">Owed: ${fmt(personOwed)}</span>
+                            <span class="stat-badge paid">Paid: ${fmt(personPaid)}</span>
+                        </div>
+                    </div>
+                    <div class="team-member-payouts"></div>
+                `;
+
+                const payoutsContainer = memberCard.querySelector('.team-member-payouts');
+                personPayouts.forEach(({ p, i }) => {
+                    const isPaid = p.status === 'paid';
+                    const payout = document.createElement('div');
+                    payout.className = `team-payout-item ${isPaid ? 'paid' : 'owed'}`;
+                    const dateEntry = p.dateEntry ? new Date(p.dateEntry).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : '(no date)';
+                    const datePaidStr = p.datePaid ? new Date(p.datePaid).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : '(pending)';
+                    payout.innerHTML = `
+                        <div class="payout-details">
+                            <div style="display: flex; justify-content: space-between; align-items: center; gap: 8px;">
+                                <div class="payout-project">${p.projectName || '(no project)'}</div>
+                            </div>
+                            <div style="display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-top: 4px; font-size: 11px; color: #888;">
+                                <div><strong>Entry:</strong> ${dateEntry}</div>
+                                <div><strong>Paid:</strong> ${datePaidStr}</div>
+                            </div>
+                            <div class="payout-amount">${fmt(p.amountOwed)}</div>
+                        </div>
+                        <div class="payout-actions">
+                            <button class="payout-btn edit" data-edit="${i}">✏️</button>
+                            <button class="payout-btn ${isPaid ? 'mark-owed' : 'mark-paid'}" data-idx="${i}">
+                                ${isPaid ? 'Mark Owed' : 'Mark Paid'}
+                            </button>
+                            <button class="payout-btn danger" data-del="${i}">×</button>
+                        </div>
+                    `;
+                    payout.querySelector('[data-edit]').addEventListener('click', (e) => {
+                        openPayoutEditModal(parseInt(e.currentTarget.dataset.edit));
+                    });
+                    payout.querySelector('[data-idx]').addEventListener('click', (e) => {
+                        togglePayoutStatus(parseInt(e.currentTarget.dataset.idx));
+                    });
+                    payout.querySelector('[data-del]').addEventListener('click', (e) => {
+                        if (confirm('Delete this payout?')) {
+                            appData.payouts.splice(parseInt(e.currentTarget.dataset.del), 1);
+                            saveData();
+                            renderAll();
+                        }
+                    });
+                    payoutsContainer.appendChild(payout);
+                });
+
+                list.appendChild(memberCard);
+            });
+        }
+
+        function renderDashboard() {
+            const expTot = calcExpenseTotals();
+            const incTot = calcIncomeTotals();
+            const payTot = calcPayoutTotals();
+            const net = incTot.earned - expTot.paid - payTot.paid;
+
+            // Determine status colors
+            const incomeStatus = incTot.percent >= 75 ? '#76d776' : (incTot.percent >= 50 ? '#ffc107' : '#f44336');
+            const expenseStatus = expTot.percent <= 75 ? '#76d776' : (expTot.percent <= 90 ? '#ffc107' : '#f44336');
+
+            document.getElementById('dashboardSummary').innerHTML = `
+                <div class="summary-bar">
+                    <div class="summary-stat">
+                        <div class="summary-stat-label">Income Earned</div>
+                        <div class="summary-stat-value" style="color: ${incomeStatus}">${fmt(incTot.earned)}</div>
+                        <div class="summary-stat-percent">${incTot.percent.toFixed(0)}% of ${fmt(incTot.expected)}</div>
+                        <div style="height: 6px; background: rgba(255,255,255,0.06); border-radius: 3px; margin-top: 8px; overflow: hidden;">
+                            <div style="height: 100%; background: ${incomeStatus}; width: ${Math.min(100, incTot.percent)}%; border-radius: 3px;"></div>
+                        </div>
+                    </div>
+                    <div class="summary-stat">
+                        <div class="summary-stat-label">Expenses Paid</div>
+                        <div class="summary-stat-value" style="color: ${expenseStatus}">${fmt(expTot.paid)}</div>
+                        <div class="summary-stat-percent">${expTot.percent.toFixed(0)}% of ${fmt(expTot.expected)}</div>
+                        <div style="height: 6px; background: rgba(255,255,255,0.06); border-radius: 3px; margin-top: 8px; overflow: hidden;">
+                            <div style="height: 100%; background: ${expenseStatus}; width: ${Math.min(100, expTot.percent)}%; border-radius: 3px;"></div>
+                        </div>
+                    </div>
+                    <div class="summary-stat">
+                        <div class="summary-stat-label">Net Balance</div>
+                        <div class="summary-stat-value" style="color: ${net >= 0 ? '#76d776' : '#f44336'}">${fmt(net)}</div>
+                        <div class="summary-stat-percent">${fmt(payTot.owed)} owed to team</div>
+                    </div>
+                </div>
+            `;
+
+            // Per-category
+            const exp = document.getElementById('expenseSummary');
+            exp.innerHTML = '';
+            Object.entries(appData.expenses).forEach(([cat, items]) => {
+                const paid = items.reduce((s, i) => s + i.paid, 0);
+                const expected = items.reduce((s, i) => s + i.expected, 0);
+                const pct = expected > 0 ? Math.min(100, (paid / expected) * 100) : 0;
+                exp.innerHTML += `
+                    <div class="progress-item">
+                        <div class="progress-label">
+                            <span class="progress-label-name">${cat}</span>
+                            <span class="progress-label-value">${fmt(paid)} / ${fmt(expected)} · ${pct.toFixed(0)}%</span>
+                        </div>
+                        <div class="progress-bar"><div class="progress-fill" style="width: ${pct}%"></div></div>
+                    </div>
+                `;
+            });
+
+            const inc = document.getElementById('incomeSummary');
+            inc.innerHTML = '';
+            if (appData.income.length === 0) {
+                inc.innerHTML = '<div class="empty-state">No projects yet</div>';
+            } else {
+                // Group income by client name
+                const byClient = {};
+                appData.income.forEach(p => {
+                    const clientName = p.projectName.split(' — ')[0];
+                    if (!byClient[clientName]) {
+                        byClient[clientName] = { earned: 0, expected: 0 };
+                    }
+                    byClient[clientName].earned += p.earned;
+                    byClient[clientName].expected += p.expected;
+                });
+
+                // Display consolidated by client
+                Object.entries(byClient).forEach(([clientName, data]) => {
+                    const pct = data.expected > 0 ? Math.min(100, (data.earned / data.expected) * 100) : 0;
+                    inc.innerHTML += `
+                        <div class="progress-item">
+                            <div class="progress-label">
+                                <span class="progress-label-name">${clientName}</span>
+                                <span class="progress-label-value">${fmt(data.earned)} / ${fmt(data.expected)} · ${pct.toFixed(0)}%</span>
+                            </div>
+                            <div class="progress-bar"><div class="progress-fill" style="width: ${pct}%"></div></div>
+                        </div>
+                    `;
+                });
+            }
+
+            const payEl = document.getElementById('payoutsSummary');
+            const openCount = appData.payouts.filter(p => p.status === 'owed').length;
+            payEl.innerHTML = `
+                <div class="progress-item">
+                    <div class="progress-label">
+                        <span class="progress-label-name">Owed</span>
+                        <span class="progress-label-value" style="color: #ffa726">${fmt(payTot.owed)} (${openCount} open)</span>
+                    </div>
+                </div>
+                <div class="progress-item">
+                    <div class="progress-label">
+                        <span class="progress-label-name">Paid</span>
+                        <span class="progress-label-value" style="color: #76d776">${fmt(payTot.paid)}</span>
+                    </div>
+                </div>
+            `;
+
+            // Top 3 Expense Categories
+            const catTotals = [];
+            Object.entries(appData.expenses).forEach(([cat, items]) => {
+                const paid = items.reduce((s, i) => s + i.paid, 0);
+                catTotals.push({ cat, paid });
+            });
+            catTotals.sort((a, b) => b.paid - a.paid);
+            const topCats = catTotals.slice(0, 3);
+            const topCatsEl = document.getElementById('topCategoriesSummary');
+            topCatsEl.innerHTML = topCats.map(c => `
+                <div class="progress-item">
+                    <div class="progress-label">
+                        <span class="progress-label-name">${c.cat}</span>
+                        <span class="progress-label-value">${fmt(c.paid)}</span>
+                    </div>
+                </div>
+            `).join('');
+
+            // Pending vs Paid Summary
+            const expensePending = Object.values(appData.expenses).flat().reduce((s, i) => s + (i.remaining || 0), 0);
+            const expensePaid = expTot.paid;
+            const payoutOwed = payTot.owed;
+            const payoutPaid = payTot.paid;
+            const pendingPaidEl = document.getElementById('pendingPaidSummary');
+            pendingPaidEl.innerHTML = `
+                <div class="progress-item">
+                    <div class="progress-label">
+                        <span class="progress-label-name">Expenses Pending</span>
+                        <span class="progress-label-value" style="color: #ffc107">${fmt(expensePending)}</span>
+                    </div>
+                </div>
+                <div class="progress-item">
+                    <div class="progress-label">
+                        <span class="progress-label-name">Expenses Paid</span>
+                        <span class="progress-label-value" style="color: #76d776">${fmt(expensePaid)}</span>
+                    </div>
+                </div>
+                <div class="progress-item">
+                    <div class="progress-label">
+                        <span class="progress-label-name">Team Owed</span>
+                        <span class="progress-label-value" style="color: #ffa726">${fmt(payoutOwed)}</span>
+                    </div>
+                </div>
+                <div class="progress-item">
+                    <div class="progress-label">
+                        <span class="progress-label-name">Team Paid</span>
+                        <span class="progress-label-value" style="color: #76d776">${fmt(payoutPaid)}</span>
+                    </div>
+                </div>
+            `;
+
+            renderTrendChart();
+        }
+
+        let trendChart = null;
+        function renderTrendChart() {
+            const ctx = document.getElementById('trendChart');
+            if (!ctx) return;
+            const daily = [];
+            const cum = [];
+            let acc = 0;
+            for (let d = 0; d < 31; d++) {
+                let dayTotal = 0;
+                Object.values(appData.expenses).forEach(items => {
+                    items.forEach(i => { dayTotal += i.days[d] || 0; });
+                });
+                daily.push(dayTotal);
+                acc += dayTotal;
+                cum.push(acc);
+            }
+
+            if (trendChart) trendChart.destroy();
+            trendChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: Array.from({ length: 31 }, (_, i) => i + 1),
+                    datasets: [
+                        {
+                            label: 'Cumulative Spend',
+                            data: cum,
+                            borderColor: '#76d776',
+                            backgroundColor: 'rgba(118, 215, 118, 0.1)',
+                            tension: 0.3,
+                            fill: true,
+                            pointRadius: 2
+                        },
+                        {
+                            label: 'Daily Spend',
+                            data: daily,
+                            borderColor: '#ffa726',
+                            backgroundColor: 'rgba(255, 167, 38, 0.05)',
+                            tension: 0.3,
+                            pointRadius: 2
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { labels: { color: '#888' } } },
+                    scales: {
+                        y: { ticks: { color: '#888' }, grid: { color: 'rgba(255,255,255,0.04)' }, beginAtZero: true },
+                        x: { ticks: { color: '#888' }, grid: { color: 'rgba(255,255,255,0.04)' } }
+                    }
+                }
+            });
+        }
+
+        // ---- Row Edit Modal ----
+        function getEditingItem() {
+            if (!editingRow) return null;
+            if (editingRow.type === 'expense') return appData.expenses[editingRow.category][editingRow.itemIdx];
+            return appData.income[editingRow.itemIdx];
+        }
+
+        function openRowEditModal(ctx) {
+            editingRow = ctx;
+            const item = getEditingItem();
+            if (!item) return;
+
+            const name = item.description || item.projectName;
+            document.getElementById('rowEditTitle').textContent = name;
+            document.getElementById('rowEditSubtitle').textContent =
+                ctx.type === 'expense' ? `Expense · ${ctx.category}` : 'Income Project';
+
+            document.getElementById('editDescription').value = name;
+            document.getElementById('editExpected').value = item.expected || 0;
+            document.getElementById('editPayday').value = item.payday == null ? '' : item.payday;
+
+            renderRowEditStats();
+            renderDayGrid();
+            document.getElementById('quickAddAmount').value = '';
+            openModal('rowEditModal');
+        }
+
+        function renderRowEditStats() {
+            const item = getEditingItem();
+            if (!item) return;
+            const isExpense = editingRow.type === 'expense';
+            const paid = isExpense ? item.paid : item.earned;
+            const pct = isExpense ? item.percentPaid : item.percentEarned;
+            document.getElementById('rowEditStats').innerHTML = `
+                <div class="modal-stat">
+                    <div class="modal-stat-label">${isExpense ? 'Paid' : 'Earned'}</div>
+                    <div class="modal-stat-value paid">${fmt(paid)}</div>
+                </div>
+                <div class="modal-stat">
+                    <div class="modal-stat-label">Remaining</div>
+                    <div class="modal-stat-value remaining">${fmt(item.remaining)}</div>
+                </div>
+                <div class="modal-stat">
+                    <div class="modal-stat-label">% ${isExpense ? 'Paid' : 'Earned'}</div>
+                    <div class="modal-stat-value percent">${pct.toFixed(0)}%</div>
+                </div>
+            `;
+        }
+
+        function renderDayGrid() {
+            const item = getEditingItem();
+            if (!item) return;
+            const grid = document.getElementById('dayGrid');
+            grid.innerHTML = '';
+            for (let d = 0; d < 31; d++) {
+                const val = item.days[d] || 0;
+                const cell = document.createElement('button');
+                cell.type = 'button';
+                cell.className = `day-cell ${val > 0 ? 'has-value' : ''}`;
+                cell.innerHTML = `
+                    <div class="day-cell-num">${d + 1}</div>
+                    <div class="day-cell-value ${val === 0 ? 'empty' : ''}">${val > 0 ? fmt(val) : '—'}</div>
+                `;
+                cell.addEventListener('click', () => openDayEdit(d));
+                grid.appendChild(cell);
+            }
+        }
+
+        function openDayEdit(dayIdx) {
+            const item = getEditingItem();
+            if (!item) return;
+            editingDayIdx = dayIdx;
+            document.getElementById('dayEditTitle').textContent = `Day ${dayIdx + 1} — ${item.description || item.projectName}`;
+            document.getElementById('dayEditInput').value = item.days[dayIdx] || '';
+            openModal('dayEditModal');
+            setTimeout(() => document.getElementById('dayEditInput').focus(), 320);
+        }
+
+        function saveDayEdit() {
+            const item = getEditingItem();
+            if (!item || editingDayIdx == null) return;
+            const v = parseFloat(document.getElementById('dayEditInput').value) || 0;
+            item.days[editingDayIdx] = v;
+            if (editingRow.type === 'expense') recalcItem(item);
+            else recalcIncome(item);
+            renderDayGrid();
+            renderRowEditStats();
+            saveData();
+            renderAll();
+            closeModal('dayEditModal');
+            editingDayIdx = null;
+        }
+
+        function quickAddDailyEntry() {
+            const item = getEditingItem();
+            if (!item) return;
+            const day = parseInt(document.getElementById('quickAddDay').value);
+            const amt = parseFloat(document.getElementById('quickAddAmount').value);
+            if (!Number.isFinite(amt) || amt === 0) { toast('Enter an amount'); return; }
+            item.days[day] = (item.days[day] || 0) + amt;
+            if (editingRow.type === 'expense') recalcItem(item);
+            else recalcIncome(item);
+            document.getElementById('quickAddAmount').value = '';
+            renderDayGrid();
+            renderRowEditStats();
+            saveData();
+            renderAll();
+        }
+
+        function saveRowEdit() {
+            const item = getEditingItem();
+            if (!item) return;
+            const desc = document.getElementById('editDescription').value.trim();
+            const exp = parseFloat(document.getElementById('editExpected').value) || 0;
+            const payday = document.getElementById('editPayday').value.trim() || null;
+            if (!desc) { toast('Description required'); return; }
+            if (editingRow.type === 'expense') {
+                item.description = desc;
+                item.expected = exp;
+                item.payday = payday;
+                recalcItem(item);
+            } else {
+                item.projectName = desc;
+                item.expected = exp;
+                item.payday = payday;
+                recalcIncome(item);
+            }
+            saveData();
+            renderAll();
+            closeModal('rowEditModal');
+        }
+
+        function deleteRow() {
+            const item = getEditingItem();
+            if (!item) return;
+            const name = item.description || item.projectName;
+            if (!confirm(`Delete "${name}"? This removes all its daily entries.`)) return;
+            if (editingRow.type === 'expense') {
+                appData.expenses[editingRow.category].splice(editingRow.itemIdx, 1);
+            } else {
+                appData.income.splice(editingRow.itemIdx, 1);
+            }
+            saveData();
+            renderAll();
+            closeModal('rowEditModal');
+        }
+
+        // ---- Add Item Modal ----
+        function openAddItemModal(ctx) {
+            addingTo = ctx;
+            if (ctx.type === 'expense') {
+                document.getElementById('addItemTitle').textContent = 'Add Expense Item';
+                document.getElementById('addItemSubtitle').textContent = `Category: ${ctx.category}`;
+                document.getElementById('expenseFields').style.display = 'block';
+                document.getElementById('incomeFields').style.display = 'none';
+                document.getElementById('newItemDescription').value = '';
+                document.getElementById('newItemDescription').focus();
+            } else {
+                document.getElementById('addItemTitle').textContent = 'Add Income Project';
+                document.getElementById('addItemSubtitle').textContent = '';
+                document.getElementById('expenseFields').style.display = 'none';
+                document.getElementById('incomeFields').style.display = 'block';
+                document.getElementById('newItemClient').value = '';
+                document.getElementById('newItemProject').value = '';
+                document.getElementById('newItemClient').focus();
+            }
+            document.getElementById('newItemExpected').value = '';
+            document.getElementById('newItemPayday').value = '';
+            openModal('addItemModal');
+        }
+
+        function saveNewItem() {
+            if (!addingTo) return;
+            const exp = parseFloat(document.getElementById('newItemExpected').value) || 0;
+            const payday = document.getElementById('newItemPayday').value.trim() || null;
+
+            const item = {
+                id: 'item-' + Date.now(),
+                expected: exp,
+                payday: payday,
+                days: Array(31).fill(0),
+                paid: 0,
+                earned: 0,
+                remaining: exp,
+                percentPaid: 0,
+                percentEarned: 0
+            };
+
+            if (addingTo.type === 'expense') {
+                const desc = document.getElementById('newItemDescription').value.trim();
+                if (!desc) { toast('Description required'); return; }
+                item.description = desc;
+                appData.expenses[addingTo.category].push(item);
+            } else {
+                const client = document.getElementById('newItemClient').value.trim();
+                const project = document.getElementById('newItemProject').value.trim();
+                if (!client || !project) { toast('Client and project names required'); return; }
+                item.projectName = client && project ? `${client} — ${project}` : (client || project);
+                appData.income.push(item);
+            }
+            saveData();
+            renderAll();
+            closeModal('addItemModal');
+            addingTo = null;
+        }
+
+        // ---- Payouts ----
+        function openPayoutModal() {
+            document.getElementById('payoutProject').value = '';
+            document.getElementById('payoutPerson').value = '';
+            document.getElementById('payoutRole').value = '';
+            document.getElementById('payoutAmount').value = '';
+            openModal('payoutModal');
+        }
+
+        function saveNewPayout() {
+            const project = document.getElementById('payoutProject').value.trim();
+            const person = document.getElementById('payoutPerson').value.trim();
+            const role = document.getElementById('payoutRole').value.trim();
+            const amt = parseFloat(document.getElementById('payoutAmount').value) || 0;
+            if (!project || !person || amt <= 0) { toast('Project, person, and amount required'); return; }
+            const today = new Date().toISOString().split('T')[0];
+            appData.payouts.push({
+                id: 'payout-' + Date.now(),
+                projectName: project,
+                person, role,
+                amountOwed: amt,
+                dateEntry: today,
+                datePaid: null,
+                status: 'owed'
+            });
+            saveData();
+            renderAll();
+            closeModal('payoutModal');
+        }
+
+        function togglePayoutStatus(idx) {
+            const p = appData.payouts[idx];
+            p.status = p.status === 'owed' ? 'paid' : 'owed';
+            if (p.status === 'paid') {
+                p.datePaid = new Date().toISOString().split('T')[0];
+            } else {
+                p.datePaid = null;
+            }
+            saveData();
+            renderAll();
+        }
+
+        function openConsolidatedIncomeEditor(baseName, indices) {
+            document.getElementById('consolidatedIncomeTitle').textContent = `${baseName} — Edit Projects`;
+            const list = document.getElementById('consolidatedIncomeList');
+            list.innerHTML = '';
+
+            indices.forEach(idx => {
+                const p = appData.income[idx];
+                const item = document.createElement('div');
+                item.style.cssText = 'background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); border-radius: 8px; padding: 12px; margin-bottom: 8px;';
+                item.innerHTML = `
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                        <div style="font-size: 13px; font-weight: 500; color: #fff; flex: 1;">${p.projectName}</div>
+                    </div>
+                    <div style="display: flex; gap: 8px; margin-bottom: 8px;">
+                        <input type="number" value="${p.earned}" placeholder="Amount" step="0.01" style="flex: 1; padding: 6px 8px; background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.12); color: #fff; border-radius: 4px; font-family: inherit;" class="sub-earned" data-idx="${idx}">
+                        <button style="padding: 6px 12px; background: rgba(76, 175, 80, 0.15); color: #76d776; border: 1px solid rgba(76, 175, 80, 0.3); border-radius: 4px; cursor: pointer; font-family: inherit; font-size: 12px;" class="mark-paid" data-idx="${idx}">Mark Paid</button>
+                    </div>
+                    <div style="display: flex; gap: 8px;">
+                        <div style="flex: 1; font-size: 11px; color: #888;">Expected: ${fmt(p.expected)} | Earned: <span class="earned-display">${fmt(p.earned)}</span></div>
+                    </div>
+                `;
+
+                item.querySelector('.sub-earned').addEventListener('input', (e) => {
+                    const val = parseFloat(e.target.value) || 0;
+                    appData.income[idx].earned = val;
+                    appData.income[idx].remaining = Math.max(0, appData.income[idx].expected - val);
+                    appData.income[idx].percentEarned = appData.income[idx].expected > 0 ? (val / appData.income[idx].expected) * 100 : 0;
+                    item.querySelector('.earned-display').textContent = fmt(val);
+                });
+
+                item.querySelector('.mark-paid').addEventListener('click', () => {
+                    appData.income[idx].earned = appData.income[idx].expected;
+                    appData.income[idx].remaining = 0;
+                    appData.income[idx].percentEarned = 100;
+                    item.querySelector('.sub-earned').value = appData.income[idx].expected;
+                    item.querySelector('.earned-display').textContent = fmt(appData.income[idx].expected);
+                    saveData();
+                    renderAll();
+                });
+
+                list.appendChild(item);
+            });
+
+            openModal('consolidatedIncomeModal');
+        }
+
+        function openPayoutEditModal(idx) {
+            editingPayoutIdx = idx;
+            const p = appData.payouts[idx];
+            document.getElementById('editPayoutProject').value = p.projectName || '';
+            document.getElementById('editPayoutPerson').value = p.person || '';
+            document.getElementById('editPayoutRole').value = p.role || '';
+            document.getElementById('editPayoutAmount').value = p.amountOwed || 0;
+            document.getElementById('editPayoutStatus').value = p.status || 'owed';
+            document.getElementById('editPayoutDateEntry').value = p.dateEntry || '';
+            document.getElementById('editPayoutDatePaid').value = p.datePaid || '';
+            openModal('payoutEditModal');
+        }
+
+        function savePayoutEdit() {
+            if (editingPayoutIdx === null) return;
+            const p = appData.payouts[editingPayoutIdx];
+            p.projectName = document.getElementById('editPayoutProject').value.trim();
+            p.person = document.getElementById('editPayoutPerson').value.trim();
+            p.role = document.getElementById('editPayoutRole').value.trim();
+            p.amountOwed = parseFloat(document.getElementById('editPayoutAmount').value) || 0;
+            p.status = document.getElementById('editPayoutStatus').value;
+            p.dateEntry = document.getElementById('editPayoutDateEntry').value || null;
+            p.datePaid = document.getElementById('editPayoutDatePaid').value || null;
+
+            if (!p.projectName || !p.person || p.amountOwed <= 0) {
+                toast('Project, person, and amount required');
+                return;
+            }
+
+            saveData();
+            renderAll();
+            closeModal('payoutEditModal');
+            editingPayoutIdx = null;
+        }
+
+        // ---- Pending Tracker Poll ----
+        async function pollPendingTracker() {
+            try {
+                const r = await fetch(PENDING_TRACKER_API);
+                if (!r.ok) return;
+                const items = await r.json();
+                if (!Array.isArray(items)) return;
+                let imported = 0;
+                items.forEach(it => {
+                    if (it.status !== 'completed') return;
+                    const id = `${it.client || ''}|${it.project || ''}|${it.date || ''}`;
+                    if (importedIds.has(id)) return;
+                    const exists = appData.income.find(p => p.id === id);
+                    if (exists) { importedIds.add(id); return; }
+
+                    const dayIdx = it.date ? Math.max(0, Math.min(30, new Date(it.date).getDate() - 1)) : 0;
+                    const days = Array(31).fill(0);
+                    days[dayIdx] = Number(it.paid || 0);
+
+                    appData.income.push({
+                        id,
+                        projectName: `${it.client || ''} — ${it.project || ''}`.trim().replace(/^—\s*/, ''),
+                        expected: Number(it.invoiced || 0),
+                        payday: null,
+                        days,
+                        earned: Number(it.paid || 0),
+                        remaining: Number(it.invoiced || 0) - Number(it.paid || 0),
+                        percentEarned: it.invoiced > 0 ? (it.paid / it.invoiced) * 100 : 0
+                    });
+                    importedIds.add(id);
+                    imported++;
+                });
+                if (imported > 0) {
+                    appData.importedIds = [...importedIds];
+                    saveData(false);
+                    renderAll();
+                    toast(`Imported ${imported} project${imported > 1 ? 's' : ''}`);
+                }
+            } catch (e) {
+                // silent
+            }
+        }
+    </script>
+</body>
+</html>

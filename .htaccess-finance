@@ -1,0 +1,12 @@
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+
+  # Exclude /finance from being rewritten
+  RewriteRule ^finance(/.*)?$ - [L]
+
+  # Continue with portfolio app routing for everything else
+  RewriteCond %{REQUEST_FILENAME} !-f
+  RewriteCond %{REQUEST_FILENAME} !-d
+  RewriteCond %{REQUEST_URI} !^/finance(/.*)?$
+  RewriteRule ^(.*)$ /index.html [QSA,L]
+</IfModule>

@@ -1,0 +1,577 @@
+{
+  "month": "2026-05",
+  "expenses": {
+    "DEBT & BNPL": [
+      {
+        "id": "tabby-card-1",
+        "description": "Tabby Card 1",
+        "expected": 5000,
+        "payday": 28,
+        "days": [0, 0, 0, 150, 300, 210, 500, 150, 150, 250, 800, 250, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+        "paid": 2760,
+        "remaining": 2240,
+        "percentPaid": 55
+      },
+      {
+        "id": "tabby-card-2",
+        "description": "Tabby Card 2",
+        "expected": 2148,
+        "payday": 12,
+        "days": [0, 0, 450, 49, 100, 0, 398, 0, 50, 175, 679, 246, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+        "paid": 2147.66,
+        "remaining": 0.34,
+        "percentPaid": 100
+      },
+      {
+        "id": "tabby-tamara",
+        "description": "Tabby/Tamara",
+        "expected": 1931,
+        "payday": "1, 15",
+        "days": [0, 0, 0, 0, 221, 137, 0, 0, 103, 74, 139, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+        "paid": 674.29,
+        "remaining": 1256.54,
+        "percentPaid": 35
+      },
+      {
+        "id": "lulu-cc",
+        "description": "LuLu Credit Card",
+        "expected": 1431,
+        "payday": 4,
+        "days": [175, 0, 0, 0, 0, 0, 0, 0, 0, 0, 150, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+        "paid": 325,
+        "remaining": 1106,
+        "percentPaid": 23
+      },
+      {
+        "id": "diido-line",
+        "description": "Diido Line",
+        "expected": 1475,
+        "payday": 1,
+        "days": [277, 200, 0, 100, 200, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+        "paid": 776.78,
+        "remaining": 698.22,
+        "percentPaid": 53
+      },
+      {
+        "id": "morgan-ya",
+        "description": "Morgan youssef alaa",
+        "expected": 4000,
+        "payday": null,
+        "days": [0, 0, 0, 0, 0, 0, 2000, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+        "paid": 2000,
+        "remaining": 2000,
+        "percentPaid": 50
+      },
+      {
+        "id": "cash-diido",
+        "description": "Cash Now (Diido)",
+        "expected": 1680,
+        "payday": 16,
+        "days": [0, 0, 180, 100, 150, 80, 500, 0, 0, 670, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+        "paid": 1680,
+        "remaining": 0,
+        "percentPaid": 100
+      },
+      {
+        "id": "cash-amirah",
+        "description": "Cash Now (Amirah)",
+        "expected": 1640,
+        "payday": 20,
+        "days": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+        "paid": 0,
+        "remaining": 1640,
+        "percentPaid": 0
+      }
+    ],
+    "FIXED OBLIGATIONS": [
+      {
+        "id": "rent",
+        "description": "Rent",
+        "expected": 3166,
+        "payday": 1,
+        "days": [0, 0, 0, 0, 300, 0, 250, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+        "paid": 550,
+        "remaining": 2616,
+        "percentPaid": 17
+      },
+      {
+        "id": "etisalat",
+        "description": "Etisalat",
+        "expected": 262,
+        "payday": 3,
+        "days": [0, 0, 0, 131, 0, 0, 0, 131, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+        "paid": 262.5,
+        "remaining": -0.5,
+        "percentPaid": 100
+      },
+      {
+        "id": "adobe",
+        "description": "Adobe Subscription",
+        "expected": 140,
+        "payday": 2,
+        "days": [140, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+        "paid": 140,
+        "remaining": 0,
+        "percentPaid": 100
+      },
+      {
+        "id": "dewa",
+        "description": "Utilities (DEWA)",
+        "expected": 284,
+        "payday": 2,
+        "days": [0, 0, 0, 0, 0, 160, 123, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+        "paid": 283.9,
+        "remaining": 0,
+        "percentPaid": 100
+      },
+      {
+        "id": "water",
+        "description": "Water",
+        "expected": 55,
+        "payday": 8,
+        "days": [0, 15, 0, 0, 0, 0, 0, 15, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+        "paid": 30,
+        "remaining": 25,
+        "percentPaid": 55
+      }
+    ],
+    "FAMILY & SUPPORT": [
+      {
+        "id": "family-transfer",
+        "description": "Family Transfer",
+        "expected": 1000,
+        "payday": 20,
+        "days": [0, 0, 100, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+        "paid": 100,
+        "remaining": 900,
+        "percentPaid": 10
+      },
+      {
+        "id": "jomari",
+        "description": "Jomari",
+        "expected": 100,
+        "payday": null,
+        "days": [100, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+        "paid": 100,
+        "remaining": 0,
+        "percentPaid": 100
+      }
+    ],
+    "CAR & TRANSPORT": [
+      {
+        "id": "car-install",
+        "description": "Car Installment",
+        "expected": 3780,
+        "payday": 2,
+        "days": [0, 0, 570, 0, 3210, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+        "paid": 3780,
+        "remaining": 0,
+        "percentPaid": 100
+      },
+      {
+        "id": "petrol",
+        "description": "Petrol",
+        "expected": 1200,
+        "payday": null,
+        "days": [35, 145, 0, 50, 0, 100, 0, 160, 50, 150, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+        "paid": 690,
+        "remaining": 510,
+        "percentPaid": 58
+      },
+      {
+        "id": "parking",
+        "description": "Parking",
+        "expected": 100,
+        "payday": null,
+        "days": [0, 0, 16, 0, 0, 10, 0, 0, 19, 21, 24, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+        "paid": 90,
+        "remaining": 10,
+        "percentPaid": 90
+      },
+      {
+        "id": "salik",
+        "description": "Salik",
+        "expected": 50,
+        "payday": null,
+        "days": [0, 50, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+        "paid": 50,
+        "remaining": 0,
+        "percentPaid": 100
+      },
+      {
+        "id": "car-wash",
+        "description": "Car Wash",
+        "expected": 100,
+        "payday": null,
+        "days": [0, 0, 0, 0, 0, 70, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+        "paid": 70,
+        "remaining": 30,
+        "percentPaid": 70
+      },
+      {
+        "id": "car-maint",
+        "description": "Car Maintenance",
+        "expected": 800,
+        "payday": null,
+        "days": [0, 0, 0, 0, 0, 300, 250, 250, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+        "paid": 800,
+        "remaining": 0,
+        "percentPaid": 100
+      }
+    ],
+    "VARIABLE / DAILY": [
+      {
+        "id": "food",
+        "description": "Food",
+        "expected": 900,
+        "payday": null,
+        "days": [27, 88, 31, 20, 29, 28, 113, 0, 277, 94, 51, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+        "paid": 758.45,
+        "remaining": 141.55,
+        "percentPaid": 84
+      }
+    ],
+    "LIFESTYLE": [
+      {
+        "id": "cigarettes",
+        "description": "Cigarettes",
+        "expected": 870,
+        "payday": null,
+        "days": [43, 43, 43, 43, 29, 43, 43, 28, 29, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+        "paid": 344,
+        "remaining": 526,
+        "percentPaid": 40
+      },
+      {
+        "id": "loza",
+        "description": "Loza",
+        "expected": 200,
+        "payday": null,
+        "days": [0, 0, 0, 0, 0, 0, 0, 150, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+        "paid": 150,
+        "remaining": 50,
+        "percentPaid": 75
+      },
+      {
+        "id": "coffee",
+        "description": "Coffee shop",
+        "expected": 500,
+        "payday": null,
+        "days": [0, 0, 0, 0, 0, 0, 98, 0, 130, 0, 0, 67, 19, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+        "paid": 313.5,
+        "remaining": 186.5,
+        "percentPaid": 63
+      },
+      {
+        "id": "outing",
+        "description": "Outing",
+        "expected": 0,
+        "payday": null,
+        "days": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+        "paid": 0,
+        "remaining": 0,
+        "percentPaid": 0
+      },
+      {
+        "id": "clothes",
+        "description": "Diido Clothes",
+        "expected": 0,
+        "payday": null,
+        "days": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+        "paid": 0,
+        "remaining": 0,
+        "percentPaid": 0
+      }
+    ],
+    "ADSENSE": [
+      {
+        "id": "adsense",
+        "description": "Adsense",
+        "expected": 204,
+        "payday": null,
+        "days": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+        "paid": 0,
+        "remaining": 204,
+        "percentPaid": 0
+      }
+    ],
+    "MEDICINE": [
+      {
+        "id": "medicine",
+        "description": "Medicine",
+        "expected": 170,
+        "payday": null,
+        "days": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+        "paid": 0,
+        "remaining": 170,
+        "percentPaid": 0
+      }
+    ],
+    "TEAM PAYOUTS": [
+      {
+        "id": "team-payouts-may",
+        "description": "Team Payouts",
+        "expected": 600,
+        "payday": null,
+        "days": [0, 150, 0, 0, 150, 0, 0, 0, 0, 0, 0, 150, 150, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+        "paid": 0,
+        "remaining": 600,
+        "percentPaid": 0
+      }
+    ]
+  },
+  "income": [
+    {
+      "id": "asma",
+      "projectName": "Asma",
+      "expected": 1100,
+      "payday": null,
+      "days": [1100, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+      "earned": 1100,
+      "remaining": 0,
+      "percentEarned": 100
+    },
+    {
+      "id": "qamar",
+      "projectName": "Qamar",
+      "expected": 1500,
+      "payday": null,
+      "days": [0, 0, 600, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+      "earned": 600,
+      "remaining": 900,
+      "percentEarned": 40
+    },
+    {
+      "id": "variable",
+      "projectName": "Variable",
+      "expected": 2000,
+      "payday": null,
+      "days": [1000, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+      "earned": 1000,
+      "remaining": 1000,
+      "percentEarned": 50
+    },
+    {
+      "id": "dr-mouhamed",
+      "projectName": "Dr Mouhamed",
+      "expected": 1500,
+      "payday": null,
+      "days": [0, 0, 0, 0, 750, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+      "earned": 750,
+      "remaining": 750,
+      "percentEarned": 50
+    },
+    {
+      "id": "cinemagic",
+      "projectName": "Cinemagic",
+      "expected": 15450,
+      "payday": null,
+      "days": [0, 0, 0, 0, 0, 6950, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+      "earned": 6950,
+      "remaining": 8500,
+      "percentEarned": 45
+    },
+    {
+      "id": "hady-cooty",
+      "projectName": "Hady Cooty",
+      "expected": 1200,
+      "payday": null,
+      "days": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+      "earned": 0,
+      "remaining": 1200,
+      "percentEarned": 0
+    },
+    {
+      "id": "warner-bros",
+      "projectName": "Warner Bros",
+      "expected": 1200,
+      "payday": null,
+      "days": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+      "earned": 0,
+      "remaining": 1200,
+      "percentEarned": 0
+    },
+    {
+      "id": "ezzal-pending",
+      "projectName": "Ezzal (pending)",
+      "expected": 0,
+      "payday": null,
+      "days": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+      "earned": 0,
+      "remaining": 0,
+      "percentEarned": 0
+    }
+  ],
+  "payouts": [
+    {
+      "id": "payout-clips-fayrouz",
+      "projectName": "Clips (Fayrouz)",
+      "person": "Youssef",
+      "role": "",
+      "amountOwed": 600,
+      "dateEntry": "2026-02-19",
+      "datePaid": "2026-02-19",
+      "status": "paid"
+    },
+    {
+      "id": "payout-alaa-020",
+      "projectName": "",
+      "person": "Alaa",
+      "role": "",
+      "amountOwed": 150,
+      "dateEntry": "2026-02-20",
+      "datePaid": "2026-02-20",
+      "status": "paid"
+    },
+    {
+      "id": "payout-surah-feb",
+      "projectName": "Surah",
+      "person": "Alaa",
+      "role": "",
+      "amountOwed": 150,
+      "dateEntry": "2026-02-22",
+      "datePaid": "2026-02-22",
+      "status": "paid"
+    },
+    {
+      "id": "payout-qamar-mar",
+      "projectName": "Qamar",
+      "person": "Alaa",
+      "role": "",
+      "amountOwed": 150,
+      "dateEntry": "2026-03-04",
+      "datePaid": "2026-03-04",
+      "status": "paid"
+    },
+    {
+      "id": "payout-solaf-clinic",
+      "projectName": "Solaf Clinic",
+      "person": "Alaa",
+      "role": "",
+      "amountOwed": 200,
+      "dateEntry": "2026-03-06",
+      "datePaid": "2026-03-06",
+      "status": "paid"
+    },
+    {
+      "id": "payout-al-areesh",
+      "projectName": "Al Areesh",
+      "person": "Alaa",
+      "role": "",
+      "amountOwed": 150,
+      "dateEntry": "2026-03-08",
+      "datePaid": "2026-03-08",
+      "status": "paid"
+    },
+    {
+      "id": "payout-surah-mar",
+      "projectName": "Surah",
+      "person": "Alaa",
+      "role": "",
+      "amountOwed": 150,
+      "dateEntry": "2026-03-09",
+      "datePaid": null,
+      "status": "owed"
+    },
+    {
+      "id": "payout-hazza",
+      "projectName": "Hazza",
+      "person": "Alaa",
+      "role": "",
+      "amountOwed": 150,
+      "dateEntry": "2026-03-13",
+      "datePaid": null,
+      "status": "owed"
+    },
+    {
+      "id": "payout-dr-hanady",
+      "projectName": "Dr. Hanady",
+      "person": "Youssef",
+      "role": "",
+      "amountOwed": 600,
+      "dateEntry": "2026-03-14",
+      "datePaid": "2026-03-14",
+      "status": "paid"
+    },
+    {
+      "id": "payout-dr-mohamed-1",
+      "projectName": "Dr. Mohamed 1",
+      "person": "Alaa",
+      "role": "",
+      "amountOwed": 150,
+      "dateEntry": "2026-04-09",
+      "datePaid": null,
+      "status": "owed"
+    },
+    {
+      "id": "payout-dr-mohamed-2",
+      "projectName": "Dr. Mohamed 2",
+      "person": "Alaa",
+      "role": "",
+      "amountOwed": 150,
+      "dateEntry": "2026-04-15",
+      "datePaid": null,
+      "status": "owed"
+    },
+    {
+      "id": "payout-dr-mohamed-3",
+      "projectName": "Dr. Mohamed 3",
+      "person": "Alaa",
+      "role": "",
+      "amountOwed": 150,
+      "dateEntry": "2026-04-19",
+      "datePaid": null,
+      "status": "owed"
+    },
+    {
+      "id": "payout-dr-mohamed-5",
+      "projectName": "Dr. Mohamed 5",
+      "person": "Alaa",
+      "role": "",
+      "amountOwed": 150,
+      "dateEntry": "2026-04-30",
+      "datePaid": null,
+      "status": "owed"
+    },
+    {
+      "id": "payout-qamar-bags",
+      "projectName": "Qamar Bags",
+      "person": "Alaa",
+      "role": "",
+      "amountOwed": 150,
+      "dateEntry": "2026-05-02",
+      "datePaid": null,
+      "status": "owed"
+    },
+    {
+      "id": "payout-ny-clinic",
+      "projectName": "New York Clinic",
+      "person": "Alaa",
+      "role": "",
+      "amountOwed": 150,
+      "dateEntry": "2026-05-05",
+      "datePaid": null,
+      "status": "owed"
+    },
+    {
+      "id": "payout-laduree",
+      "projectName": "Laduree Shop",
+      "person": "Alaa",
+      "role": "",
+      "amountOwed": 150,
+      "dateEntry": "2026-05-12",
+      "datePaid": null,
+      "status": "owed"
+    },
+    {
+      "id": "payout-batoul",
+      "projectName": "Batoul Clinic",
+      "person": "Alaa",
+      "role": "",
+      "amountOwed": 150,
+      "dateEntry": "2026-05-13",
+      "datePaid": null,
+      "status": "owed"
+    }
+  ]
+}

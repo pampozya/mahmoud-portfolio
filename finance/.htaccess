@@ -1,0 +1,18 @@
+# Finance Tracker — prevent parent rewrite rules
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+
+  # Don't rewrite existing files or directories
+  RewriteCond %{REQUEST_FILENAME} !-f
+  RewriteCond %{REQUEST_FILENAME} !-d
+
+  # Serve index.html for all non-file/directory requests (SPA routing)
+  RewriteRule ^(.*)$ index.html [QSA,L]
+</IfModule>
+
+# Allow PHP files to be served directly
+<FilesMatch "\.(php|json)$">
+  <IfModule mod_rewrite.c>
+    RewriteEngine Off
+  </IfModule>
+</FilesMatch>
