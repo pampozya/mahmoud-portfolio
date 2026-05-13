@@ -1392,6 +1392,12 @@
             renderAll();
             pollPendingTracker();
             pollTimer = setInterval(pollPendingTracker, 10000);
+            // Sync data from other devices every 15 seconds (silent, only if changed)
+            syncTimer = setInterval(() => {
+                if (document.visibilityState === 'visible') {
+                    loadData(false);
+                }
+            }, 15000);
         });
 
         let installPrompt = null;
@@ -1438,7 +1444,7 @@
         // Online/offline detection
         window.addEventListener('online', () => {
             updateSync('synced');
-            loadData();
+            loadData(true);
             showToast('Back online—syncing...', 'success');
         });
 
@@ -1549,29 +1555,35 @@
         }
 
         // ---- Data load/save ----
-        async function loadData() {
-            updateSync('syncing');
+        async function loadData(showStatus = true) {
+            if (showStatus) updateSync('syncing');
             try {
                 const r = await fetch(API_URL);
                 if (!r.ok) throw new Error('load failed');
-                appData = await r.json();
+                const newData = await r.json();
+                // Check if data changed before re-rendering
+                const dataChanged = JSON.stringify(appData) !== JSON.stringify(newData);
+                appData = newData;
                 normalizeData();
-                updateSync('synced');
+                if (dataChanged) {
+                    renderAll();
+                }
+                if (showStatus) updateSync('synced');
             } catch (e) {
                 console.log('Load fail, trying cache:', e);
                 const cached = localStorage.getItem('financeData');
                 if (cached) {
                     appData = JSON.parse(cached);
                     normalizeData();
-                    updateSync('offline');
+                    if (showStatus) updateSync('offline');
                 } else {
                     try {
                         const r = await fetch('data-seed.json');
                         appData = await r.json();
                         normalizeData();
-                        updateSync('offline');
+                        if (showStatus) updateSync('offline');
                     } catch (e2) {
-                        updateSync('error');
+                        if (showStatus) updateSync('error');
                     }
                 }
             }
