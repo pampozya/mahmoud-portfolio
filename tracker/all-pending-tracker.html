@@ -1,0 +1,1647 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>Lens Mania — Pending Work</title>
+
+    <!-- PWA -->
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#0f1419">
+    <link rel="icon" type="image/png" sizes="192x192" href="tracker-icon-192.png">
+    <link rel="icon" type="image/png" sizes="512x512" href="tracker-icon-512.png">
+
+    <!-- iOS Add to Home Screen -->
+    <link rel="apple-touch-icon" href="tracker-apple-touch.png">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-title" content="Pending">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black">
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #0f1419 0%, #1a1f2e 100%);
+            color: #e0e0e0;
+            min-height: 100vh;
+            padding: 20px;
+            /* iOS safe-area insets so PWA fullscreen avoids the notch */
+            padding-top: max(20px, env(safe-area-inset-top));
+            padding-bottom: max(20px, env(safe-area-inset-bottom));
+            padding-left: max(20px, env(safe-area-inset-left));
+            padding-right: max(20px, env(safe-area-inset-right));
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        .container {
+            max-width: 1600px;
+            margin: 0 auto;
+        }
+
+        header {
+            margin-bottom: 40px;
+        }
+
+        h1 {
+            font-size: 32px;
+            font-weight: 300;
+            color: #ffffff;
+            letter-spacing: 0.5px;
+            margin-bottom: 8px;
+        }
+
+        .header-meta {
+            font-size: 13px;
+            color: #888;
+            display: flex;
+            gap: 16px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .sync-indicator {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 3px 10px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: 500;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            background: rgba(255, 255, 255, 0.06);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            color: #888;
+        }
+
+        .sync-indicator::before {
+            content: '';
+            width: 7px;
+            height: 7px;
+            border-radius: 50%;
+            background: currentColor;
+        }
+
+        .sync-indicator.synced { color: #4caf50; border-color: rgba(76, 175, 80, 0.3); }
+        .sync-indicator.syncing { color: #ffc107; border-color: rgba(255, 193, 7, 0.3); }
+        .sync-indicator.error   { color: #f44336; border-color: rgba(244, 67, 54, 0.3); }
+        .sync-indicator.offline { color: #888; }
+
+        .tabs {
+            display: flex;
+            gap: 20px;
+            margin-bottom: 30px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+        }
+
+        .tab-btn {
+            padding: 12px 16px;
+            background: none;
+            border: none;
+            color: #888;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            border-bottom: 3px solid transparent;
+            transition: all 0.2s;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .tab-btn.active {
+            color: #ffc107;
+            border-bottom-color: #ffc107;
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        .analytics-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 16px;
+            margin-bottom: 30px;
+        }
+
+        .card {
+            background: rgba(255, 255, 255, 0.04);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            padding: 20px;
+            backdrop-filter: blur(10px);
+        }
+
+        .card.highlight {
+            border: 1px solid rgba(255, 193, 7, 0.3);
+            background: rgba(255, 193, 7, 0.05);
+        }
+
+        .metric-value {
+            font-size: 24px;
+            font-weight: 600;
+            color: #ffc107;
+            margin-bottom: 6px;
+            font-family: 'Monaco', monospace;
+        }
+
+        .metric-label {
+            font-size: 11px;
+            color: #999;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .chart-container {
+            background: rgba(255, 255, 255, 0.04);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            padding: 24px;
+            margin-bottom: 30px;
+            position: relative;
+            height: 400px;
+        }
+
+        .chart-container-small {
+            height: 300px;
+        }
+
+        .chart-row {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+
+        .controls {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 24px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+
+        .search-box {
+            flex: 1;
+            min-width: 200px;
+            background: rgba(255, 255, 255, 0.06);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 10px 14px;
+            border-radius: 6px;
+            color: #e0e0e0;
+            font-size: 13px;
+        }
+
+        .search-box::placeholder {
+            color: #666;
+        }
+
+        .sort-select, .filter-select {
+            background: rgba(255, 255, 255, 0.06);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 8px 10px;
+            border-radius: 6px;
+            color: #e0e0e0;
+            font-size: 12px;
+            cursor: pointer;
+        }
+
+        .btn {
+            background: rgba(255, 193, 7, 0.15);
+            border: 1px solid rgba(255, 193, 7, 0.3);
+            color: #ffc107;
+            padding: 8px 14px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 12px;
+            font-weight: 500;
+            transition: all 0.2s;
+            white-space: nowrap;
+        }
+
+        .btn:hover {
+            background: rgba(255, 193, 7, 0.25);
+            border-color: rgba(255, 193, 7, 0.5);
+        }
+
+        .btn.secondary {
+            background: rgba(255, 255, 255, 0.08);
+            border-color: rgba(255, 255, 255, 0.15);
+            color: #e0e0e0;
+        }
+
+        .btn.secondary:hover {
+            background: rgba(255, 255, 255, 0.12);
+        }
+
+        .btn.success {
+            background: rgba(76, 175, 80, 0.15);
+            border-color: rgba(76, 175, 80, 0.3);
+            color: #4caf50;
+        }
+
+        .btn.success:hover {
+            background: rgba(76, 175, 80, 0.25);
+        }
+
+        .btn.danger {
+            background: rgba(244, 67, 54, 0.15);
+            border-color: rgba(244, 67, 54, 0.3);
+            color: #f44336;
+        }
+
+        .table-wrapper {
+            overflow-x: auto;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        th {
+            text-align: left;
+            padding: 12px;
+            font-size: 11px;
+            font-weight: 600;
+            color: #999;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+            background: rgba(255, 255, 255, 0.02);
+        }
+
+        td {
+            padding: 12px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+            font-size: 13px;
+        }
+
+        tr:hover {
+            background: rgba(255, 255, 255, 0.02);
+        }
+
+        /* ---- Swipe actions ------------------------------------------ */
+        tbody tr.swipe-row {
+            position: relative;
+        }
+        tbody tr.swipe-row > td {
+            transition: transform 180ms ease;
+            background: #1a1f2e;
+            position: relative;
+            z-index: 2;
+        }
+        tbody tr.swipe-row.swiping > td {
+            transition: none;
+        }
+        tbody tr.swipe-row::before,
+        tbody tr.swipe-row::after {
+            content: '';
+            position: absolute;
+            top: 0; bottom: 0;
+            width: 50%;
+            display: flex;
+            align-items: center;
+            font-size: 18px;
+            font-weight: 600;
+            letter-spacing: 0.3px;
+            z-index: 1;
+            opacity: 0;
+            transition: opacity 180ms ease;
+        }
+        tbody tr.swipe-row::before {
+            left: 0;
+            background: #4caf50;
+            color: white;
+            justify-content: flex-start;
+            padding-left: 20px;
+            content: '💵  Mark Paid';
+        }
+        tbody tr.swipe-row::after {
+            right: 0;
+            background: #f44336;
+            color: white;
+            justify-content: flex-end;
+            padding-right: 20px;
+            content: '🗑  Delete';
+        }
+        tbody tr.swipe-row.show-pay::before { opacity: 1; }
+        tbody tr.swipe-row.show-del::after { opacity: 1; }
+
+        .version-badge {
+            position: fixed;
+            top: max(6px, env(safe-area-inset-top));
+            right: max(10px, env(safe-area-inset-right));
+            font-size: 10px;
+            font-family: 'Monaco', monospace;
+            color: rgba(255, 255, 255, 0.35);
+            background: rgba(0, 0, 0, 0.45);
+            padding: 2px 6px;
+            border-radius: 4px;
+            z-index: 100;
+            pointer-events: none;
+            letter-spacing: 0.5px;
+        }
+
+        .hard-refresh-btn {
+            display: none;
+            position: fixed;
+            top: max(6px, env(safe-area-inset-top));
+            right: calc(max(10px, env(safe-area-inset-right)) + 130px);
+            font-size: 10px;
+            font-family: -apple-system, sans-serif;
+            font-weight: 600;
+            color: #f44336;
+            background: rgba(244, 67, 54, 0.18);
+            border: 1px solid rgba(244, 67, 54, 0.4);
+            padding: 3px 9px;
+            border-radius: 12px;
+            cursor: pointer;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            z-index: 100;
+        }
+        .hard-refresh-btn.visible { display: inline-block; }
+        .hard-refresh-btn:active { background: rgba(244, 67, 54, 0.3); }
+
+        .install-btn {
+            display: none;
+            background: rgba(33, 150, 243, 0.15);
+            border: 1px solid rgba(33, 150, 243, 0.3);
+            color: #2196f3;
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: 500;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            cursor: pointer;
+        }
+        .install-btn.visible { display: inline-flex; }
+
+        .client-name {
+            font-weight: 500;
+            color: #ffffff;
+        }
+
+        .project-name {
+            color: #aaa;
+            font-size: 12px;
+        }
+
+        .amount {
+            font-family: 'Monaco', monospace;
+            font-weight: 500;
+            color: #ffc107;
+        }
+
+        .status-badge {
+            display: inline-block;
+            padding: 3px 8px;
+            border-radius: 3px;
+            font-size: 11px;
+            font-weight: 500;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+            cursor: pointer;
+        }
+
+        .status-badge.paid {
+            background: rgba(76, 175, 80, 0.2);
+            color: #4caf50;
+        }
+
+        .status-badge.completed {
+            background: rgba(255, 152, 0, 0.2);
+            color: #ff9800;
+        }
+
+        .status-badge.pending {
+            background: rgba(244, 67, 54, 0.2);
+            color: #f44336;
+        }
+
+        .status-badge.partial {
+            background: rgba(33, 150, 243, 0.2);
+            color: #2196f3;
+        }
+
+        .progress-cell {
+            font-family: 'Monaco', monospace;
+            font-size: 12px;
+            color: #aaa;
+            white-space: nowrap;
+        }
+
+        .progress-cell .paid-amt { color: #4caf50; }
+        .progress-cell .remain-amt { color: #ff9800; }
+
+        .progress-bar {
+            display: inline-block;
+            vertical-align: middle;
+            margin-left: 6px;
+            width: 60px;
+            height: 4px;
+            background: rgba(255, 255, 255, 0.08);
+            border-radius: 2px;
+            overflow: hidden;
+        }
+
+        .progress-bar > span {
+            display: block;
+            height: 100%;
+            background: linear-gradient(90deg, #4caf50, #8bc34a);
+        }
+
+        .actions {
+            display: flex;
+            gap: 6px;
+        }
+
+        .action-btn {
+            background: none;
+            border: none;
+            color: #666;
+            cursor: pointer;
+            font-size: 14px;
+            padding: 4px 6px;
+            transition: color 0.2s;
+        }
+
+        .action-btn:hover {
+            color: #ffc107;
+        }
+
+        .action-btn.delete:hover {
+            color: #f44336;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.8);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .modal.active {
+            display: flex;
+        }
+
+        .modal-content {
+            background: #1a1f2e;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            padding: 28px;
+            max-width: 450px;
+            width: 100%;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+
+        .modal-header {
+            font-size: 18px;
+            font-weight: 500;
+            margin-bottom: 20px;
+            color: #ffffff;
+        }
+
+        .form-group {
+            margin-bottom: 16px;
+        }
+
+        .form-group label {
+            display: block;
+            font-size: 12px;
+            color: #aaa;
+            margin-bottom: 5px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .form-group input,
+        .form-group select {
+            width: 100%;
+            background: rgba(255, 255, 255, 0.06);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 8px 10px;
+            border-radius: 6px;
+            color: #e0e0e0;
+            font-size: 13px;
+        }
+
+        .form-group input::placeholder {
+            color: #666;
+        }
+
+        .modal-actions {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+        }
+
+        .modal-actions button {
+            flex: 1;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 50px 20px;
+            color: #666;
+        }
+
+        .empty-state-icon {
+            font-size: 40px;
+            margin-bottom: 12px;
+            opacity: 0.3;
+        }
+
+        .toast {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: rgba(76, 175, 80, 0.2);
+            border: 1px solid rgba(76, 175, 80, 0.4);
+            color: #4caf50;
+            padding: 10px 16px;
+            border-radius: 6px;
+            font-size: 12px;
+            animation: slideIn 0.3s ease;
+            z-index: 2000;
+        }
+
+        .toast.error {
+            background: rgba(244, 67, 54, 0.2);
+            border-color: rgba(244, 67, 54, 0.4);
+            color: #f44336;
+        }
+
+        @keyframes slideIn {
+            from {
+                transform: translateX(400px);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+
+        .stat-row {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 12px;
+            margin-bottom: 20px;
+        }
+
+        .stat-card {
+            background: rgba(255, 255, 255, 0.02);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 6px;
+            padding: 16px;
+            text-align: center;
+        }
+
+        .stat-number {
+            font-size: 20px;
+            font-weight: 600;
+            color: #4caf50;
+            margin-bottom: 4px;
+            font-family: 'Monaco', monospace;
+        }
+
+        .stat-label {
+            font-size: 11px;
+            color: #888;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+        }
+
+        @media (max-width: 768px) {
+            h1 {
+                font-size: 24px;
+            }
+
+            .tabs {
+                gap: 12px;
+            }
+
+            .tab-btn {
+                padding: 10px 12px;
+                font-size: 12px;
+            }
+
+            .analytics-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+
+            .chart-row {
+                grid-template-columns: 1fr;
+            }
+
+            .chart-container {
+                height: 300px;
+            }
+
+            .controls {
+                flex-direction: column;
+            }
+
+            .search-box, .sort-select, .filter-select, .btn {
+                width: 100%;
+            }
+        }
+
+        /* ---- Card view: turn each table row into a stacked card ----
+           Applies on narrow screens AND on any touch-primary device
+           (iPad, touch laptops) regardless of viewport width.        */
+        @media (max-width: 768px), (pointer: coarse) {
+            .table-wrapper { overflow-x: visible; }
+            table, thead, tbody { display: block; width: 100%; }
+            thead { display: none; } /* hide table headers — labels go inline */
+
+            tbody tr {
+                display: block;
+                background: rgba(255, 255, 255, 0.04);
+                border: 1px solid rgba(255, 255, 255, 0.1);
+                border-radius: 10px;
+                padding: 14px;
+                margin-bottom: 12px;
+                position: relative;
+                overflow: hidden;
+            }
+            tbody tr:hover { background: rgba(255, 255, 255, 0.04); }
+
+            tbody tr td {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                gap: 12px;
+                padding: 5px 0;
+                border: none;
+                font-size: 13px;
+            }
+            tbody tr td::before {
+                content: attr(data-label);
+                font-size: 10px;
+                font-weight: 600;
+                text-transform: uppercase;
+                letter-spacing: 0.5px;
+                color: #888;
+                flex-shrink: 0;
+            }
+
+            /* Client cell — promote to header of the card */
+            tbody tr td[data-label="Client"] {
+                display: block;
+                padding: 0 0 10px;
+                margin-bottom: 8px;
+                border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+                font-size: 16px;
+            }
+            tbody tr td[data-label="Client"]::before { display: none; }
+            tbody tr td[data-label="Client"] .client-name {
+                font-size: 16px;
+                font-weight: 600;
+            }
+
+            /* Project cell — show under client without label, lighter */
+            tbody tr td[data-label="Project"] {
+                display: block;
+                padding: 0 0 10px;
+                margin-top: -6px;
+                margin-bottom: 8px;
+                border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+            }
+            tbody tr td[data-label="Project"]::before { display: none; }
+            tbody tr td[data-label="Project"] .project-name {
+                font-size: 12px;
+                color: #888;
+            }
+
+            /* Paid/Remaining: allow wrapping of the inline parts */
+            tbody tr td[data-label="Paid"] .progress-bar {
+                margin-left: 8px;
+            }
+
+            /* Actions row: spread the buttons across, bigger targets */
+            tbody tr td[data-label="Actions"] {
+                display: flex;
+                justify-content: flex-end;
+                padding-top: 10px;
+                margin-top: 6px;
+                border-top: 1px solid rgba(255, 255, 255, 0.07);
+            }
+            tbody tr td[data-label="Actions"]::before { display: none; }
+            tbody tr td[data-label="Actions"] .actions { gap: 4px; }
+            tbody tr td[data-label="Actions"] .action-btn {
+                font-size: 18px;
+                padding: 8px 14px;
+                min-height: 38px;
+                min-width: 44px;
+            }
+
+            /* Swipe actions: revealed text needs to be visible behind cards */
+            tbody tr.swipe-row::before,
+            tbody tr.swipe-row::after { font-size: 14px; }
+
+            /* Hide the table-row swipe transform background (cards now have their own bg) */
+            tbody tr.swipe-row > td { background: transparent; }
+        }
+    </style>
+</head>
+<body>
+    <button class="hard-refresh-btn" id="hardRefreshBtn">⟳ Reset Cache</button>
+    <div class="version-badge">v0.7 · 2026-05-13</div>
+    <div class="container">
+        <header>
+            <h1>All Pending Work</h1>
+            <div class="header-meta">
+                <span>Last updated: <span id="lastUpdate">—</span></span>
+                <span class="sync-indicator offline" id="syncIndicator">Loading</span>
+                <button class="install-btn" id="installBtn" title="Install as app">⬇ Install</button>
+            </div>
+        </header>
+
+        <div class="tabs">
+            <button class="tab-btn active" onclick="switchTab(event, 'dashboard')">📊 Dashboard</button>
+            <button class="tab-btn" onclick="switchTab(event, 'orders')">📋 All Orders</button>
+            <button class="tab-btn" onclick="switchTab(event, 'analytics')">📈 Analytics</button>
+        </div>
+
+        <!-- DASHBOARD TAB -->
+        <div id="dashboard" class="tab-content active">
+            <div class="analytics-grid">
+                <div class="card highlight">
+                    <div class="metric-value" id="totalPending">0 AED</div>
+                    <div class="metric-label">Total Pending</div>
+                </div>
+                <div class="card">
+                    <div class="metric-value" id="pendingCount">0</div>
+                    <div class="metric-label">Unpaid Orders</div>
+                </div>
+                <div class="card">
+                    <div class="metric-value" id="paidTotal">0 AED</div>
+                    <div class="metric-label">Total Paid</div>
+                </div>
+                <div class="card">
+                    <div class="metric-value" id="uniqueClients">0</div>
+                    <div class="metric-label">Active Clients</div>
+                </div>
+            </div>
+
+            <div class="stat-row">
+                <div class="stat-card">
+                    <div class="stat-number" id="statCinemagic">0 AED</div>
+                    <div class="stat-label">Cinemagic Pending</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number" id="statOther">0 AED</div>
+                    <div class="stat-label">Other Clients Pending</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number" id="statAvg">0 AED</div>
+                    <div class="stat-label">Avg Per Order</div>
+                </div>
+            </div>
+
+            <div class="chart-row">
+                <div class="chart-container chart-container-small">
+                    <canvas id="statusChart"></canvas>
+                </div>
+                <div class="chart-container chart-container-small">
+                    <canvas id="clientChart"></canvas>
+                </div>
+            </div>
+
+            <div class="chart-container">
+                <canvas id="amountChart"></canvas>
+            </div>
+        </div>
+
+        <!-- ORDERS TAB -->
+        <div id="orders" class="tab-content">
+            <div class="controls">
+                <input type="text" class="search-box" id="searchBox" placeholder="Search client or project...">
+                <select class="sort-select" id="sortSelect">
+                    <option value="date-desc">Newest</option>
+                    <option value="date-asc">Oldest</option>
+                    <option value="amount-desc">Highest Amount</option>
+                    <option value="amount-asc">Lowest Amount</option>
+                </select>
+                <select class="filter-select" id="filterSelect">
+                    <option value="">All Orders</option>
+                    <option value="pending">Pending</option>
+                    <option value="completed">Unpaid</option>
+                    <option value="partial">Partial</option>
+                    <option value="paid">Paid</option>
+                </select>
+                <button class="btn" id="addBtn">+ Add Order</button>
+                <button class="btn secondary" id="exportBtn">↓ Export CSV</button>
+                <button class="btn secondary" id="refreshBtn" title="Pull latest from server">↻ Refresh</button>
+            </div>
+
+            <div class="table-wrapper">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Client</th>
+                            <th>Project</th>
+                            <th>Date</th>
+                            <th>Invoiced</th>
+                            <th>Paid / Remaining</th>
+                            <th>Status</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tableBody">
+                        <tr><td colspan="7" class="empty-state">Loading...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- ANALYTICS TAB -->
+        <div id="analytics" class="tab-content">
+            <div class="analytics-grid">
+                <div class="card">
+                    <div class="metric-value" id="oldestOrder">-</div>
+                    <div class="metric-label">Oldest Unpaid</div>
+                </div>
+                <div class="card">
+                    <div class="metric-value" id="topClient">-</div>
+                    <div class="metric-label">Top Client</div>
+                </div>
+                <div class="card">
+                    <div class="metric-value" id="largestOrder">0 AED</div>
+                    <div class="metric-label">Largest Order</div>
+                </div>
+                <div class="card">
+                    <div class="metric-value" id="daysOverdue">0</div>
+                    <div class="metric-label">Days (Oldest)</div>
+                </div>
+            </div>
+
+            <div class="chart-container">
+                <canvas id="clientBreakdownChart"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODALS -->
+    <div class="modal" id="addModal">
+        <div class="modal-content">
+            <div class="modal-header">Add New Order</div>
+            <form id="addForm">
+                <div class="form-group">
+                    <label>Client Name *</label>
+                    <input type="text" id="addClient" placeholder="e.g., Cinemagic" required>
+                </div>
+                <div class="form-group">
+                    <label>Project Name *</label>
+                    <input type="text" id="addProject" placeholder="e.g., RTA Uber" required>
+                </div>
+                <div class="form-group">
+                    <label>Date *</label>
+                    <input type="date" id="addDate" required>
+                </div>
+                <div class="form-group">
+                    <label>Invoiced (AED) *</label>
+                    <input type="number" id="addAmount" placeholder="1500" min="0" step="0.01" required>
+                </div>
+                <div class="form-group">
+                    <label>Already Paid (AED)</label>
+                    <input type="number" id="addPaid" placeholder="0" min="0" step="0.01" value="0">
+                </div>
+                <div class="form-group">
+                    <label>Work Status</label>
+                    <select id="addStatus">
+                        <option value="completed">Completed</option>
+                        <option value="pending">Pending</option>
+                    </select>
+                </div>
+                <div class="modal-actions">
+                    <button type="submit" class="btn success">Save</button>
+                    <button type="button" class="btn secondary" onclick="closeModal('addModal')">Cancel</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div class="modal" id="editModal">
+        <div class="modal-content">
+            <div class="modal-header">Edit Order</div>
+            <form id="editForm">
+                <div class="form-group">
+                    <label>Client Name</label>
+                    <input type="text" id="editClient" required>
+                </div>
+                <div class="form-group">
+                    <label>Project Name</label>
+                    <input type="text" id="editProject" required>
+                </div>
+                <div class="form-group">
+                    <label>Date</label>
+                    <input type="date" id="editDate" required>
+                </div>
+                <div class="form-group">
+                    <label>Invoiced (AED)</label>
+                    <input type="number" id="editAmount" min="0" step="0.01" required>
+                </div>
+                <div class="form-group">
+                    <label>Paid (AED)</label>
+                    <input type="number" id="editPaid" min="0" step="0.01" required>
+                </div>
+                <div class="form-group">
+                    <label>Work Status</label>
+                    <select id="editStatus">
+                        <option value="completed">Completed</option>
+                        <option value="pending">Pending</option>
+                    </select>
+                </div>
+                <div class="modal-actions">
+                    <button type="submit" class="btn success">Save Changes</button>
+                    <button type="button" class="btn secondary" onclick="closeModal('editModal')">Cancel</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div class="modal" id="payModal">
+        <div class="modal-content">
+            <div class="modal-header">Record Payment</div>
+            <div id="payOrderSummary" style="font-size:13px;color:#aaa;margin-bottom:16px;"></div>
+            <form id="payForm">
+                <div class="form-group">
+                    <label>Payment Amount (AED) *</label>
+                    <input type="number" id="payAmount" min="0.01" step="0.01" required>
+                </div>
+                <div class="modal-actions">
+                    <button type="submit" class="btn success">Record Payment</button>
+                    <button type="button" class="btn secondary" onclick="closeModal('payModal')">Cancel</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        // ---- Server sync configuration ---------------------------------
+        const API_URL = 'api.php';
+        const API_TOKEN = 'oxEUCIkQZ1cAl3bmaDW7ryWSFVvixeiX'; // must match api.php $TOKEN
+        const POLL_INTERVAL_MS = 30000; // pull latest from server every 30s
+        const CACHE_KEY = 'pendingWorkData';
+
+        let allData = [];
+        let filteredData = [];
+        let editingIdx = -1;
+        let payingIdx = -1;
+        let charts = {};
+        let pollTimer = null;
+        let suppressPollUntil = 0; // pause polling briefly right after a local write
+
+        const defaultData = [
+            { client: 'Cinemagic', project: 'Dubai Humanitarian', date: '2026-03-30', invoiced: 500, paid: 0, status: 'completed' },
+            { client: 'Cinemagic', project: 'RTA Uber', date: '2026-04-01', invoiced: 1500, paid: 0, status: 'completed' },
+            { client: 'Cinemagic', project: 'UAE Message D1', date: '2026-04-05', invoiced: 1000, paid: 0, status: 'completed' },
+            { client: 'Cinemagic', project: 'UAE Message D2', date: '2026-04-06', invoiced: 1000, paid: 0, status: 'completed' },
+            { client: 'Cinemagic', project: 'UAE Message D3', date: '2026-04-07', invoiced: 1000, paid: 0, status: 'completed' },
+            { client: 'Cinemagic', project: 'Clips Aqua Man', date: '2026-04-08', invoiced: 1000, paid: 0, status: 'completed' },
+            { client: 'Cinemagic', project: 'SCA Dubai', date: '2026-04-13', invoiced: 1000, paid: 0, status: 'completed' },
+            { client: 'Cinemagic', project: 'Clips Nada Hawa', date: '2026-04-15', invoiced: 1000, paid: 0, status: 'completed' },
+            { client: 'Cinemagic', project: 'Int\'l Family Day 1', date: '2026-05-03', invoiced: 1000, paid: 0, status: 'completed' },
+            { client: 'Cinemagic', project: 'Int\'l Family Day 2', date: '2026-05-06', invoiced: 1000, paid: 0, status: 'completed' },
+            { client: 'Cinemagic', project: 'Int\'l Family Day 3', date: '2026-05-10', invoiced: 1500, paid: 0, status: 'completed' },
+            { client: 'Sakr', project: 'Ahmed Sakr', date: '2026-01-16', invoiced: 77, paid: 0, status: 'completed' },
+            { client: 'Hady Cooty', project: 'Hady Koty', date: '2026-05-06', invoiced: 1000, paid: 0, status: 'completed' },
+            { client: 'Rominds', project: 'Warner Bros NMDC AUH', date: '2026-05-08', invoiced: 1200, paid: 0, status: 'completed' }
+        ];
+
+        // Migrate legacy records (amount → invoiced + paid) and normalize.
+        function normalize(rec) {
+            const out = { ...rec };
+            if (out.invoiced == null && out.amount != null) {
+                out.invoiced = Number(out.amount);
+                out.paid = out.status === 'paid' ? Number(out.amount) : 0;
+            }
+            out.invoiced = Number(out.invoiced) || 0;
+            out.paid = Math.min(Math.max(Number(out.paid) || 0, 0), out.invoiced);
+            // Collapse old 'paid' status into completed + paid==invoiced
+            if (out.status === 'paid') { out.paid = out.invoiced; out.status = 'completed'; }
+            if (!['pending', 'completed'].includes(out.status)) out.status = 'completed';
+            delete out.amount;
+            return out;
+        }
+
+        function normalizeAll(arr) { return arr.map(normalize); }
+
+        // Display state derived from work status + payment progress.
+        function displayState(d) {
+            if (d.invoiced > 0 && d.paid >= d.invoiced) return 'paid';
+            if (d.paid > 0) return 'partial';
+            if (d.status === 'pending') return 'pending';
+            return 'completed'; // unpaid
+        }
+
+        function remaining(d) { return Math.max(d.invoiced - d.paid, 0); }
+        function isFullyPaid(d) { return d.invoiced > 0 && d.paid >= d.invoiced; }
+
+        function setSync(state, detail) {
+            const el = document.getElementById('syncIndicator');
+            el.className = 'sync-indicator ' + state;
+            const labels = { synced: 'Synced', syncing: 'Syncing…', error: 'Sync error', offline: 'Offline' };
+            el.textContent = labels[state] || state;
+            if (detail) el.title = detail; else el.removeAttribute('title');
+        }
+
+        async function fetchFromServer() {
+            const res = await fetch(API_URL + '?t=' + Date.now(), { cache: 'no-store' });
+            if (!res.ok) throw new Error('GET HTTP ' + res.status);
+            const data = await res.json();
+            if (!Array.isArray(data)) throw new Error('server returned non-array');
+            return data;
+        }
+
+        async function pushToServer() {
+            const res = await fetch(API_URL, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'X-Auth': API_TOKEN },
+                body: JSON.stringify(allData)
+            });
+            if (!res.ok) throw new Error('POST HTTP ' + res.status);
+            return res.json();
+        }
+
+        async function initialLoad() {
+            setSync('syncing');
+            try {
+                let data = await fetchFromServer();
+                if (data.length === 0) {
+                    // First run on this server — seed with the defaults.
+                    allData = normalizeAll(defaultData);
+                    await pushToServer();
+                } else {
+                    allData = normalizeAll(data);
+                }
+                localStorage.setItem(CACHE_KEY, JSON.stringify(allData));
+                setSync('synced');
+            } catch (err) {
+                console.error('Load failed:', err);
+                const cached = localStorage.getItem(CACHE_KEY);
+                allData = normalizeAll(cached ? JSON.parse(cached) : defaultData);
+                setSync('error', String(err.message || err));
+                showToast('Could not reach server — showing cached data', true);
+            }
+            filteredData = [...allData];
+            updateUI();
+        }
+
+        async function persistChange() {
+            // Optimistic UI: re-render immediately, then push.
+            localStorage.setItem(CACHE_KEY, JSON.stringify(allData));
+            filteredData = [...allData];
+            applySorting();
+            updateUI();
+
+            suppressPollUntil = Date.now() + 5000;
+            setSync('syncing');
+            try {
+                await pushToServer();
+                setSync('synced');
+                showToast('Saved');
+            } catch (err) {
+                console.error('Save failed:', err);
+                setSync('error', String(err.message || err));
+                showToast('Save failed: ' + (err.message || err), true);
+            }
+        }
+
+        async function pollOnce() {
+            if (Date.now() < suppressPollUntil) return;
+            try {
+                const remote = normalizeAll(await fetchFromServer());
+                if (JSON.stringify(remote) !== JSON.stringify(allData)) {
+                    allData = remote;
+                    localStorage.setItem(CACHE_KEY, JSON.stringify(allData));
+                    filteredData = [...allData];
+                    applySorting();
+                    updateUI();
+                    showToast('Updated from another device');
+                }
+                setSync('synced');
+            } catch (err) {
+                setSync('error', String(err.message || err));
+            }
+        }
+
+        function updateUI() {
+            updateAnalytics();
+            renderTable();
+            updateCharts();
+            updateLastUpdate();
+        }
+
+        function updateAnalytics() {
+            const outstanding = allData.filter(d => !isFullyPaid(d));
+            const cinemagic = outstanding.filter(d => d.client === 'Cinemagic');
+            const other = outstanding.filter(d => d.client !== 'Cinemagic');
+
+            const pendingTotal = outstanding.reduce((s, d) => s + remaining(d), 0);
+            const paidTotal = allData.reduce((s, d) => s + d.paid, 0);
+            const uniqueClients = new Set(allData.map(d => d.client)).size;
+            const avg = outstanding.length ? Math.round(pendingTotal / outstanding.length) : 0;
+
+            document.getElementById('totalPending').textContent = fmtAED(pendingTotal);
+            document.getElementById('pendingCount').textContent = outstanding.length;
+            document.getElementById('paidTotal').textContent = fmtAED(paidTotal);
+            document.getElementById('uniqueClients').textContent = uniqueClients;
+            document.getElementById('statCinemagic').textContent = fmtAED(cinemagic.reduce((s, d) => s + remaining(d), 0));
+            document.getElementById('statOther').textContent = fmtAED(other.reduce((s, d) => s + remaining(d), 0));
+            document.getElementById('statAvg').textContent = fmtAED(avg);
+
+            // Analytics tab
+            if (outstanding.length) {
+                const oldest = outstanding.reduce((a, b) => new Date(a.date) < new Date(b.date) ? a : b);
+                const daysOld = Math.floor((new Date() - new Date(oldest.date)) / (1000 * 60 * 60 * 24));
+                document.getElementById('oldestOrder').textContent = formatDate(oldest.date);
+                document.getElementById('daysOverdue').textContent = daysOld + ' days';
+            } else {
+                document.getElementById('oldestOrder').textContent = '-';
+                document.getElementById('daysOverdue').textContent = '0';
+            }
+
+            const topClient = [...allData].sort((a, b) => b.invoiced - a.invoiced)[0];
+            document.getElementById('topClient').textContent = topClient ? topClient.client : '-';
+            document.getElementById('largestOrder').textContent = topClient ? fmtAED(topClient.invoiced) : '0 AED';
+        }
+
+        function fmtAED(n) { return Math.round(n).toLocaleString() + ' AED'; }
+
+        function renderTable() {
+            const tbody = document.getElementById('tableBody');
+            if (!filteredData.length) {
+                tbody.innerHTML = '<tr><td colspan="7" class="empty-state">No orders</td></tr>';
+                return;
+            }
+
+            tbody.innerHTML = filteredData.map((d) => {
+                const realIdx = allData.indexOf(d);
+                const state = displayState(d);
+                const stateLabel = { paid: 'paid', partial: 'partial', completed: 'unpaid', pending: 'pending' }[state];
+                const rem = remaining(d);
+                const pct = d.invoiced > 0 ? Math.min(100, Math.round((d.paid / d.invoiced) * 100)) : 0;
+                const paidCell = d.paid > 0
+                    ? `<span class="paid-amt">${d.paid.toLocaleString()}</span> / <span class="remain-amt">${rem.toLocaleString()} left</span><span class="progress-bar"><span style="width:${pct}%"></span></span>`
+                    : `<span style="color:#666">—</span>`;
+                return `<tr class="swipe-row">
+                    <td data-label="Client"><div class="client-name">${escapeHtml(d.client)}</div></td>
+                    <td data-label="Project"><div class="project-name">${escapeHtml(d.project)}</div></td>
+                    <td data-label="Date">${formatDate(d.date)}</td>
+                    <td data-label="Invoiced" class="amount">${d.invoiced.toLocaleString()} AED</td>
+                    <td data-label="Paid" class="progress-cell">${paidCell}</td>
+                    <td data-label="Status"><span class="status-badge ${state}" onclick="cycleStatus(${realIdx})">${stateLabel}</span></td>
+                    <td data-label="Actions"><div class="actions">
+                        <button class="action-btn" onclick="openPay(${realIdx})" title="Record payment" ${state==='paid'?'style="opacity:0.3"':''}>💵</button>
+                        <button class="action-btn" onclick="openEdit(${realIdx})" title="Edit">✎</button>
+                        <button class="action-btn delete" onclick="deleteOrder(${realIdx})" title="Delete">🗑</button>
+                    </div></td>
+                </tr>`;
+            }).join('');
+        }
+
+        function escapeHtml(s) {
+            return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+        }
+
+        function updateCharts() {
+            const fullyPaid = allData.filter(d => isFullyPaid(d)).length;
+            const partial = allData.filter(d => d.paid > 0 && !isFullyPaid(d)).length;
+            const unpaid = allData.filter(d => d.paid === 0).length;
+
+            if (charts.status) charts.status.destroy();
+            charts.status = new Chart(document.getElementById('statusChart'), {
+                type: 'doughnut',
+                data: {
+                    labels: ['Unpaid', 'Partial', 'Paid'],
+                    datasets: [{
+                        data: [unpaid, partial, fullyPaid],
+                        backgroundColor: ['#ff9800', '#2196f3', '#4caf50'],
+                        borderColor: '#1a1f2e'
+                    }]
+                },
+                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { labels: { color: '#aaa' } } } }
+            });
+
+            const clients = [...new Set(allData.map(d => d.client))];
+            const clientData = clients.map(c => allData.filter(d => d.client === c).reduce((s, d) => s + remaining(d), 0));
+            if (charts.client) charts.client.destroy();
+            charts.client = new Chart(document.getElementById('clientChart'), {
+                type: 'bar',
+                data: {
+                    labels: clients,
+                    datasets: [{
+                        label: 'Outstanding (AED)',
+                        data: clientData,
+                        backgroundColor: '#ffc107',
+                        borderColor: '#ff9800'
+                    }]
+                },
+                options: { responsive: true, maintainAspectRatio: false, indexAxis: 'y', plugins: { legend: { labels: { color: '#aaa' } } } }
+            });
+
+            const sorted = [...allData].sort((a, b) => new Date(a.date) - new Date(b.date));
+            if (charts.amount) charts.amount.destroy();
+            charts.amount = new Chart(document.getElementById('amountChart'), {
+                type: 'line',
+                data: {
+                    labels: sorted.map(d => formatDate(d.date)),
+                    datasets: [
+                        {
+                            label: 'Invoiced (AED)',
+                            data: sorted.map(d => d.invoiced),
+                            borderColor: '#ffc107',
+                            backgroundColor: 'rgba(255, 193, 7, 0.1)',
+                            tension: 0.4
+                        },
+                        {
+                            label: 'Paid (AED)',
+                            data: sorted.map(d => d.paid),
+                            borderColor: '#4caf50',
+                            backgroundColor: 'rgba(76, 175, 80, 0.1)',
+                            tension: 0.4
+                        }
+                    ]
+                },
+                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { labels: { color: '#aaa' } } } }
+            });
+
+            if (charts.breakdown) charts.breakdown.destroy();
+            charts.breakdown = new Chart(document.getElementById('clientBreakdownChart'), {
+                type: 'pie',
+                data: {
+                    labels: clients,
+                    datasets: [{
+                        data: clientData,
+                        backgroundColor: ['#ffc107', '#ff9800', '#f44336', '#2196f3', '#9c27b0', '#00bcd4'],
+                        borderColor: '#1a1f2e'
+                    }]
+                },
+                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { labels: { color: '#aaa' } } } }
+            });
+        }
+
+        function formatDate(d) {
+            return new Date(d + 'T00:00:00Z').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: '2-digit' });
+        }
+
+        function switchTab(evt, name) {
+            document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+            document.getElementById(name).classList.add('active');
+            evt.currentTarget.classList.add('active');
+        }
+
+        document.getElementById('searchBox').addEventListener('input', () => {
+            const search = document.getElementById('searchBox').value.toLowerCase();
+            const filter = document.getElementById('filterSelect').value;
+            filteredData = allData.filter(d => {
+                const match = d.client.toLowerCase().includes(search) || d.project.toLowerCase().includes(search);
+                const statusMatch = !filter || displayState(d) === filter;
+                return match && statusMatch;
+            });
+            applySorting();
+            renderTable();
+        });
+
+        document.getElementById('sortSelect').addEventListener('change', () => {
+            applySorting();
+            renderTable();
+        });
+
+        document.getElementById('filterSelect').addEventListener('change', () => {
+            document.getElementById('searchBox').dispatchEvent(new Event('input'));
+        });
+
+        function applySorting() {
+            const sort = document.getElementById('sortSelect').value;
+            filteredData.sort((a, b) => {
+                if (sort === 'date-desc') return new Date(b.date) - new Date(a.date);
+                if (sort === 'date-asc') return new Date(a.date) - new Date(b.date);
+                if (sort === 'amount-desc') return b.invoiced - a.invoiced;
+                if (sort === 'amount-asc') return a.invoiced - b.invoiced;
+                return 0;
+            });
+        }
+
+        // Click the status badge: toggle work state (pending <-> completed).
+        // Payment is recorded via the 💵 button — not via status cycle.
+        function cycleStatus(idx) {
+            const d = allData[idx];
+            d.status = d.status === 'pending' ? 'completed' : 'pending';
+            persistChange();
+        }
+
+        function openEdit(idx) {
+            editingIdx = idx;
+            const d = allData[idx];
+            document.getElementById('editClient').value = d.client;
+            document.getElementById('editProject').value = d.project;
+            document.getElementById('editDate').value = d.date;
+            document.getElementById('editAmount').value = d.invoiced;
+            document.getElementById('editPaid').value = d.paid;
+            document.getElementById('editStatus').value = d.status === 'pending' ? 'pending' : 'completed';
+            openModal('editModal');
+        }
+
+        document.getElementById('editForm').addEventListener('submit', (e) => {
+            e.preventDefault();
+            const invoiced = parseFloat(document.getElementById('editAmount').value) || 0;
+            let paid = parseFloat(document.getElementById('editPaid').value) || 0;
+            paid = Math.min(Math.max(paid, 0), invoiced);
+            allData[editingIdx] = normalize({
+                client: document.getElementById('editClient').value,
+                project: document.getElementById('editProject').value,
+                date: document.getElementById('editDate').value,
+                invoiced,
+                paid,
+                status: document.getElementById('editStatus').value
+            });
+            closeModal('editModal');
+            persistChange();
+        });
+
+        function openPay(idx) {
+            const d = allData[idx];
+            if (isFullyPaid(d)) { showToast('Already fully paid'); return; }
+            payingIdx = idx;
+            const rem = remaining(d);
+            document.getElementById('payOrderSummary').textContent =
+                `${d.client} — ${d.project} · Invoiced ${fmtAED(d.invoiced)} · Paid ${fmtAED(d.paid)} · Remaining ${fmtAED(rem)}`;
+            const inp = document.getElementById('payAmount');
+            inp.max = rem;
+            inp.value = rem;
+            openModal('payModal');
+            setTimeout(() => inp.focus(), 200);
+        }
+
+        document.getElementById('payForm').addEventListener('submit', (e) => {
+            e.preventDefault();
+            const d = allData[payingIdx];
+            const rem = remaining(d);
+            let amt = parseFloat(document.getElementById('payAmount').value) || 0;
+            amt = Math.min(Math.max(amt, 0), rem);
+            if (amt <= 0) { closeModal('payModal'); return; }
+            d.paid = Math.min(d.paid + amt, d.invoiced);
+            closeModal('payModal');
+            persistChange();
+            showToast(`Recorded ${fmtAED(amt)} for ${d.client}`);
+        });
+
+        function deleteOrder(idx) {
+            if (confirm('Delete this order?')) {
+                allData.splice(idx, 1);
+                persistChange();
+            }
+        }
+
+        document.getElementById('addBtn').addEventListener('click', (e) => {
+            e.stopPropagation();
+            document.getElementById('addForm').reset();
+            document.getElementById('addDate').valueAsDate = new Date();
+            document.getElementById('addPaid').value = 0;
+            openModal('addModal');
+        });
+
+        document.getElementById('addForm').addEventListener('submit', (e) => {
+            e.preventDefault();
+            const invoiced = parseFloat(document.getElementById('addAmount').value) || 0;
+            let paid = parseFloat(document.getElementById('addPaid').value) || 0;
+            paid = Math.min(Math.max(paid, 0), invoiced);
+            allData.unshift(normalize({
+                client: document.getElementById('addClient').value,
+                project: document.getElementById('addProject').value,
+                date: document.getElementById('addDate').value,
+                invoiced,
+                paid,
+                status: document.getElementById('addStatus').value
+            }));
+            closeModal('addModal');
+            persistChange();
+        });
+
+        document.getElementById('exportBtn').addEventListener('click', () => {
+            let csv = 'Client,Project,Date,Invoiced,Paid,Remaining,Status\n';
+            filteredData.forEach(d => {
+                csv += `"${d.client}","${d.project}","${formatDate(d.date)}",${d.invoiced},${d.paid},${remaining(d)},"${displayState(d)}"\n`;
+            });
+            const blob = new Blob([csv], { type: 'text/csv' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `pending-${new Date().toISOString().split('T')[0]}.csv`;
+            a.click();
+        });
+
+        document.getElementById('refreshBtn').addEventListener('click', () => {
+            pollOnce();
+        });
+
+        let lastModalOpenedAt = 0;
+        function openModal(id) {
+            lastModalOpenedAt = Date.now();
+            // Defer one frame so the synthesized "ghost click" from iOS
+            // Safari (fired ~300ms after touchend) doesn't land on the
+            // newly-shown backdrop and immediately close it.
+            requestAnimationFrame(() => {
+                document.getElementById(id).classList.add('active');
+            });
+        }
+        function closeModal(id) {
+            document.getElementById(id).classList.remove('active');
+        }
+
+        function showToast(msg, isError) {
+            const toast = document.createElement('div');
+            toast.className = 'toast' + (isError ? ' error' : '');
+            toast.textContent = msg;
+            document.body.appendChild(toast);
+            setTimeout(() => toast.remove(), 2500);
+        }
+
+        function updateLastUpdate() {
+            document.getElementById('lastUpdate').textContent = new Date().toLocaleTimeString();
+        }
+
+        document.querySelectorAll('.modal').forEach(m => {
+            m.addEventListener('click', (e) => {
+                // Ignore the ghost click iOS Safari fires ~300ms after the
+                // touchend that opened this modal.
+                if (Date.now() - lastModalOpenedAt < 400) return;
+                if (e.target === m) m.classList.remove('active');
+            });
+        });
+
+        window.addEventListener('online', () => pollOnce());
+        window.addEventListener('offline', () => setSync('offline'));
+
+        // ---- Swipe actions on table rows --------------------------------
+        // Swipe right → mark fully paid (records remaining balance)
+        // Swipe left  → delete (with confirm)
+        // Past 35% of row width = commits on release; otherwise snaps back.
+        (function() {
+            const tbody = document.getElementById('tableBody');
+            let active = null; // { tr, startX, startY, dx, idx, axisLocked }
+            const THRESHOLD_PCT = 0.35;
+
+            function getRowIdx(tr) {
+                const btn = tr.querySelector('.action-btn.delete');
+                if (!btn) return -1;
+                const m = btn.getAttribute('onclick').match(/deleteOrder\((\d+)\)/);
+                return m ? parseInt(m[1], 10) : -1;
+            }
+
+            function reset(tr) {
+                tr.classList.remove('swiping', 'show-pay', 'show-del');
+                tr.querySelectorAll('td').forEach(td => { td.style.transform = ''; });
+            }
+
+            tbody.addEventListener('touchstart', (e) => {
+                const tr = e.target.closest('tr');
+                if (!tr || !tr.classList.contains('swipe-row')) return;
+                // Don't hijack taps on action buttons or status badges.
+                if (e.target.closest('.action-btn, .status-badge')) return;
+                const t = e.touches[0];
+                active = { tr, startX: t.clientX, startY: t.clientY, dx: 0, idx: getRowIdx(tr), axisLocked: null };
+            }, { passive: true });
+
+            tbody.addEventListener('touchmove', (e) => {
+                if (!active) return;
+                const t = e.touches[0];
+                const dx = t.clientX - active.startX;
+                const dy = t.clientY - active.startY;
+                if (active.axisLocked === null) {
+                    if (Math.abs(dx) < 8 && Math.abs(dy) < 8) return;
+                    active.axisLocked = Math.abs(dx) > Math.abs(dy) ? 'x' : 'y';
+                }
+                if (active.axisLocked !== 'x') { active = null; return; }
+                e.preventDefault?.();
+                active.dx = dx;
+                active.tr.classList.add('swiping');
+                active.tr.classList.toggle('show-pay', dx > 0);
+                active.tr.classList.toggle('show-del', dx < 0);
+                active.tr.querySelectorAll('td').forEach(td => {
+                    td.style.transform = `translateX(${dx}px)`;
+                });
+            }, { passive: false });
+
+            tbody.addEventListener('touchend', () => {
+                if (!active) return;
+                const { tr, dx, idx } = active;
+                active = null;
+                const width = tr.getBoundingClientRect().width;
+                if (Math.abs(dx) > width * THRESHOLD_PCT && idx >= 0) {
+                    const action = dx > 0 ? 'pay' : 'del';
+                    if (action === 'pay') {
+                        const d = allData[idx];
+                        if (isFullyPaid(d)) {
+                            reset(tr);
+                            return;
+                        }
+                        const rem = remaining(d);
+                        d.paid = d.invoiced;
+                        persistChange();
+                        showToast(`Marked paid: ${fmtAED(rem)}`);
+                    } else {
+                        if (confirm('Delete this order?')) {
+                            allData.splice(idx, 1);
+                            persistChange();
+                        } else {
+                            reset(tr);
+                        }
+                    }
+                } else {
+                    reset(tr);
+                }
+            });
+
+            tbody.addEventListener('touchcancel', () => {
+                if (active) { reset(active.tr); active = null; }
+            });
+        })();
+
+        // ---- Service worker + install prompt ----------------------------
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('sw.js').catch(err => console.warn('SW reg failed:', err));
+            });
+        }
+
+        let deferredInstall = null;
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault();
+            deferredInstall = e;
+            document.getElementById('installBtn').classList.add('visible');
+        });
+        document.getElementById('installBtn').addEventListener('click', async () => {
+            if (deferredInstall) {
+                deferredInstall.prompt();
+                await deferredInstall.userChoice;
+                deferredInstall = null;
+                document.getElementById('installBtn').classList.remove('visible');
+            } else {
+                // iOS Safari has no install prompt — show manual instructions.
+                alert('To install on iPad: tap the Share button in Safari, then "Add to Home Screen".');
+            }
+        });
+
+        // Show the install button on iOS (manual install) when not already standalone.
+        const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+        const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+        if (isIOS && !isStandalone) {
+            document.getElementById('installBtn').classList.add('visible');
+        }
+
+        // Hard refresh: clears all SW caches and unregisters workers, then reloads.
+        // Only shown inside the installed PWA — the browser already has a refresh button.
+        async function hardRefresh() {
+            if (!confirm('Reset cache and reload? This forces the latest version.')) return;
+            try {
+                if ('caches' in window) {
+                    const keys = await caches.keys();
+                    await Promise.all(keys.map(k => caches.delete(k)));
+                }
+                if ('serviceWorker' in navigator) {
+                    const regs = await navigator.serviceWorker.getRegistrations();
+                    await Promise.all(regs.map(r => r.unregister()));
+                }
+            } catch (e) {
+                console.warn('Cache reset failed:', e);
+            }
+            location.reload();
+        }
+        document.getElementById('hardRefreshBtn').addEventListener('click', hardRefresh);
+        if (isStandalone) {
+            document.getElementById('hardRefreshBtn').classList.add('visible');
+        }
+
+        initialLoad().then(() => {
+            pollTimer = setInterval(pollOnce, POLL_INTERVAL_MS);
+        });
+    </script>
+</body>
+</html>

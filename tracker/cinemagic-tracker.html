@@ -1,0 +1,595 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Cinemagic · Payment Tracker</title>
+
+<!-- Favicon -->
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzk4IiBoZWlnaHQ9Ijc4IiB2aWV3Qm94PSIwIDAgMzk4IDc4IiBmaWxsPSJub25lIiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciPjxyZWN0IHdpZHRoPSIzOTgiIGhlaWdodD0iNzgiIGZpbGw9IiMxMTExMTEiLz48dGV4dCB4PSIyMCIgeT0iNTUiIGZvbnQtZmFtaWx5PSJBcmlhbCIgZm9udC1zaXplPSI2MCIgZm9udC13ZWlnaHQ9ImJvbGQiIGZpbGw9IndoaXRlIj5DTTwvdGV4dD48L3N2Zz4=">
+<meta property="og:title" content="Cinemagic · Payment Tracker" />
+<meta property="og:description" content="Payment tracking for Mahmoud Adel · Diido" />
+<meta property="og:image" content="https://lensmania.ae/cinemagic-logo.png" />
+<meta property="og:url" content="https://lensmania.ae/cinemagic-tracker.html" />
+
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700;900&family=DM+Mono:wght@300;400;500&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:       #0a0a0a;
+  --bg2:      #111111;
+  --bg3:      #1a1a1a;
+  --bg4:      #222222;
+  --border:   rgba(255,255,255,0.08);
+  --border-s: rgba(255,255,255,0.16);
+  --white:    #ffffff;
+  --off:      #e8e8e8;
+  --grey1:    #aaaaaa;
+  --grey2:    #666666;
+  --grey3:    #333333;
+  --accent:   #ffffff;
+  --green:    #6ee7b7;
+  --green-dim:rgba(110,231,183,0.1);
+  --red:      #f87171;
+  --red-dim:  rgba(248,113,113,0.1);
+  --yellow:   #fbbf24;
+  --yellow-dim:rgba(251,191,36,0.1);
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{background:var(--bg);color:var(--white);font-family:'Inter',sans-serif;min-height:100vh;overflow-x:hidden;}
+
+/* GRAIN */
+body::after{content:'';position:fixed;inset:0;background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.03'/%3E%3C/svg%3E");pointer-events:none;z-index:0;opacity:0.6;}
+
+.page{position:relative;z-index:1;max-width:1200px;margin:0 auto;padding:36px 24px 100px;}
+
+/* HEADER */
+.hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:48px;flex-wrap:wrap;gap:16px;padding-bottom:24px;border-bottom:1px solid var(--border);}
+.hdr-right{display:flex;align-items:center;gap:10px;}
+.tag{font-family:'DM Mono',monospace;font-size:10px;letter-spacing:.2em;color:var(--grey2);border:1px solid var(--border);padding:5px 14px;border-radius:20px;}
+
+/* HERO */
+.hero{background:var(--bg2);border:1px solid var(--border);border-radius:20px;padding:40px 48px;position:relative;overflow:hidden;margin-bottom:16px;}
+.hero::before{content:'';position:absolute;inset:0;background:linear-gradient(135deg,rgba(255,255,255,0.03) 0%,transparent 60%);pointer-events:none;}
+.hero-rule{position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,rgba(255,255,255,0.15),transparent);}
+.hero::after{content:'OUTSTANDING';position:absolute;bottom:10px;right:30px;font-family:'Playfair Display',serif;font-size:110px;font-weight:900;color:rgba(255,255,255,0.025);letter-spacing:-.02em;line-height:1;pointer-events:none;}
+.hero-lbl{font-family:'DM Mono',monospace;font-size:10px;letter-spacing:.25em;color:var(--grey2);text-transform:uppercase;margin-bottom:12px;}
+.hero-amt{font-family:'Playfair Display',serif;font-size:clamp(48px,7vw,80px);font-weight:900;color:var(--white);line-height:1;letter-spacing:-.02em;margin-bottom:8px;}
+.hero-amt sup{font-size:.38em;font-weight:400;color:var(--grey1);vertical-align:super;margin-right:6px;}
+.hero-sub{font-family:'DM Mono',monospace;font-size:11px;color:var(--grey2);margin-bottom:28px;}
+.prog-labels{display:flex;justify-content:space-between;margin-bottom:8px;}
+.prog-labels span{font-family:'DM Mono',monospace;font-size:11px;color:var(--grey2);}
+.prog-labels strong{color:var(--white);}
+.prog-track{height:4px;background:var(--bg4);border-radius:10px;overflow:hidden;}
+.prog-fill{height:100%;background:linear-gradient(90deg,var(--grey2),var(--white));border-radius:10px;transition:width 1.4s cubic-bezier(.4,0,.2,1);}
+.prog-sub{display:flex;justify-content:space-between;margin-top:8px;}
+.prog-sub span{font-family:'DM Mono',monospace;font-size:10px;color:var(--grey2);}
+
+/* STAT CARDS */
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(155px,1fr));gap:10px;margin-bottom:40px;}
+.sc{background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:18px 20px;position:relative;overflow:hidden;transition:border-color .2s,transform .2s;}
+.sc:hover{border-color:var(--border-s);transform:translateY(-2px);}
+.sc::before{content:'';position:absolute;top:0;left:0;right:0;height:1px;}
+.sc.w::before{background:linear-gradient(90deg,var(--white),transparent);}
+.sc.g::before{background:linear-gradient(90deg,var(--green),transparent);}
+.sc.r::before{background:linear-gradient(90deg,var(--red),transparent);}
+.sc.y::before{background:linear-gradient(90deg,var(--yellow),transparent);}
+.sc-ico{font-size:15px;margin-bottom:10px;}
+.sc-lbl{font-family:'DM Mono',monospace;font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--grey2);margin-bottom:5px;}
+.sc-val{font-family:'Playfair Display',serif;font-size:21px;font-weight:700;line-height:1;}
+.sc-val.w{color:var(--white);}
+.sc-val.g{color:var(--green);}
+.sc-val.r{color:var(--red);}
+.sc-val.y{color:var(--yellow);}
+
+/* MONTHLY CHARTS */
+.month-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:12px;}
+.month-card{background:var(--bg2);border:1px solid var(--border);border-radius:14px;padding:20px 16px;display:flex;flex-direction:column;align-items:center;gap:10px;transition:border-color .2s,transform .2s;cursor:default;}
+.month-card:hover{border-color:var(--border-s);transform:translateY(-2px);}
+.month-label{font-family:'DM Mono',monospace;font-size:10px;letter-spacing:.2em;text-transform:uppercase;color:var(--grey2);}
+.donut-wrap{position:relative;width:120px;height:120px;}
+.donut-wrap svg{transform:rotate(-90deg);}
+.donut-center{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;}
+.donut-pct{font-family:'Playfair Display',serif;font-size:26px;font-weight:700;line-height:1;}
+.donut-sub{font-family:'DM Mono',monospace;font-size:8px;letter-spacing:.1em;color:var(--grey2);margin-top:2px;}
+.month-stats{width:100%;display:flex;flex-direction:column;gap:5px;}
+.ms-row{display:flex;justify-content:space-between;font-family:'DM Mono',monospace;font-size:10px;}
+.ms-row span:first-child{color:var(--grey2);}
+.ms-divider{border:none;border-top:1px solid var(--border);margin:3px 0;}
+
+/* SECTION HEAD */
+.sec-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:12px;}
+.sec-title{display:flex;align-items:center;gap:10px;}
+.sec-title h2{font-family:'Playfair Display',serif;font-size:20px;font-weight:700;color:var(--white);}
+.badge{font-family:'DM Mono',monospace;font-size:10px;padding:3px 9px;border-radius:20px;font-weight:500;}
+.badge-r{background:var(--red-dim);color:var(--red);border:1px solid rgba(248,113,113,0.25);}
+.badge-g{background:var(--green-dim);color:var(--green);border:1px solid rgba(110,231,183,0.25);}
+.controls{display:flex;gap:8px;align-items:center;flex-wrap:wrap;}
+.srch{background:var(--bg3);border:1px solid var(--border);border-radius:7px;padding:8px 14px;font-family:'DM Mono',monospace;font-size:12px;color:var(--white);outline:none;width:180px;transition:border .15s;}
+.srch:focus{border-color:var(--border-s);}
+.srch::placeholder{color:var(--grey2);}
+
+/* BUTTONS */
+.btn{display:inline-flex;align-items:center;gap:6px;padding:9px 18px;border-radius:7px;font-family:'DM Mono',monospace;font-size:12px;font-weight:500;cursor:pointer;border:none;transition:all .18s;text-decoration:none;white-space:nowrap;}
+.btn-p{background:var(--white);color:var(--bg);font-weight:700;}
+.btn-p:hover{background:var(--off);transform:translateY(-1px);}
+.btn-g{background:transparent;color:var(--grey2);border:1px solid var(--border);}
+.btn-g:hover{border-color:var(--border-s);color:var(--white);}
+.btn-sm{padding:7px 13px;font-size:11px;}
+.wa-btn{background:#25D366;color:#fff;padding:9px 16px;font-size:12px;border-radius:7px;display:inline-flex;align-items:center;gap:6px;border:none;cursor:pointer;font-family:'DM Mono',monospace;font-weight:500;transition:all .15s;}
+.wa-btn:hover{background:#1ebe5d;transform:translateY(-1px);}
+.wa-sm{background:rgba(37,211,102,0.15);color:#25D366;border:1px solid rgba(37,211,102,0.3);padding:5px 10px;font-size:11px;border-radius:6px;display:inline-flex;align-items:center;gap:4px;cursor:pointer;font-family:'DM Mono',monospace;font-weight:500;transition:all .15s;text-decoration:none;}
+.wa-sm:hover{background:rgba(37,211,102,0.25);}
+
+/* TABLE */
+.tbl-wrap{background:var(--bg2);border:1px solid var(--border);border-radius:12px;overflow:hidden;margin-bottom:10px;}
+table{width:100%;border-collapse:collapse;}
+thead th{padding:10px 14px;text-align:left;font-family:'DM Mono',monospace;font-size:10px;letter-spacing:.15em;text-transform:uppercase;color:var(--grey2);background:var(--bg3);border-bottom:1px solid var(--border);white-space:nowrap;}
+tbody tr{border-bottom:1px solid rgba(255,255,255,0.04);transition:background .12s;}
+tbody tr:last-child{border-bottom:none;}
+tbody tr:hover{background:rgba(255,255,255,0.02);}
+td{padding:13px 14px;font-size:12px;vertical-align:middle;}
+.td-date{font-family:'DM Mono',monospace;font-size:11px;color:var(--grey2);white-space:nowrap;}
+.td-cli{font-weight:600;color:var(--white);}
+.td-proj{color:var(--grey1);font-size:12px;max-width:200px;}
+.td-mo{font-family:'DM Mono',monospace;font-size:10px;color:var(--grey2);}
+.td-amt{font-family:'DM Mono',monospace;font-weight:500;white-space:nowrap;color:var(--off);}
+.td-rec{font-family:'DM Mono',monospace;color:var(--green);white-space:nowrap;}
+.td-due{font-family:'DM Mono',monospace;font-weight:700;white-space:nowrap;color:var(--red);}
+
+/* PILL */
+.pill{display:inline-flex;align-items:center;gap:4px;padding:3px 9px;border-radius:20px;font-family:'DM Mono',monospace;font-size:10px;font-weight:500;letter-spacing:.05em;text-transform:uppercase;}
+.pill-u{background:var(--red-dim);color:var(--red);border:1px solid rgba(248,113,113,0.2);}
+.pill-part{background:var(--yellow-dim);color:var(--yellow);border:1px solid rgba(251,191,36,0.2);}
+.pill-paid{background:var(--green-dim);color:var(--green);border:1px solid rgba(110,231,183,0.2);}
+.pdot{width:4px;height:4px;border-radius:50%;background:currentColor;}
+
+/* ICON BTN */
+.ib{width:28px;height:28px;border-radius:6px;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;border:none;background:transparent;color:var(--grey2);transition:all .15s;}
+.ib.ed:hover{background:rgba(255,255,255,0.08);color:var(--white);}
+.ib.dl:hover{background:var(--red-dim);color:var(--red);}
+
+/* EMPTY */
+.empty{text-align:center;padding:40px 20px;color:var(--grey2);}
+.empty p{font-family:'DM Mono',monospace;font-size:12px;}
+
+/* PAID TOGGLE */
+.paid-tog{display:flex;align-items:center;justify-content:space-between;cursor:pointer;padding:14px 20px;background:var(--bg2);border:1px solid var(--border);border-radius:12px;margin:32px 0 12px;transition:all .2s;user-select:none;}
+.paid-tog:hover{border-color:var(--border-s);}
+.paid-tog-l{display:flex;align-items:center;gap:10px;}
+.paid-tog-l h3{font-family:'Playfair Display',serif;font-size:18px;font-weight:700;}
+.arr{transition:transform .3s;color:var(--grey2);}
+.arr.open{transform:rotate(180deg);}
+.paid-sec{display:none;}
+.paid-sec.open{display:block;}
+
+/* MODAL */
+.ov{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.9);backdrop-filter:blur(8px);z-index:200;align-items:center;justify-content:center;padding:20px;}
+.ov.open{display:flex;}
+.modal{background:var(--bg2);border:1px solid var(--border-s);border-radius:16px;width:100%;max-width:520px;padding:32px;animation:pop .22s cubic-bezier(.34,1.56,.64,1);position:relative;max-height:90vh;overflow-y:auto;}
+@keyframes pop{from{opacity:0;transform:scale(.92) translateY(14px);}to{opacity:1;transform:scale(1) translateY(0);}}
+.mc{position:absolute;top:16px;right:16px;width:28px;height:28px;border-radius:50%;background:var(--bg3);border:1px solid var(--border);color:var(--grey2);cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .15s;font-size:14px;}
+.mc:hover{background:var(--white);color:var(--bg);}
+.mtitle{font-family:'Playfair Display',serif;font-size:21px;font-weight:700;margin-bottom:4px;}
+.msub{font-family:'DM Mono',monospace;font-size:11px;color:var(--grey2);margin-bottom:22px;}
+.fg{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+.fi{display:flex;flex-direction:column;gap:6px;}
+.fi.full{grid-column:1/-1;}
+.fi label{font-family:'DM Mono',monospace;font-size:10px;letter-spacing:.15em;text-transform:uppercase;color:var(--grey2);}
+.fi input,.fi select,.fi textarea{background:var(--bg3);border:1px solid var(--border);border-radius:7px;padding:9px 12px;font-family:'DM Mono',monospace;font-size:12px;color:var(--white);outline:none;transition:border .15s;width:100%;}
+.fi input:focus,.fi select:focus,.fi textarea:focus{border-color:var(--border-s);}
+.fi select option{background:var(--bg3);}
+.fi textarea{resize:vertical;min-height:56px;}
+.mfooter{display:flex;gap:10px;justify-content:flex-end;margin-top:20px;}
+.wa-prev{background:var(--bg3);border:1px solid var(--border);border-radius:9px;padding:14px;font-family:'DM Mono',monospace;font-size:11px;color:var(--off);line-height:1.75;margin-bottom:14px;max-height:200px;overflow-y:auto;white-space:pre-wrap;}
+.wa-row{display:flex;gap:10px;align-items:flex-end;}
+.wa-row .fi{flex:1;}
+
+/* DIVIDERS */
+.sec-div{margin:36px 0 20px;height:1px;background:var(--border);}
+
+@media(max-width:700px){
+  .fg{grid-template-columns:1fr;}
+  .hero{padding:24px 20px;}
+  .hero-amt{font-size:44px;}
+  table{font-size:11px;}
+  td,thead th{padding:9px 9px;}
+  .td-proj,.td-mo{display:none;}
+  .page{padding:20px 14px 80px;}
+  .srch{width:130px;}
+}
+</style>
+</head>
+<body>
+<div class="page">
+
+<!-- HEADER -->
+<div class="hdr">
+  <svg width="200" height="39" viewBox="0 0 398 78" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <mask id="ml" style="mask-type:luminance" maskUnits="userSpaceOnUse" x="0" y="0" width="398" height="78"><path d="M398 0H0V77.762H398V0Z" fill="white"/></mask>
+    <g mask="url(#ml)">
+    <path d="M133.967 13.7694C132.936 10.8745 131.284 8.24068 129.125 6.05338C127.051 4.02127 124.554 2.47149 121.812 1.51438C118.896 0.489627 115.825-0.0226023 112.734 0.000375453C108.863-0.0855115 105.031 0.798674 101.589 2.57238C98.4184 4.26297 95.8075 6.83881 94.0742 9.98638H93.8742C92.0929 6.85822 89.4726 4.29026 86.3092 2.57238C82.8855 0.795065 79.0686-0.0895768 75.2122 0.000375453C72.1218-0.0225271 69.0508 0.489702 66.1352 1.51438C63.3935 2.47137 60.8965 4.02117 58.8222 6.05338C56.6632 8.24005 55.0106 10.8741 53.9812 13.7694C52.7343 17.3152 52.1361 21.0565 52.2152 24.8144V40.7674C52.2293 43.1255 51.5479 45.4354 50.2562 47.4084C48.8723 49.4808 47.0954 51.2617 45.0262 52.6504C41.4798 54.986 37.3032 56.1796 33.0582 56.0704C30.1629 56.1096 27.2885 55.576 24.6002 54.5004C22.1451 53.5061 19.9294 52.0011 18.1002 50.0854C16.2706 48.1468 14.8351 45.8713 13.8732 43.3854C12.8385 40.705 12.3227 37.8524 12.3532 34.9794C12.3226 32.106 12.8384 29.2531 13.8732 26.5724C14.8289 24.0996 16.2656 21.841 18.1002 19.9274C19.9422 18.0347 22.1583 16.5464 24.6072 15.5574C27.2947 14.4828 30.1681 13.9499 33.0622 13.9894H44.8732C45.2039 13.9894 45.5211 13.858 45.7549 13.6241C45.9888 13.3903 46.1202 13.0731 46.1202 12.7424V3.93238C46.1202 3.60165 45.9888 3.28447 45.7549 3.05061C45.5211 2.81676 45.2039 2.68538 44.8732 2.68538H32.5342V2.70038C28.1473 2.69904 23.7987 3.51566 19.7112 5.10838C15.8156 6.64156 12.2637 8.93401 9.26218 11.8524C6.29826 14.7631 3.96934 18.2561 2.42218 22.1114C0.78218 26.2028-0.0406397 30.5757 0.000178608 34.9834C-0.0496169 39.4064 0.773421 43.7958 2.42218 47.9004C3.97689 51.7379 6.30525 55.2141 9.26218 58.1124C12.2635 61.0311 15.8154 63.3235 19.7112 64.8564C23.9629 66.5138 28.4942 67.3362 33.0572 67.2784C36.9072 67.309 40.738 66.7319 44.4082 65.5684C47.7922 64.4952 50.9703 62.8574 53.8082 60.7244C56.5582 58.6396 58.9349 56.1037 60.8372 53.2244C62.0337 51.4207 63.0392 49.4974 63.8372 47.4854C64.6943 45.3078 65.1313 42.9876 65.1252 40.6474V24.8144C65.1252 20.3097 66.2012 17.0484 68.3532 15.0304C70.5593 13.0802 73.4022 12.0038 76.3467 12.0038C79.2912 12.0038 82.1341 13.0802 84.3402 15.0304C86.4582 17.047 87.5175 20.3084 87.5182 24.8144V66.0324C87.5182 66.6803 87.6496 66.6803 87.8834 66.9141C88.1173 67.148 88.4344 67.2794 88.7652 67.2794H99.1822C99.5129 67.2794 99.8301 67.148 100.064 66.9141C100.298 66.6803 100.429 66.3631 100.429 66.0324V24.8144C100.429 20.3097 101.488 17.0484 103.606 15.0304C105.812 13.0801 108.656 12.0037 111.6 12.0037C114.545 12.0037 117.388 13.0801 119.594 15.0304C121.746 17.047 122.821 20.3084 122.821 24.8144V66.0324C122.821 66.3631 122.953 66.6803 123.186 66.9141C123.42 67.148 123.737 67.2794 124.068 67.2794H134.486C134.817 67.2794 135.134 67.148 135.368 66.9141C135.602 66.6803 135.733 66.3631 135.733 66.0324V24.8144C135.811 21.0566 135.213 17.3154 133.967 13.7694Z" fill="white"/>
+    <path d="M165.708 12.1076C165.09 11.2172 164.291 10.4675 163.362 9.90765C162.567 9.39687 161.646 9.11364 160.701 9.08865C160.076 9.08318 159.457 9.21744 158.89 9.48165C158.333 9.74523 157.835 10.1195 157.427 10.5816C156.998 11.0676 156.672 11.6348 156.466 12.2496C156.24 12.9244 156.129 13.6321 156.135 14.3436C156.128 15.0706 156.24 15.7939 156.466 16.4846C156.669 17.1057 156.996 17.679 157.427 18.1696C157.835 18.6321 158.333 19.0064 158.89 19.2696C159.457 19.5346 160.076 19.6692 160.701 19.6636C161.601 19.6362 162.481 19.393 163.267 18.9546C164.185 18.479 165.011 17.8446 165.707 17.0806L169.926 21.5806C169.098 22.4913 168.15 23.2855 167.108 23.9416C166.068 24.6043 164.946 25.1284 163.77 25.5006C162.656 25.8598 161.493 26.0456 160.322 26.0516C158.723 26.07 157.134 25.7758 155.647 25.1856C154.265 24.6312 153.008 23.8072 151.947 22.7616C150.892 21.7128 150.062 20.4591 149.508 19.0776C148.919 17.6007 148.625 16.0227 148.642 14.4326C148.624 12.8667 148.924 11.3135 149.523 9.86665C150.098 8.50028 150.949 7.26771 152.023 6.24665C153.124 5.20618 154.418 4.39298 155.833 3.85365C157.356 3.27486 158.974 2.98656 160.603 3.00365C161.76 3.00607 162.91 3.17445 164.019 3.50365C165.156 3.83617 166.246 4.31235 167.262 4.92065C168.253 5.50709 169.15 6.23928 169.923 7.09265L165.708 12.1076Z" fill="white"/>
+    <path d="M186.394 3.48047H179.09V25.5525H186.394V3.48047Z" fill="white"/>
+    <path d="M197.226 3.48047H203.334L214.008 17.3335L212.056 17.9955V3.48047H218.668V25.5525H212.56L201.918 11.7615L203.87 11.1005V25.5525H197.227L197.226 3.48047Z" fill="white"/>
+    <path d="M229.499 3.48047H248.17V9.02247H236.804V11.7295H247.132V17.2715H236.804V20.0115H248.455V25.5535H229.499V3.48047Z" fill="white"/>
+    <path d="M258.907 3.48047H266.652L272.131 15.0045L277.577 3.48047H285.323V25.5525H278.931V13.4615L274.491 23.4115H269.738L265.298 13.4615V25.5515H258.906L258.907 3.48047Z" fill="white"/>
+    <path d="M303.587 3.48047H311.08L320.054 25.5525H312.276L307.113 10.7525L301.76 25.5525H294.267L303.587 3.48047Z" fill="white"/>
+    <path d="M322.783 14.4336C322.765 12.8674 323.065 11.3139 323.664 9.86665C324.239 8.50023 325.09 7.26764 326.164 6.24665C327.265 5.20618 328.558 4.39298 329.974 3.85365C331.497 3.27483 333.115 2.98653 334.744 3.00365C335.853 3.00513 336.956 3.15735 338.023 3.45565C339.105 3.75523 340.145 4.19261 341.116 4.75665C342.059 5.29903 342.922 5.97213 343.682 6.75465L339.31 11.2176C338.854 10.6812 338.315 10.2215 337.712 9.85765C337.126 9.4979 336.487 9.23254 335.817 9.07165C335.189 8.91902 334.543 8.84338 333.895 8.84665C333.181 8.83956 332.472 8.96773 331.805 9.22465C331.175 9.46836 330.602 9.84 330.121 10.3156C329.64 10.7913 329.261 11.3607 329.008 11.9876C328.736 12.6638 328.601 13.3872 328.611 14.1156V14.7506C328.591 15.4943 328.725 16.2344 329.005 16.9226C329.267 17.5496 329.659 18.1131 330.155 18.5766C330.651 19.0431 331.237 19.4023 331.877 19.6316C332.553 19.8738 333.267 19.9947 333.986 19.9886C334.636 19.9867 335.284 19.9062 335.915 19.7486C336.577 19.5783 337.21 19.3116 337.793 18.9566C338.39 18.5893 338.926 18.1278 339.38 17.5896L343.679 22.0526C342.913 22.8451 342.044 23.5296 341.094 24.0866C340.118 24.6509 339.071 25.0799 337.981 25.3626C336.902 25.6431 335.793 25.7856 334.679 25.7866C333.033 25.8067 331.398 25.5163 329.858 24.9306C328.461 24.3937 327.19 23.5806 326.119 22.5406C325.061 21.509 324.233 20.2644 323.687 18.8876C323.097 17.4253 322.786 15.8649 322.769 14.2886L322.783 14.4336Z" fill="white"/>
+    <path d="M355.737 3.48047H348.433V25.5525H355.737V3.48047Z" fill="white"/>
+    <path d="M369.735 9.02247H362.056V3.48047H384.721V9.02247H377.042V25.5525H369.736L369.735 9.02247Z" fill="white"/>
+    <path d="M393.613 16.7065L384.417 3.48047H392.884L397.987 11.3445L393.613 16.7065ZM393.613 16.7065L398 25.5525H389.375L393.613 16.7065ZM384.418 25.5525L389.375 16.7065L393.613 16.7065L384.418 25.5525Z" fill="white"/>
+    <path d="M0 77.762H9.371V45.692H0V77.762Z" fill="white"/>
+    <path d="M13.609 77.762H22.545L38.195 59.095L36.281 58.427V77.762H45.217V45.692H36.281L20.631 64.359L22.545 65.027V45.692H13.609V77.762Z" fill="white"/>
+    <path d="M49.608 77.762H80.574V70.524H58.979V65.026H78.659V57.787H58.979V52.93H80.256V45.692H49.608V77.762Z" fill="white"/>
+    <path d="M84.608 77.762H93.545V65.025H107.245V77.762H116.182V45.692H107.245V57.787H93.545V45.692H84.608V77.762Z" fill="white"/>
+    <path d="M135.418 78.0001C130.648 78.0001 127.006 76.7181 124.49 74.1541C121.974 71.5901 120.716 67.8921 120.716 63.0601V45.6921H129.652V62.9321C129.652 65.3281 130.114 67.0741 131.038 68.1701C131.962 69.2661 133.398 69.8141 135.347 69.8141C137.296 69.8141 138.732 69.2661 139.656 68.1701C140.58 67.0741 141.042 65.3281 141.042 62.9321V45.6921H149.978V63.0601C149.978 67.8921 148.72 71.5901 146.204 74.1541C143.688 76.7181 140.044 78.0001 135.418 78.0001Z" fill="white"/>
+    <path d="M154.367 77.762H163.304V67.621L161.072 68.289L172.24 45.692H162.98L155.963 61.917L158.353 62.585L151.336 45.692H142.076L154.367 68.289L152.135 67.621L154.367 77.762Z" fill="white"/>
+    <path d="M188.422 78.0001C185.754 78.0461 183.104 77.5371 180.637 76.5041C178.384 75.5521 176.352 74.1481 174.667 72.3801C172.982 70.6031 171.681 68.5001 170.844 66.2041C169.957 63.7861 169.512 61.2291 169.531 58.6551V64.3981C169.518 61.8514 169.963 59.3228 170.844 56.9381C171.679 54.6358 172.98 52.5265 174.667 50.7441C176.35 48.9718 178.382 47.5644 180.637 46.6121C185.571 44.5341 191.114 44.5341 196.048 46.6121C198.298 47.5661 200.327 48.9735 202.011 50.7441C203.697 52.5273 204.998 54.6366 205.836 56.9381C206.716 59.3228 207.161 61.8514 207.148 64.3981V58.6551C207.165 61.2288 206.72 63.7855 205.836 66.2041C204.997 68.5067 203.694 70.6127 202.005 72.3861C200.321 74.1518 198.293 75.5544 196.044 76.5041C193.58 77.5364 190.934 78.0454 188.269 78.0001H188.422ZM188.422 70.2841C189.559 70.3051 190.688 70.0931 191.741 69.6611C192.726 69.2561 193.614 68.6481 194.349 67.8771C195.092 67.0901 195.668 66.1581 196.044 65.1401C196.453 64.0281 196.654 62.8511 196.637 61.6671V61.3851C196.655 60.2038 196.454 59.0296 196.044 57.9221C195.669 56.9041 195.093 55.9721 194.349 55.1851C193.614 54.4141 192.726 53.8061 191.741 53.4011C190.689 52.9681 189.56 52.7561 188.422 52.7771C187.284 52.7561 186.155 52.9681 185.103 53.4011C184.118 53.8061 183.23 54.4141 182.495 55.1851C181.751 55.9721 181.175 56.9041 180.8 57.9221C180.39 59.0296 180.189 60.2038 180.207 61.3851V61.6671C180.19 62.8511 180.391 64.0281 180.8 65.1401C181.176 66.1581 181.752 67.0901 182.495 67.8771C183.23 68.6481 184.118 69.2561 185.103 69.6611C186.157 70.0931 187.286 70.3051 188.422 70.2841Z" fill="white"/>
+    <path d="M211.245 77.762H220.182V67.621L217.95 68.289L229.118 45.692H219.858L212.841 61.917L215.231 62.585L208.214 45.692H198.954L211.245 68.289L209.013 67.621L211.245 77.762Z" fill="white"/>
+    <path d="M248.623 78.0001C245.955 78.0461 243.305 77.5371 240.838 76.5041C238.585 75.5521 236.553 74.1481 234.868 72.3801C233.183 70.6031 231.882 68.5001 231.045 66.2041C230.158 63.7861 229.713 61.2291 229.732 58.6551V64.3981C229.719 61.8514 230.164 59.3228 231.045 56.9381C231.88 54.6358 233.181 52.5265 234.868 50.7441C236.551 48.9718 238.583 47.5644 240.838 46.6121C245.772 44.5341 251.315 44.5341 256.249 46.6121C258.499 47.5661 260.528 48.9735 262.212 50.7441C263.898 52.5273 265.199 54.6366 266.037 56.9381C266.917 59.3228 267.362 61.8514 267.349 64.3981V58.6551C267.366 61.2288 266.921 63.7855 266.037 66.2041C265.198 68.5067 263.895 70.6127 262.206 72.3861C260.522 74.1518 258.494 75.5544 256.245 76.5041C253.781 77.5364 251.135 78.0454 248.47 78.0001H248.623ZM248.623 70.2841C249.76 70.3051 250.889 70.0931 251.942 69.6611C252.927 69.2561 253.815 68.6481 254.55 67.8771C255.293 67.0901 255.869 66.1581 256.245 65.1401C256.654 64.0281 256.855 62.8511 256.838 61.6671V61.3851C256.856 60.2038 256.655 59.0296 256.245 57.9221C255.87 56.9041 255.294 55.9721 254.55 55.1851C253.815 54.4141 252.927 53.8061 251.942 53.4011C250.89 52.9681 249.761 52.7561 248.623 52.7771C247.485 52.7561 246.356 52.9681 245.304 53.4011C244.319 53.8061 243.431 54.4141 242.696 55.1851C241.952 55.9721 241.376 56.9041 241.001 57.9221C240.591 59.0296 240.39 60.2038 240.408 61.3851V61.6671C240.391 62.8511 240.592 64.0281 241.001 65.1401C241.377 66.1581 241.953 67.0901 242.696 67.8771C243.431 68.6481 244.319 69.2561 245.304 69.6611C246.358 70.0931 247.487 70.3051 248.623 70.2841Z" fill="white"/>
+    </g>
+  </svg>
+  <div class="hdr-right">
+    <span id="sync-ind" style="font-size:10px;color:#aaa;letter-spacing:.5px;text-transform:uppercase;align-self:center;margin-right:6px;font-family:'Inter',sans-serif;">Loading…</span>
+    <div class="tag">Mahmoud Adel · Diido</div>
+    <button class="btn btn-g btn-sm" onclick="exportCSV()">↓ CSV</button>
+    <button class="btn btn-p" onclick="openAdd()">+ Add Job</button>
+  </div>
+</div>
+
+<!-- HERO -->
+<div class="hero">
+  <div class="hero-rule"></div>
+  <div class="hero-lbl">Total Outstanding · Cinemagic</div>
+  <div class="hero-amt"><sup>AED</sup><span id="h-due">0</span></div>
+  <div class="hero-sub" id="h-sub">across 0 unpaid jobs</div>
+  <div class="prog-labels"><span>Collected</span><strong id="h-pct">0%</strong></div>
+  <div class="prog-track"><div class="prog-fill" id="h-bar" style="width:0%"></div></div>
+  <div class="prog-sub"><span id="h-rec">AED 0 received</span><span id="h-inv">AED 0 total invoiced</span></div>
+</div>
+
+<!-- STAT CARDS -->
+<div class="stats">
+  <div class="sc w"><div class="sc-ico">📋</div><div class="sc-lbl">Total Invoiced</div><div class="sc-val w" id="s-inv">AED 0</div></div>
+  <div class="sc g"><div class="sc-ico">✅</div><div class="sc-lbl">Total Received</div><div class="sc-val g" id="s-rec">AED 0</div></div>
+  <div class="sc r"><div class="sc-ico">⏳</div><div class="sc-lbl">Outstanding</div><div class="sc-val r" id="s-out">AED 0</div></div>
+  <div class="sc y"><div class="sc-ico">🎬</div><div class="sc-lbl">Unpaid Jobs</div><div class="sc-val y" id="s-upd">0</div></div>
+  <div class="sc g"><div class="sc-ico">🏆</div><div class="sc-lbl">Paid Jobs</div><div class="sc-val w" id="s-pdc">0</div></div>
+</div>
+
+<!-- MONTHLY CHARTS -->
+<div style="margin-bottom:40px;">
+  <div class="sec-head" style="margin-bottom:16px;">
+    <div class="sec-title"><h2>Monthly Overview</h2></div>
+    <span style="font-family:'DM Mono',monospace;font-size:10px;letter-spacing:.15em;color:var(--grey2);text-transform:uppercase;">% collected per month</span>
+  </div>
+  <div class="month-grid" id="month-grid"></div>
+</div>
+
+<!-- UNPAID -->
+<div class="sec-head">
+  <div class="sec-title"><h2>Unpaid Orders</h2><span class="badge badge-r" id="u-badge">0</span></div>
+  <div class="controls">
+    <input class="srch" placeholder="Search…" oninput="filter(this.value)" />
+    <button class="wa-btn" onclick="openWA()">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+      Send Follow Up
+    </button>
+  </div>
+</div>
+<div class="tbl-wrap">
+  <div style="overflow-x:auto;">
+    <table><thead><tr><th>Date</th><th>End Client</th><th>Project</th><th>Month</th><th>Amount</th><th>Received</th><th>Balance Due</th><th>Status</th><th>WA</th><th></th></tr></thead>
+    <tbody id="u-body"></tbody></table>
+  </div>
+</div>
+
+<!-- PAID TOGGLE -->
+<div class="paid-tog" onclick="togglePaid()">
+  <div class="paid-tog-l"><h3>Paid Orders</h3><span class="badge badge-g" id="p-badge">0</span></div>
+  <svg class="arr" id="p-arr" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+</div>
+<div class="paid-sec" id="paid-sec">
+  <div class="tbl-wrap">
+    <div style="overflow-x:auto;">
+      <table><thead><tr><th>Date</th><th>End Client</th><th>Project</th><th>Month</th><th>Amount</th><th>Payment Date</th><th>Status</th><th></th></tr></thead>
+      <tbody id="p-body"></tbody></table>
+    </div>
+  </div>
+</div>
+
+</div><!-- /page -->
+
+<!-- JOB MODAL -->
+<div class="ov" id="job-ov">
+  <div class="modal">
+    <button class="mc" onclick="closeOv('job-ov')">✕</button>
+    <div class="mtitle" id="m-title">New Job</div>
+    <div class="msub">All jobs billed through Cinemagic</div>
+    <div class="fg">
+      <div class="fi"><label>Event Date</label><input type="date" id="f-date"/></div>
+      <div class="fi"><label>End Client</label><input type="text" id="f-cli" placeholder="e.g. Holiday Inn SHJ"/></div>
+      <div class="fi full"><label>Project Description</label><input type="text" id="f-proj" placeholder="e.g. International Family Day 1 of 2"/></div>
+      <div class="fi"><label>Amount (AED)</label><input type="number" id="f-amt" placeholder="1000" min="0"/></div>
+      <div class="fi"><label>Amount Received (AED)</label><input type="number" id="f-rec" placeholder="0" min="0"/></div>
+      <div class="fi"><label>Status</label><select id="f-st"><option value="unpaid">Unpaid</option><option value="partial">Partial</option><option value="paid">Paid</option></select></div>
+      <div class="fi"><label>Payment Date</label><input type="date" id="f-pd"/></div>
+      <div class="fi full"><label>Notes</label><textarea id="f-notes" placeholder="Any extra info…"></textarea></div>
+    </div>
+    <div class="mfooter">
+      <button class="btn btn-g" onclick="closeOv('job-ov')">Cancel</button>
+      <button class="btn btn-p" onclick="saveJob()">Save Job</button>
+    </div>
+  </div>
+</div>
+
+<!-- WA MODAL -->
+<div class="ov" id="wa-ov">
+  <div class="modal" style="max-width:460px;">
+    <button class="mc" onclick="closeOv('wa-ov')">✕</button>
+    <div class="mtitle">Send Follow Up</div>
+    <div class="msub">All unpaid orders included</div>
+    <div class="wa-prev" id="wa-prev"></div>
+    <div class="wa-row">
+      <div class="fi" style="flex:1;"><label>WhatsApp Number (with country code)</label><input type="tel" id="wa-num" placeholder="e.g. 971501234567"/></div>
+      <button class="wa-btn" onclick="sendWA()">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+        Open WhatsApp
+      </button>
+    </div>
+  </div>
+</div>
+
+<script>
+const KEY='cm_v4';
+let jobs=[],eid=null,fq='';
+const WAIC=`<path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>`;
+
+const SEED=[
+  {id:1,date:'2025-03-16',cli:'Reading Challenge',proj:'Reading Challenge / RAK',amt:500,rec:500,st:'paid',pd:'2025-05-03',notes:''},
+  {id:2,date:'2025-03-25',cli:'Dubai Civil Defense',proj:'Dubai Civil Defense',amt:1500,rec:1500,st:'paid',pd:'2025-05-03',notes:''},
+  {id:3,date:'2025-03-26',cli:'Dubai Rain',proj:'Dubai Rain',amt:1500,rec:1500,st:'paid',pd:'2025-05-03',notes:''},
+  {id:4,date:'2025-03-27',cli:'Dubai Beauty',proj:'Dubai Beauty',amt:1500,rec:1500,st:'paid',pd:'2025-05-03',notes:''},
+  {id:5,date:'2025-03-30',cli:'Dubai Humanitarian',proj:'Dubai Humanitarian',amt:1500,rec:1500,st:'paid',pd:'2025-05-03',notes:''},
+  {id:6,date:'2025-04-01',cli:'RTA Uber',proj:'RTA Uber',amt:1500,rec:0,st:'unpaid',pd:'',notes:''},
+  {id:7,date:'2025-04-05',cli:'UAE Message',proj:'UAE Message Day 1',amt:1000,rec:0,st:'unpaid',pd:'',notes:''},
+  {id:8,date:'2025-04-06',cli:'UAE Message',proj:'UAE Message Day 2',amt:1000,rec:0,st:'unpaid',pd:'',notes:''},
+  {id:9,date:'2025-04-07',cli:'UAE Message',proj:'UAE Message Day 3',amt:1000,rec:0,st:'unpaid',pd:'',notes:''},
+  {id:10,date:'2025-04-08',cli:'Clips Aqua Man',proj:'Clips Aqua Man',amt:1000,rec:0,st:'unpaid',pd:'',notes:''},
+  {id:11,date:'2025-04-13',cli:'SCA Dubai',proj:'SCA Dubai',amt:1000,rec:0,st:'unpaid',pd:'',notes:''},
+  {id:12,date:'2025-04-14',cli:'Clips Nada Hawa',proj:'Clips Nada Hawa',amt:1000,rec:0,st:'unpaid',pd:'',notes:''},
+  {id:13,date:'2025-05-03',cli:'International Family Day',proj:'International Family Day 1 of 2',amt:1000,rec:0,st:'unpaid',pd:'',notes:''},
+  {id:14,date:'2025-02-01',cli:'Clips',proj:'Clips',amt:1000,rec:1000,st:'paid',pd:'2025-03-12',notes:''},
+  {id:15,date:'2025-02-03',cli:'Creative Story',proj:'Creative Story',amt:500,rec:500,st:'paid',pd:'2025-02-06',notes:''},
+  {id:16,date:'2025-02-04',cli:'Clips (Ali)',proj:'Clips (Ali)',amt:1000,rec:1000,st:'paid',pd:'2025-04-03',notes:''},
+  {id:30,date:'2025-02-01',cli:'Action Camera Rental',proj:'Action Camera Rental',amt:150,rec:150,st:'paid',pd:'2025-05-03',notes:''},
+  {id:17,date:'2025-02-05',cli:'Rotana Hotel',proj:'Rotana Hotel',amt:800,rec:700,st:'partial',pd:'',notes:'AED 100 remaining'},
+  {id:18,date:'2025-02-07',cli:'SWAT',proj:'SWAT Day 1',amt:1100,rec:1100,st:'paid',pd:'2025-02-06',notes:''},
+  {id:19,date:'2025-02-08',cli:'SWAT',proj:'SWAT Day 2',amt:1100,rec:1100,st:'paid',pd:'2025-02-06',notes:''},
+  {id:20,date:'2025-02-09',cli:'SWAT',proj:'SWAT Day 3',amt:1100,rec:1100,st:'paid',pd:'2025-02-06',notes:''},
+  {id:21,date:'2025-02-10',cli:'SWAT',proj:'SWAT Day 4',amt:1100,rec:1100,st:'paid',pd:'2025-02-06',notes:''},
+  {id:22,date:'2025-02-11',cli:'SWAT',proj:'SWAT Day 5',amt:1100,rec:1100,st:'paid',pd:'2025-04-03',notes:''},
+  {id:23,date:'2025-02-11',cli:'CM Teleprompter',proj:'CM Teleprompter',amt:746,rec:746,st:'paid',pd:'2025-02-13',notes:''},
+  {id:24,date:'2025-02-16',cli:'Clips Dr. Fatima',proj:'Clips (Dr. Fatima)',amt:1000,rec:1000,st:'paid',pd:'2025-03-12',notes:''},
+  {id:25,date:'2025-02-18',cli:'Clips Dr. Medhat',proj:'Clips (Dr. Medhat)',amt:1000,rec:1000,st:'paid',pd:'2025-03-12',notes:''},
+  {id:26,date:'2025-02-19',cli:'Clips Fayrouz',proj:'Clips (Fayrouz)',amt:1500,rec:1500,st:'paid',pd:'2025-04-03',notes:''},
+  {id:27,date:'2025-03-05',cli:'Holiday Inn SHJ',proj:'Cinemagic / Holiday Inn SHJ',amt:1000,rec:1000,st:'paid',pd:'2025-04-13',notes:''},
+  {id:28,date:'2025-03-10',cli:'Clips Fayrouz Dubai',proj:'Clips Fayrouz / Dubai',amt:1000,rec:1000,st:'paid',pd:'2025-04-13',notes:''},
+  {id:29,date:'2025-03-23',cli:'Diana Clips Dubai',proj:'Diana Clips / Dubai',amt:1000,rec:1000,st:'paid',pd:'2025-04-13',notes:''},
+]
+
+function mo(d){if(!d)return'—';const m=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];const p=d.split('-');return m[+p[1]-1]+' '+p[0].slice(2);}
+function fd(d){if(!d)return'—';const p=d.split('-');const m=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];return +p[2]+' '+m[+p[1]-1];}
+function aed(n){return'AED '+Number(n||0).toLocaleString('en-AE');}
+function num(n){return Number(n||0).toLocaleString('en-AE');}
+function pill(s){const m={unpaid:['pill-u','Unpaid'],partial:['pill-part','Partial'],paid:['pill-paid','Paid']};const[c,l]=m[s]||m.unpaid;return`<span class="pill ${c}"><span class="pdot"></span>${l}</span>`;}
+function ib(id,type){const[cls,ic]=type==='ed'?['ed','<path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/>']:['dl','<polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4a1 1 0 011-1h4a1 1 0 011 1v2"/>'];const fn=type==='ed'?`openEdit(${id})`:`delJob(${id})`;return`<button class="ib ${cls}" onclick="${fn}"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">${ic}</svg></button>`;}
+
+// ── SYNC LAYER ────────────────────────────────────────────────
+// localStorage = local cache, cinemagic-api.php = source of truth across devices.
+// On boot: hydrate from localStorage (instant UI), then pull from server.
+// On save: write locally + debounced push to server.
+// Every 30s: pull from server; if changed AND no edit overlay open, adopt.
+const API='cinemagic-api.php';
+const AUTH='r62sGUz0Y7sE3gd77wgPKe3w5BxNLkXh';
+const POLL_MS=30000;
+let lastServer=null;
+let pushTimer=null;
+let pollPaused=false;
+
+function setSync(state,detail){
+  const el=document.getElementById('sync-ind');if(!el)return;
+  const t=new Date();
+  const hh=String(t.getHours()).padStart(2,'0');
+  const mm=String(t.getMinutes()).padStart(2,'0');
+  if(state==='syncing'){el.textContent='Syncing…';el.style.color='#aaa';el.title='';}
+  else if(state==='ok'){el.textContent='Synced '+hh+':'+mm;el.style.color='#6ee7b7';el.title='';}
+  else if(state==='err'){el.textContent='Offline · local only';el.style.color='#f87171';el.title=detail||'';}
+}
+
+async function fetchServer(){
+  const r=await fetch(API+'?t='+Date.now(),{cache:'no-store'});
+  if(!r.ok)throw new Error('HTTP '+r.status);
+  const j=await r.json();
+  if(!Array.isArray(j))throw new Error('not an array');
+  return j;
+}
+async function pushServer(arr){
+  const r=await fetch(API,{method:'POST',headers:{'Content-Type':'application/json','X-Auth':AUTH},body:JSON.stringify(arr)});
+  if(!r.ok)throw new Error('HTTP '+r.status);
+  return await r.json();
+}
+
+async function syncFromServer(){
+  if(pollPaused)return;
+  setSync('syncing');
+  try{
+    const server=await fetchServer();
+    const serverJson=JSON.stringify(server);
+    // Migration: server empty + we have local data → seed server from this device.
+    if(server.length===0 && jobs.length>0){
+      await pushServer(jobs);
+      lastServer=JSON.stringify(jobs);
+      setSync('ok');
+      return;
+    }
+    // Server differs from last known → adopt, unless user is mid-edit.
+    if(serverJson!==lastServer){
+      lastServer=serverJson;
+      const editing=document.getElementById('job-ov').classList.contains('open');
+      if(!editing){
+        jobs=server;
+        localStorage.setItem(KEY,JSON.stringify(jobs));
+        render();buildCharts();
+      }
+    }
+    setSync('ok');
+  }catch(e){
+    setSync('err',e.message);
+  }
+}
+
+function queuePush(){
+  if(pushTimer)clearTimeout(pushTimer);
+  pollPaused=true;
+  pushTimer=setTimeout(async()=>{
+    setSync('syncing');
+    try{
+      await pushServer(jobs);
+      lastServer=JSON.stringify(jobs);
+      setSync('ok');
+    }catch(e){
+      setSync('err',e.message);
+    }finally{
+      pollPaused=false;
+    }
+  },300);
+}
+
+function load(){try{const r=localStorage.getItem(KEY);const p=localStorage.getItem('cm_v3');jobs=r?JSON.parse(r):p?JSON.parse(p):SEED;if(!Array.isArray(jobs)||!jobs.length)jobs=SEED;}catch{jobs=SEED;}}
+function save(){localStorage.setItem(KEY,JSON.stringify(jobs));queuePush();}
+
+// ── MONTHLY DONUT CHARTS ──────────────────────────────────────
+function buildCharts(){
+  const months={};
+  jobs.forEach(j=>{
+    if(!j.date)return;
+    const p=j.date.split('-');
+    const key=p[0]+'-'+p[1];
+    const lbl=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][+p[1]-1]+' '+p[0].slice(2);
+    if(!months[key])months[key]={lbl,total:0,rec:0,jobs:0};
+    months[key].total+=(j.amt||0);
+    months[key].rec+=(j.rec||0);
+    months[key].jobs++;
+  });
+  const grid=document.getElementById('month-grid');
+  if(!grid)return;
+  const sorted=Object.entries(months).sort((a,b)=>a[0].localeCompare(b[0]));
+  grid.innerHTML=sorted.map(([k,m])=>{
+    const pct=m.total>0?Math.round(m.rec/m.total*100):0;
+    const due=m.total-m.rec;
+    const r=46,cx=60,cy=60,circ=2*Math.PI*r;
+    const filled=circ*(pct/100);
+    const clr=pct===100?'#6ee7b7':pct>=50?'#e8e8e8':'#f87171';
+    const trackClr='rgba(255,255,255,0.07)';
+    return `<div class="month-card">
+      <div class="month-label">${m.lbl}</div>
+      <div class="donut-wrap">
+        <svg width="120" height="120" viewBox="0 0 120 120">
+          <circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="${trackClr}" stroke-width="10"/>
+          <circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="${clr}" stroke-width="10"
+            stroke-dasharray="${filled.toFixed(2)} ${circ.toFixed(2)}"
+            stroke-linecap="round"
+            style="transition:stroke-dasharray 1.2s cubic-bezier(.4,0,.2,1);"/>
+        </svg>
+        <div class="donut-center">
+          <span class="donut-pct" style="color:${clr};">${pct}%</span>
+          <span class="donut-sub">COLLECTED</span>
+        </div>
+      </div>
+      <div class="month-stats">
+        <div class="ms-row"><span>Invoiced</span><span style="color:#e8e8e8;">${aed(m.total)}</span></div>
+        <div class="ms-row"><span>Received</span><span style="color:#6ee7b7;">${aed(m.rec)}</span></div>
+        ${due>0?`<div class="ms-row"><span>Due</span><span style="color:#f87171;">${aed(due)}</span></div>`:''}
+        <hr class="ms-divider"/>
+        <div class="ms-row"><span>Jobs</span><span style="color:#aaa;">${m.jobs}</span></div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// ── RENDER ────────────────────────────────────────────────────
+function render(){
+  const q=fq.toLowerCase();
+  const up=jobs.filter(j=>j.st!=='paid'&&(!q||j.cli.toLowerCase().includes(q)||j.proj.toLowerCase().includes(q)));
+  const pd=jobs.filter(j=>j.st==='paid'&&(!q||j.cli.toLowerCase().includes(q)||j.proj.toLowerCase().includes(q)));
+
+  const ub=document.getElementById('u-body');
+  ub.innerHTML=up.length?up.sort((a,b)=>a.date.localeCompare(b.date)).map(j=>{
+    const due=(j.amt||0)-(j.rec||0);
+    const wamsg=`Hi,\n\nFollowing up on payment for:\n*${j.proj}* (${fd(j.date)})\n\nAmount Due: *${aed(due)}*\n\nThis is for *Mahmoud Adel "Diido"*.\nKindly advise. Thank you 🙏`;
+    return`<tr><td class="td-date">${fd(j.date)}</td><td class="td-cli">${j.cli}</td><td class="td-proj">${j.proj}</td><td class="td-mo">${mo(j.date)}</td><td class="td-amt">${aed(j.amt)}</td><td class="td-rec">${j.rec>0?aed(j.rec):'—'}</td><td class="td-due">${aed(due)}</td><td>${pill(j.st)}</td><td><a class="wa-sm" href="https://wa.me/?text=${encodeURIComponent(wamsg)}" target="_blank"><svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor">${WAIC}</svg>WA</a></td><td style="display:flex;gap:2px;padding-top:14px;">${ib(j.id,'ed')}${ib(j.id,'dl')}</td></tr>`;
+  }).join(''):`<tr><td colspan="10"><div class="empty"><p>🎉 No unpaid orders</p></div></td></tr>`;
+
+  const pb=document.getElementById('p-body');
+  pb.innerHTML=pd.length?pd.sort((a,b)=>b.date.localeCompare(a.date)).map(j=>`<tr><td class="td-date">${fd(j.date)}</td><td class="td-cli">${j.cli}</td><td class="td-proj">${j.proj}</td><td class="td-mo">${mo(j.date)}</td><td class="td-amt">${aed(j.amt)}</td><td class="td-date">${j.pd?fd(j.pd):'—'}</td><td>${pill(j.st)}</td><td style="display:flex;gap:2px;padding-top:14px;">${ib(j.id,'ed')}${ib(j.id,'dl')}</td></tr>`).join(''):`<tr><td colspan="8"><div class="empty"><p>No paid orders yet.</p></div></td></tr>`;
+
+  document.getElementById('u-badge').textContent=jobs.filter(j=>j.st!=='paid').length;
+  document.getElementById('p-badge').textContent=jobs.filter(j=>j.st==='paid').length;
+
+  const inv=jobs.reduce((s,j)=>s+(j.amt||0),0);
+  const rec=jobs.reduce((s,j)=>s+(j.rec||0),0);
+  const out=inv-rec;
+  const upd=jobs.filter(j=>j.st!=='paid').reduce((s,j)=>s+((j.amt||0)-(j.rec||0)),0);
+  const upc=jobs.filter(j=>j.st!=='paid').length;
+  const pct=inv>0?Math.round(rec/inv*100):0;
+
+  document.getElementById('h-due').textContent=num(upd);
+  document.getElementById('h-sub').textContent=`across ${upc} unpaid job${upc!==1?'s':''}`;
+  document.getElementById('h-pct').textContent=pct+'%';
+  document.getElementById('h-bar').style.width=pct+'%';
+  document.getElementById('h-rec').textContent=aed(rec)+' received';
+  document.getElementById('h-inv').textContent=aed(inv)+' total invoiced';
+  document.getElementById('s-inv').textContent=aed(inv);
+  document.getElementById('s-rec').textContent=aed(rec);
+  document.getElementById('s-out').textContent=aed(out);
+  document.getElementById('s-upd').textContent=upc;
+  document.getElementById('s-pdc').textContent=jobs.filter(j=>j.st==='paid').length;
+}
+
+function openAdd(){eid=null;document.getElementById('m-title').textContent='New Job';document.getElementById('f-date').value=new Date().toISOString().split('T')[0];['f-cli','f-proj','f-amt','f-rec','f-pd','f-notes'].forEach(i=>document.getElementById(i).value='');document.getElementById('f-st').value='unpaid';document.getElementById('job-ov').classList.add('open');}
+function openEdit(id){eid=id;const j=jobs.find(x=>x.id===id);if(!j)return;document.getElementById('m-title').textContent='Edit Job';document.getElementById('f-date').value=j.date||'';document.getElementById('f-cli').value=j.cli||'';document.getElementById('f-proj').value=j.proj||'';document.getElementById('f-amt').value=j.amt||'';document.getElementById('f-rec').value=j.rec||'';document.getElementById('f-st').value=j.st||'unpaid';document.getElementById('f-pd').value=j.pd||'';document.getElementById('f-notes').value=j.notes||'';document.getElementById('job-ov').classList.add('open');}
+function closeOv(id){document.getElementById(id).classList.remove('open');}
+
+function saveJob(){
+  const date=document.getElementById('f-date').value;
+  const cli=document.getElementById('f-cli').value.trim();
+  const proj=document.getElementById('f-proj').value.trim()||cli;
+  const amt=parseFloat(document.getElementById('f-amt').value)||0;
+  const rec=parseFloat(document.getElementById('f-rec').value)||0;
+  const st=document.getElementById('f-st').value;
+  const pd=document.getElementById('f-pd').value;
+  const notes=document.getElementById('f-notes').value.trim();
+  if(!cli||!date){alert('Please fill in Date and End Client.');return;}
+  if(eid){const i=jobs.findIndex(j=>j.id===eid);if(i>-1)jobs[i]={...jobs[i],date,cli,proj,amt,rec,st,pd,notes};}
+  else jobs.push({id:Date.now(),date,cli,proj,amt,rec,st,pd,notes});
+  save();render();buildCharts();closeOv('job-ov');
+}
+function delJob(id){if(!confirm('Delete this job?'))return;jobs=jobs.filter(j=>j.id!==id);save();render();buildCharts();}
+
+['f-amt','f-rec'].forEach(fid=>{document.getElementById(fid).addEventListener('input',()=>{const a=parseFloat(document.getElementById('f-amt').value)||0;const r=parseFloat(document.getElementById('f-rec').value)||0;document.getElementById('f-st').value=r===0?'unpaid':r>=a?'paid':'partial';});});
+
+function buildMsg(){const up=jobs.filter(j=>j.st!=='paid').sort((a,b)=>a.date.localeCompare(b.date));const total=up.reduce((s,j)=>s+((j.amt||0)-(j.rec||0)),0);let m=`Hi,\n\nPlease find below the unpaid order details for:\n*Mahmoud Adel "Diido"*\n\n📋 *Unpaid Orders:*\n`;up.forEach(j=>{const d=(j.amt||0)-(j.rec||0);m+=`• ${fd(j.date)} – ${j.proj} → *AED ${num(d)}*\n`;});m+=`\n💰 *Total Outstanding: AED ${num(total)}*\n\nKindly advise on the payment schedule.\nThank you 🙏`;return m;}
+function openWA(){document.getElementById('wa-prev').textContent=buildMsg();document.getElementById('wa-num').value='';document.getElementById('wa-ov').classList.add('open');}
+function sendWA(){const n=document.getElementById('wa-num').value.trim().replace(/\D/g,'');window.open((n?`https://wa.me/${n}?text=`:`https://wa.me/?text=`)+encodeURIComponent(buildMsg()),'_blank');}
+function togglePaid(){document.getElementById('paid-sec').classList.toggle('open');document.getElementById('p-arr').classList.toggle('open');}
+function filter(q){fq=q;render();}
+function exportCSV(){const h=['Date','Client','Project','Month','Amount','Received','Balance Due','Status','Payment Date'];const rows=jobs.map(j=>{const d=(j.amt||0)-(j.rec||0);return[j.date,`"${j.cli}"`,`"${j.proj}"`,mo(j.date),j.amt,j.rec,d,j.st,j.pd||''];});const csv=[h,...rows].map(r=>r.join(',')).join('\n');const a=document.createElement('a');a.href='data:text/csv;charset=utf-8,'+encodeURIComponent(csv);a.download='cinemagic-tracker.csv';a.click();}
+['job-ov','wa-ov'].forEach(id=>{document.getElementById(id).addEventListener('click',e=>{if(e.target===e.currentTarget)closeOv(id);});});
+
+load(); render(); buildCharts();
+syncFromServer();
+setInterval(syncFromServer, POLL_MS);
+</script>
+</body>
+</html>
