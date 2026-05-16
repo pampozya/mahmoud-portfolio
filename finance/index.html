@@ -174,6 +174,64 @@
         .summary-stat.paid .summary-stat-value { color: #76d776; }
         .summary-stat.remaining .summary-stat-value { color: #ffa726; }
 
+        /* Snapshot strip — 3-tile hero at top of dashboard */
+        .snapshot-strip {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+            margin-bottom: 16px;
+        }
+        .snap-tile {
+            background: rgba(255, 255, 255, 0.04);
+            border: 1px solid rgba(255, 255, 255, 0.10);
+            border-radius: 12px;
+            padding: 14px 14px;
+            position: relative;
+            overflow: hidden;
+        }
+        .snap-tile::before {
+            content: '';
+            position: absolute; left: 0; top: 0; bottom: 0; width: 3px;
+            background: rgba(255,255,255,0.18);
+        }
+        .snap-tile.good::before  { background: #76d776; }
+        .snap-tile.warn::before  { background: #ffa726; }
+        .snap-tile.bad::before   { background: #f44336; }
+        .snap-tile-label {
+            font-size: 10px;
+            text-transform: uppercase;
+            letter-spacing: 0.6px;
+            color: #888;
+            font-weight: 600;
+            margin-bottom: 4px;
+        }
+        .snap-tile-value {
+            font-size: 22px;
+            font-weight: 600;
+            color: #fff;
+            font-variant-numeric: tabular-nums;
+            line-height: 1.1;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .snap-tile.good .snap-tile-value { color: #76d776; }
+        .snap-tile.warn .snap-tile-value { color: #ffa726; }
+        .snap-tile.bad  .snap-tile-value { color: #f44336; }
+        .snap-tile-sub {
+            font-size: 11px;
+            color: #999;
+            margin-top: 4px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        @media (max-width: 700px) {
+            .snapshot-strip { grid-template-columns: 1fr; gap: 8px; }
+            .snap-tile { padding: 12px 14px; }
+            .snap-tile-value { font-size: 20px; }
+        }
+
         /* Compact data table */
         .data-list {
             background: rgba(255, 255, 255, 0.03);
@@ -1112,6 +1170,7 @@
 
         <!-- Dashboard -->
         <div id="dashboard" class="tab-content active">
+            <div id="snapshotStrip" class="snapshot-strip"></div>
             <div id="dashboardSummary"></div>
             <div class="dashboard-grid">
                 <div class="card">
@@ -1151,6 +1210,7 @@
                 <div class="summary-bar" id="expenseSummaryBar"></div>
                 <button id="filterPendingBtn" class="filter-btn">Show Pending Only</button>
             </div>
+            <input type="search" id="expenseSearch" class="modal-input" placeholder="Search expenses (e.g. etisalat, rent, tabby)…" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" style="margin: 8px 0 12px;">
             <div class="data-list" id="expensesList"></div>
         </div>
 
@@ -1365,7 +1425,7 @@
     <div class="toast" id="toast">Saved</div>
 
     <script>
-        const VERSION = 'v0.2';
+        const VERSION = 'v0.3.7';
         const DEPLOY_DATE = '2026-05-13';
         const API_URL = 'api.php';
         const PENDING_TRACKER_API = '/api.php';
@@ -1379,6 +1439,7 @@
         let lastModalOpenedAt = 0;
         let pollTimer = null;
         let showPendingOnly = false;  // expenses filter
+        let expenseSearch = '';        // expenses search query (lowercased)
         let importedIds = new Set();
 
         // ---- Init ----
@@ -1405,14 +1466,31 @@
         async function registerSW() {
             if (!('serviceWorker' in navigator)) return;
             try {
-                const reg = await navigator.serviceWorker.register('sw.js');
+                const reg = await navigator.serviceWorker.register('sw.js', { updateViaCache: 'none' });
+
+                // Check for SW updates every 30 seconds
+                setInterval(() => reg.update().catch(() => {}), 30000);
+                // Also check immediately
+                reg.update().catch(() => {});
+
                 reg.addEventListener('updatefound', () => {
                     const newWorker = reg.installing;
+                    if (!newWorker) return;
                     newWorker.addEventListener('statechange', () => {
-                        if (newWorker.state === 'activated') {
-                            showToast('Update available—refresh to get latest', 'info');
+                        if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                            // New SW installed — auto-reload to apply
+                            showToast('Updating to latest version...', 'info');
+                            setTimeout(() => window.location.reload(), 800);
                         }
                     });
+                });
+
+                // Reload when a new SW takes control
+                let reloading = false;
+                navigator.serviceWorker.addEventListener('controllerchange', () => {
+                    if (reloading) return;
+                    reloading = true;
+                    window.location.reload();
                 });
             } catch (e) { console.log('SW failed:', e); }
         }
@@ -1506,6 +1584,11 @@
                 renderExpenses();
             });
 
+            document.getElementById('expenseSearch').addEventListener('input', (e) => {
+                expenseSearch = e.target.value.trim().toLowerCase();
+                renderExpenses();
+            });
+
             document.getElementById('payoutSave').addEventListener('click', saveNewPayout);
             document.getElementById('payoutCancel').addEventListener('click', () => closeModal('payoutModal'));
             document.getElementById('payoutEditSave').addEventListener('click', savePayoutEdit);
@@ -1519,13 +1602,20 @@
             const btn = document.getElementById('refreshBtn');
             btn.classList.add('spinning');
             try {
+                // Unregister all service workers
+                if ('serviceWorker' in navigator) {
+                    const regs = await navigator.serviceWorker.getRegistrations();
+                    await Promise.all(regs.map(r => r.unregister()));
+                }
+                // Clear all caches
                 if ('caches' in window) {
                     const cacheNames = await caches.keys();
                     await Promise.all(cacheNames.map(name => caches.delete(name)));
                 }
                 updateSync('syncing');
                 await new Promise(r => setTimeout(r, 800));
-                window.location.reload(true);
+                // Force network reload, bypass any cache
+                window.location.href = window.location.pathname + '?bust=' + Date.now();
             } catch (e) {
                 console.error('Refresh failed:', e);
                 btn.classList.remove('spinning');
@@ -1673,10 +1763,139 @@
             renderDashboard();
         }
 
+        // The "TEAM PAYOUTS" expense category is a virtual passthrough — its single
+        // row is computed live from appData.payouts (not from stored expense items)
+        // so it always stays in sync with what's on the Team Payouts tab.
+        function synthTeamPayouts() {
+            const payouts = appData.payouts || [];
+            const expected = payouts.reduce((s, p) => s + (Number(p.amountOwed) || 0), 0);
+            const paid = payouts.reduce((s, p) => s + (p.status === 'paid' ? (Number(p.amountOwed) || 0) : 0), 0);
+            const remaining = Math.max(0, expected - paid);
+            const percentPaid = expected > 0 ? (paid / expected) * 100 : 0;
+            return {
+                description: 'Team Payouts',
+                expected, paid, remaining, percentPaid,
+                days: Array(31).fill(0),
+                payday: null,
+                __synthetic: true
+            };
+        }
+
+        // ── SNAPSHOT METRICS (top-of-dashboard hero strip) ────────────
+        function calcCashPosition() {
+            // This month's net: income earned − pure expenses paid − payouts paid.
+            // Excludes the TEAM PAYOUTS expense category to avoid double-counting payouts.
+            const incEarned = (appData.income || []).reduce((s, p) => s + (Number(p.earned) || 0), 0);
+            const expPaid = Object.entries(appData.expenses || {})
+                .filter(([cat]) => cat !== 'TEAM PAYOUTS')
+                .flatMap(([, items]) => items)
+                .reduce((s, i) => s + (Number(i.paid) || 0), 0);
+            const payPaid = (appData.payouts || [])
+                .filter(p => p.status === 'paid')
+                .reduce((s, p) => s + (Number(p.amountOwed) || 0), 0);
+            return incEarned - expPaid - payPaid;
+        }
+
+        function calcEomForecast() {
+            // Optimistic: every remaining income lands AND every remaining expense + owed payout gets paid.
+            const cash = calcCashPosition();
+            const incRemaining = (appData.income || []).reduce((s, p) => s + (Number(p.remaining) || 0), 0);
+            const expRemaining = Object.entries(appData.expenses || {})
+                .filter(([cat]) => cat !== 'TEAM PAYOUTS')
+                .flatMap(([, items]) => items)
+                .reduce((s, i) => s + (Number(i.remaining) || 0), 0);
+            const payOwed = (appData.payouts || [])
+                .filter(p => p.status !== 'paid')
+                .reduce((s, p) => s + (Number(p.amountOwed) || 0), 0);
+            return cash + incRemaining - expRemaining - payOwed;
+        }
+
+        function extractIncomeInvoiceDate(p) {
+            // Auto-imported from pending tracker: id = "client|project|YYYY-MM-DD"
+            if (typeof p.id === 'string' && p.id.includes('|')) {
+                const parts = p.id.split('|');
+                if (parts.length >= 3 && parts[2]) {
+                    const d = new Date(parts[2]);
+                    if (!isNaN(d.getTime())) return d;
+                }
+            }
+            // Explicit date field on the item if present
+            if (p.date) {
+                const d = new Date(p.date);
+                if (!isNaN(d.getTime())) return d;
+            }
+            // Manually added: id = "item-<timestamp>" — use as proxy for invoice date
+            if (typeof p.id === 'string' && p.id.startsWith('item-')) {
+                const ts = Number(p.id.slice(5));
+                if (Number.isFinite(ts) && ts > 0) return new Date(ts);
+            }
+            return null;
+        }
+
+        function calcOverdueReceivables(thresholdDays) {
+            const now = Date.now();
+            const thresholdMs = (thresholdDays || 30) * 24 * 60 * 60 * 1000;
+            let amount = 0, count = 0, oldestDays = 0;
+            (appData.income || []).forEach(p => {
+                if ((Number(p.remaining) || 0) <= 0) return;
+                const invDate = extractIncomeInvoiceDate(p);
+                if (!invDate) return;
+                const ageMs = now - invDate.getTime();
+                if (ageMs > thresholdMs) {
+                    amount += Number(p.remaining) || 0;
+                    count += 1;
+                    const ageDays = Math.floor(ageMs / (24 * 60 * 60 * 1000));
+                    if (ageDays > oldestDays) oldestDays = ageDays;
+                }
+            });
+            return { amount, count, oldestDays };
+        }
+
+        function renderSnapshotStrip() {
+            const strip = document.getElementById('snapshotStrip');
+            if (!strip) return;
+            const cash = calcCashPosition();
+            const eom = calcEomForecast();
+            const overdue = calcOverdueReceivables(30);
+
+            const sign = n => n < 0 ? '−' : '';
+            const cashClass = cash >= 0 ? 'good' : 'bad';
+            const eomClass  = eom  >= 0 ? 'good' : 'bad';
+            const overdueClass = overdue.amount === 0 ? 'good' : (overdue.amount >= 5000 ? 'bad' : 'warn');
+
+            strip.innerHTML = `
+                <div class="snap-tile ${cashClass}">
+                    <div class="snap-tile-label">Cash Position</div>
+                    <div class="snap-tile-value">${sign(cash)}${fmt(Math.abs(cash))}</div>
+                    <div class="snap-tile-sub">this month · earned − paid</div>
+                </div>
+                <div class="snap-tile ${eomClass}">
+                    <div class="snap-tile-label">Forecast EOM</div>
+                    <div class="snap-tile-value">${sign(eom)}${fmt(Math.abs(eom))}</div>
+                    <div class="snap-tile-sub">if all pending lands</div>
+                </div>
+                <div class="snap-tile ${overdueClass}">
+                    <div class="snap-tile-label">Overdue Receivables</div>
+                    <div class="snap-tile-value">${fmt(overdue.amount)}</div>
+                    <div class="snap-tile-sub">${overdue.count === 0
+                        ? 'nothing over 30 days'
+                        : `${overdue.count} invoice${overdue.count !== 1 ? 's' : ''} over 30 days${overdue.oldestDays > 30 ? ` · oldest ${overdue.oldestDays}d` : ''}`}</div>
+                </div>
+            `;
+        }
+
         function calcExpenseTotals() {
             let expected = 0, paid = 0;
-            Object.values(appData.expenses).forEach(items => {
+            Object.entries(appData.expenses).forEach(([cat, items]) => {
+                // Skip TEAM PAYOUTS: any stored items here are stale placeholders;
+                // real payouts are added directly below from appData.payouts.
+                if (cat === 'TEAM PAYOUTS') return;
                 items.forEach(i => { expected += i.expected || 0; paid += i.paid || 0; });
+            });
+            (appData.payouts || []).forEach(p => {
+                const amt = Number(p.amountOwed) || 0;
+                expected += amt;
+                if (p.status === 'paid') paid += amt;
             });
             const remaining = expected - paid;
             const percent = expected > 0 ? (paid / expected) * 100 : 0;
@@ -1739,10 +1958,29 @@
             const list = document.getElementById('expensesList');
             list.innerHTML = '';
 
+            const q = expenseSearch;
+            let renderedCount = 0;
+
             Object.entries(appData.expenses).forEach(([cat, items]) => {
-                // Filter items if pending-only mode
-                const displayItems = showPendingOnly ? items.filter(i => i.remaining > 0) : items;
+                // TEAM PAYOUTS is a virtual category — its row is computed live from
+                // appData.payouts so it stays in sync with the Team Payouts tab.
+                const isTeamPayouts = (cat === 'TEAM PAYOUTS');
+                const effItems = isTeamPayouts ? [synthTeamPayouts()] : items;
+
+                // Apply search: a category-name match shows every row in the category;
+                // otherwise filter by item description. Empty query = no filter.
+                let searchFiltered = effItems;
+                if (q) {
+                    const catMatches = cat.toLowerCase().includes(q);
+                    if (!catMatches) {
+                        searchFiltered = effItems.filter(i => (i.description || '').toLowerCase().includes(q));
+                    }
+                }
+
+                // Then apply pending-only filter on top of search.
+                const displayItems = showPendingOnly ? searchFiltered.filter(i => i.remaining > 0) : searchFiltered;
                 if (displayItems.length === 0) return;
+                renderedCount += displayItems.length;
 
                 const catPaid = displayItems.reduce((s, i) => s + i.paid, 0);
                 const catExpected = displayItems.reduce((s, i) => s + i.expected, 0);
@@ -1798,7 +2036,8 @@
 
                 const rowList = block.querySelector('.row-list');
                 displayItems.forEach((item, displayIdx) => {
-                    const actualIdx = items.indexOf(item);
+                    const isSynth = !!item.__synthetic;
+                    const actualIdx = isSynth ? -1 : items.indexOf(item);
                     const row = document.createElement('div');
                     row.className = 'row';
                     row.innerHTML = `
@@ -1807,20 +2046,43 @@
                         <div class="row-cell paid">${fmt(item.paid)}</div>
                         <div class="row-cell remaining">${fmt(item.remaining)}</div>
                         <div class="row-cell percent">${item.percentPaid.toFixed(0)}%</div>
-                        <button class="edit-btn" title="Edit">✏️</button>
+                        <button class="edit-btn" title="${isSynth ? 'Open Team Payouts tab' : 'Edit'}">${isSynth ? '↗' : '✏️'}</button>
                     `;
                     row.querySelector('.edit-btn').addEventListener('click', () => {
-                        openRowEditModal({ type: 'expense', category: cat, itemIdx: actualIdx });
+                        if (isSynth) {
+                            document.querySelector('.tab-btn[data-tab="payouts"]')?.click();
+                        } else {
+                            openRowEditModal({ type: 'expense', category: cat, itemIdx: actualIdx });
+                        }
                     });
                     rowList.appendChild(row);
                 });
 
-                block.querySelector('.add-item-btn').addEventListener('click', (e) => {
-                    openAddItemModal({ type: 'expense', category: e.currentTarget.dataset.category });
-                });
+                const addBtn = block.querySelector('.add-item-btn');
+                if (isTeamPayouts) {
+                    addBtn.textContent = '→ Manage in Team Payouts tab';
+                    addBtn.addEventListener('click', () => {
+                        document.querySelector('.tab-btn[data-tab="payouts"]')?.click();
+                    });
+                } else {
+                    addBtn.addEventListener('click', (e) => {
+                        openAddItemModal({ type: 'expense', category: e.currentTarget.dataset.category });
+                    });
+                }
 
                 list.appendChild(block);
             });
+
+            // Empty state when search yields nothing.
+            if (q && renderedCount === 0) {
+                const empty = document.createElement('div');
+                empty.className = 'empty-state';
+                empty.style.padding = '24px 12px';
+                empty.style.textAlign = 'center';
+                empty.style.color = '#888';
+                empty.innerHTML = `No expenses match <strong style="color:#fff;">"${q.replace(/[<>&"']/g, c => ({'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;',"'":'&#39;'}[c]))}"</strong>.`;
+                list.appendChild(empty);
+            }
         }
 
         function renderIncome() {
@@ -2010,10 +2272,12 @@
         }
 
         function renderDashboard() {
+            renderSnapshotStrip();
             const expTot = calcExpenseTotals();
             const incTot = calcIncomeTotals();
             const payTot = calcPayoutTotals();
-            const net = incTot.earned - expTot.paid - payTot.paid;
+            // expTot.paid already rolls in payouts.paid, so don't subtract payTot.paid again.
+            const net = incTot.earned - expTot.paid;
 
             // Determine status colors
             const incomeStatus = incTot.percent >= 75 ? '#76d776' : (incTot.percent >= 50 ? '#ffc107' : '#f44336');
@@ -2049,8 +2313,10 @@
             const exp = document.getElementById('expenseSummary');
             exp.innerHTML = '';
             Object.entries(appData.expenses).forEach(([cat, items]) => {
-                const paid = items.reduce((s, i) => s + i.paid, 0);
-                const expected = items.reduce((s, i) => s + i.expected, 0);
+                // TEAM PAYOUTS: synthesize from real payouts data so the bar matches reality.
+                const effItems = (cat === 'TEAM PAYOUTS') ? [synthTeamPayouts()] : items;
+                const paid = effItems.reduce((s, i) => s + i.paid, 0);
+                const expected = effItems.reduce((s, i) => s + i.expected, 0);
                 const pct = expected > 0 ? Math.min(100, (paid / expected) * 100) : 0;
                 exp.innerHTML += `
                     <div class="progress-item">
@@ -2114,7 +2380,8 @@
             // Top 3 Expense Categories
             const catTotals = [];
             Object.entries(appData.expenses).forEach(([cat, items]) => {
-                const paid = items.reduce((s, i) => s + i.paid, 0);
+                const effItems = (cat === 'TEAM PAYOUTS') ? [synthTeamPayouts()] : items;
+                const paid = effItems.reduce((s, i) => s + i.paid, 0);
                 catTotals.push({ cat, paid });
             });
             catTotals.sort((a, b) => b.paid - a.paid);
@@ -2129,9 +2396,15 @@
                 </div>
             `).join('');
 
-            // Pending vs Paid Summary
-            const expensePending = Object.values(appData.expenses).flat().reduce((s, i) => s + (i.remaining || 0), 0);
-            const expensePaid = expTot.paid;
+            // Pending vs Paid Summary — show expense-only and team-only separately here
+            // so the breakdown rows don't double-count what's already in the rollup above.
+            // Exclude the TEAM PAYOUTS category items (stale placeholders); team payouts
+            // are shown on their own rows below from appData.payouts.
+            const realExpenseItems = Object.entries(appData.expenses)
+                .filter(([cat]) => cat !== 'TEAM PAYOUTS')
+                .flatMap(([, items]) => items);
+            const expensePending = realExpenseItems.reduce((s, i) => s + (i.remaining || 0), 0);
+            const expensePaid = realExpenseItems.reduce((s, i) => s + (i.paid || 0), 0);
             const payoutOwed = payTot.owed;
             const payoutPaid = payTot.paid;
             const pendingPaidEl = document.getElementById('pendingPaidSummary');
@@ -2490,19 +2763,32 @@
                 `;
 
                 item.querySelector('.sub-earned').addEventListener('input', (e) => {
+                    // Write the diff into today's day-slot so days[] (source of truth) stays in sync.
+                    // Without this, normalizeData() on the next 15s poll re-derives earned from
+                    // days[] and silently reverts the user's edit.
                     const val = parseFloat(e.target.value) || 0;
-                    appData.income[idx].earned = val;
-                    appData.income[idx].remaining = Math.max(0, appData.income[idx].expected - val);
-                    appData.income[idx].percentEarned = appData.income[idx].expected > 0 ? (val / appData.income[idx].expected) * 100 : 0;
-                    item.querySelector('.earned-display').textContent = fmt(val);
+                    const p = appData.income[idx];
+                    const today = Math.max(0, Math.min(30, new Date().getDate() - 1));
+                    const currentSum = p.days.reduce((s, v) => s + (Number(v) || 0), 0);
+                    const diff = val - currentSum;
+                    p.days[today] = Math.max(0, (Number(p.days[today]) || 0) + diff);
+                    recalcIncome(p);
+                    item.querySelector('.earned-display').textContent = fmt(p.earned);
                 });
 
                 item.querySelector('.mark-paid').addEventListener('click', () => {
-                    appData.income[idx].earned = appData.income[idx].expected;
-                    appData.income[idx].remaining = 0;
-                    appData.income[idx].percentEarned = 100;
-                    item.querySelector('.sub-earned').value = appData.income[idx].expected;
-                    item.querySelector('.earned-display').textContent = fmt(appData.income[idx].expected);
+                    // Same reason: write the remaining-to-paid amount into today's day-slot
+                    // so the daily breakdown is preserved and the poll won't undo it.
+                    const p = appData.income[idx];
+                    const today = Math.max(0, Math.min(30, new Date().getDate() - 1));
+                    const currentSum = p.days.reduce((s, v) => s + (Number(v) || 0), 0);
+                    const diff = (p.expected || 0) - currentSum;
+                    if (diff > 0) {
+                        p.days[today] = (Number(p.days[today]) || 0) + diff;
+                    }
+                    recalcIncome(p);
+                    item.querySelector('.sub-earned').value = p.earned;
+                    item.querySelector('.earned-display').textContent = fmt(p.earned);
                     saveData();
                     renderAll();
                 });

@@ -412,11 +412,13 @@ function FeaturedCarousel({ items, onSelect, lang }) {
   if (!items.length) return null;
   const item = items[idx];
   const thumb = getThumbnail(item);
+  const fx = item.featured_focal_x ?? 50;
+  const fy = item.featured_focal_y ?? 50;
 
   return (
-    <section className="carousel-section">
+    <section className="carousel-section fade-in-section">
       <div className="carousel-inner" onClick={() => onSelect(item)}>
-        <div className="carousel-bg" style={thumb ? { backgroundImage: `url(${thumb})` } : {}} />
+        <div className="carousel-bg" style={thumb ? { backgroundImage: `url(${thumb})`, backgroundPosition: `${fx}% ${fy}%` } : {}} />
         <div className="carousel-overlay" />
         <div className="carousel-content">
           <span className="carousel-tag">✨ Featured</span>
@@ -527,12 +529,6 @@ function VideoPlayer({ url }) {
 // ==================== VIDEO MODAL ====================
 
 function VideoModal({ item, onClose, lang }) {
-  useEffect(() => {
-    const h = (e) => { if (e.key === 'Escape') onClose(); };
-    document.addEventListener('keydown', h);
-    return () => document.removeEventListener('keydown', h);
-  }, [onClose]);
-
   const platform = item.video_type || detectPlatform(item.video_url);
   const isInstagram = platform === 'instagram';
   const embedUrl = isInstagram ? null : getEmbedUrl(item);
@@ -541,7 +537,27 @@ function VideoModal({ item, onClose, lang }) {
   const padding = getAspectPadding(item.aspect_ratio || '16:9');
   const bts = item.bts_photos ? JSON.parse(item.bts_photos) : [];
   const collabs = parseCollaborators(item.collaborators);
-  const [btsFull, setBtsFull] = useState(null);
+  const [btsIndex, setBtsIndex] = useState(null);
+  const btsCount = bts.length;
+  const btsOpen = btsIndex !== null && btsIndex >= 0 && btsIndex < btsCount;
+  const isBtsVideo = (url) => /\.(mp4|mov|webm|m4v)(\?|$)/i.test(url || '');
+  const closeBts = () => setBtsIndex(null);
+  const prevBts = () => setBtsIndex(i => (i - 1 + btsCount) % btsCount);
+  const nextBts = () => setBtsIndex(i => (i + 1) % btsCount);
+
+  useEffect(() => {
+    const h = (e) => {
+      if (btsOpen) {
+        if (e.key === 'Escape') closeBts();
+        else if (e.key === 'ArrowLeft') prevBts();
+        else if (e.key === 'ArrowRight') nextBts();
+      } else if (e.key === 'Escape') {
+        onClose();
+      }
+    };
+    document.addEventListener('keydown', h);
+    return () => document.removeEventListener('keydown', h);
+  }, [onClose, btsOpen, btsCount]);
 
   return (
     <div className="modal-overlay" onClick={onClose}>
@@ -598,13 +614,40 @@ function VideoModal({ item, onClose, lang }) {
             <div className="bts-strip">
               <p className="bts-label">{lang === 'ar' ? 'خلف الكواليس' : 'Behind the Scenes'}</p>
               <div className="bts-thumbs">
-                {bts.map((url, i) => <img key={i} src={resolveUrl(url)} alt={`BTS ${i+1}`} onClick={() => setBtsFull(url)} />)}
+                {bts.map((url, i) => (
+                  <div key={i} className="bts-thumb-wrap" onClick={() => setBtsIndex(i)}>
+                    {isBtsVideo(url) ? (
+                      <>
+                        <video src={resolveUrl(url)} muted playsInline preload="metadata" />
+                        <span className="bts-thumb-play">▶</span>
+                      </>
+                    ) : (
+                      <img src={resolveUrl(url)} alt={`BTS ${i + 1}`} />
+                    )}
+                  </div>
+                ))}
               </div>
             </div>
           )}
         </div>
       </div>
-      {btsFull && <div className="bts-fullscreen" onClick={() => setBtsFull(null)}><img src={resolveUrl(btsFull)} alt="BTS" /></div>}
+      {btsOpen && (
+        <div className="bts-fullscreen" onClick={closeBts}>
+          <button className="bts-close" onClick={e => { e.stopPropagation(); closeBts(); }} aria-label="Close">✕</button>
+          {btsCount > 1 && (
+            <button className="bts-nav bts-prev" onClick={e => { e.stopPropagation(); prevBts(); }} aria-label="Previous">‹</button>
+          )}
+          {isBtsVideo(bts[btsIndex]) ? (
+            <video key={bts[btsIndex]} src={resolveUrl(bts[btsIndex])} controls autoPlay playsInline onClick={e => e.stopPropagation()} />
+          ) : (
+            <img src={resolveUrl(bts[btsIndex])} alt={`BTS ${btsIndex + 1}`} onClick={e => e.stopPropagation()} />
+          )}
+          {btsCount > 1 && (
+            <button className="bts-nav bts-next" onClick={e => { e.stopPropagation(); nextBts(); }} aria-label="Next">›</button>
+          )}
+          {btsCount > 1 && <div className="bts-counter">{btsIndex + 1} / {btsCount}</div>}
+        </div>
+      )}
     </div>
   );
 }
@@ -696,6 +739,18 @@ function PublicSite({ onAdminClick }) {
       }).finally(() => setLoading(false));
   }, []);
 
+  // If URL is ?item=ID, auto-open that portfolio item's modal
+  useEffect(() => {
+    if (loading) return;
+    const itemId = new URLSearchParams(window.location.search).get('item');
+    if (!itemId) return;
+    const found = portfolio.find(p => String(p.id) === String(itemId));
+    if (found) {
+      setSelectedItem(found);
+      api.trackVideoView(found.id);
+    }
+  }, [loading, portfolio]);
+
   // If URL is ?leave-review=1, scroll to testimonials after content settles
   useEffect(() => {
     const wantsReview = new URLSearchParams(window.location.search).get('leave-review') === '1';
@@ -732,14 +787,12 @@ function PublicSite({ onAdminClick }) {
     }
   }, [settings?.ga_tracking_id]);
 
-  // Scroll-triggered fade-ins
+  // Scroll-triggered fade-ins (re-trigger as section enters viewport from any direction)
   useEffect(() => {
     const obs = new IntersectionObserver((entries) => {
       entries.forEach(e => {
-        if (e.isIntersecting) {
-          e.target.classList.add('visible');
-          obs.unobserve(e.target);
-        }
+        if (e.isIntersecting) e.target.classList.add('visible');
+        else e.target.classList.remove('visible');
       });
     }, { threshold: 0.12, rootMargin: '0px 0px -80px 0px' });
     document.querySelectorAll('.fade-in-section').forEach(el => obs.observe(el));
@@ -785,7 +838,7 @@ function PublicSite({ onAdminClick }) {
 
   const handleShare = (e, item) => {
     e.stopPropagation();
-    const url = item.video_url || window.location.href;
+    const url = `${window.location.origin}/?item=${item.id}`;
     if (navigator.share) { navigator.share({ title: item.title, url }); }
     else { navigator.clipboard.writeText(url); }
   };
@@ -1417,7 +1470,7 @@ function CollaboratorEditor({ value, onChange }) {
 
 // ==================== PORTFOLIO MANAGER ====================
 
-const EMPTY_FORM = { category_id: '', title: '', description: 'Cinematic social media reel', video_url: '', video_type: 'youtube', embed_code: '', thumbnail_url: '', featured: false, order: 0, aspect_ratio: '16:9', collaborators: '', bts_photos: '[]', seo_title: '', seo_description: '' };
+const EMPTY_FORM = { category_id: '', title: '', description: 'Cinematic social media reel', video_url: '', video_type: 'youtube', embed_code: '', thumbnail_url: '', featured: false, featured_focal_x: 50, featured_focal_y: 50, order: 0, aspect_ratio: '16:9', collaborators: '', bts_photos: '[]', seo_title: '', seo_description: '' };
 
 function PortfolioManager({ portfolio, categories, token, onUpdate, settings }) {
   const [showForm, setShowForm] = useState(false);
@@ -1481,14 +1534,32 @@ function PortfolioManager({ portfolio, categories, token, onUpdate, settings }) 
 
   const handleBtsUpload = async (e) => {
     const files = Array.from(e.target.files); if (!files.length) return;
-    setUploading(true);
+    setUploading(true); setUploadStatus('uploading');
     const urls = [...btsPhotos];
-    for (const file of files) {
-      setUploadFilename(file.name); setUploadProgress(0);
-      const res = await api.uploadFile(token, file, p => setUploadProgress(p));
-      if (res.url) urls.push(res.url);
+    let succeeded = 0; let failed = 0;
+    try {
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        setUploadFilename(`(${i + 1}/${files.length}) ${file.name}`);
+        setUploadProgress(0);
+        try {
+          const res = await api.uploadFile(token, file, p => setUploadProgress(p));
+          if (res.url) { urls.push(res.url); succeeded++; }
+          else { failed++; }
+        } catch (err) {
+          console.error(`BTS upload failed for ${file.name}:`, err);
+          failed++;
+        }
+      }
+    } finally {
+      setBtsPhotos(urls);
+      set({ bts_photos: JSON.stringify(urls) });
+      setUploading(false);
+      setUploadProgress(100);
+      if (failed > 0 && succeeded === 0) setUploadStatus('error');
+      else if (failed > 0) { setUploadStatus('done'); setUploadFilename(`${succeeded} uploaded, ${failed} failed — check console`); }
+      else setUploadStatus('done');
     }
-    setBtsPhotos(urls); set({ bts_photos: JSON.stringify(urls) }); setUploading(false); setUploadProgress(100); setUploadStatus('done');
   };
 
   const handleSubmit = async (e) => {
@@ -1504,7 +1575,7 @@ function PortfolioManager({ portfolio, categories, token, onUpdate, settings }) 
   const openEdit = (item) => {
     const bts = item.bts_photos ? JSON.parse(item.bts_photos) : [];
     setBtsPhotos(bts);
-    setForm({ category_id: item.category_id, title: item.title, description: item.description || '', video_url: item.video_url || '', video_type: item.video_type || 'youtube', embed_code: item.embed_code || '', thumbnail_url: item.thumbnail_url || '', featured: item.featured, order: item.order || 0, aspect_ratio: item.aspect_ratio || '16:9', collaborators: item.collaborators || '', bts_photos: item.bts_photos || '[]', seo_title: item.seo_title || '', seo_description: item.seo_description || '' });
+    setForm({ category_id: item.category_id, title: item.title, description: item.description || '', video_url: item.video_url || '', video_type: item.video_type || 'youtube', embed_code: item.embed_code || '', thumbnail_url: item.thumbnail_url || '', featured: item.featured, featured_focal_x: item.featured_focal_x ?? 50, featured_focal_y: item.featured_focal_y ?? 50, order: item.order || 0, aspect_ratio: item.aspect_ratio || '16:9', collaborators: item.collaborators || '', bts_photos: item.bts_photos || '[]', seo_title: item.seo_title || '', seo_description: item.seo_description || '' });
     setEditId(item.id); setShowForm(true); setUploadStatus('');
   };
 
@@ -1789,6 +1860,26 @@ function PortfolioManager({ portfolio, categories, token, onUpdate, settings }) 
             <input type="checkbox" checked={form.featured} onChange={e => set({ featured: e.target.checked })} />
             ⭐ Mark as Featured
           </label>
+
+          {form.featured && (form.thumbnail_url || autoFrames.length > 0) && (
+            <div className="focal-picker">
+              <label className="field-label">Featured Highlight — Focal Point</label>
+              <p className="focal-hint">Click anywhere on the image to set what stays centered in the home-page highlight banner.</p>
+              <div
+                className="focal-preview"
+                onClick={e => {
+                  const r = e.currentTarget.getBoundingClientRect();
+                  const x = Math.max(0, Math.min(100, ((e.clientX - r.left) / r.width) * 100));
+                  const y = Math.max(0, Math.min(100, ((e.clientY - r.top) / r.height) * 100));
+                  set({ featured_focal_x: Math.round(x), featured_focal_y: Math.round(y) });
+                }}
+              >
+                <img src={resolveUrl(form.thumbnail_url || autoFrames[0])} alt="Focal preview" draggable={false} />
+                <div className="focal-dot" style={{ left: `${form.featured_focal_x}%`, top: `${form.featured_focal_y}%` }} />
+              </div>
+              <div className="focal-coords">x: {Math.round(form.featured_focal_x)}% &nbsp;·&nbsp; y: {Math.round(form.featured_focal_y)}%</div>
+            </div>
+          )}
 
           <div className="form-buttons">
             <button type="submit" className="btn-primary" disabled={uploading}>{editId ? '💾 Update' : '💾 Save'}</button>

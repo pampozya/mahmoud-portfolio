@@ -33,7 +33,7 @@ load_dotenv()
 DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./portfolio.db")
 SECRET_KEY = os.getenv("SECRET_KEY", "your-secret-key-change-in-production")
 ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES = 1440  # 24 hours
+ACCESS_TOKEN_EXPIRE_MINUTES = 10080  # 7 days
 
 # Create FastAPI app
 app = FastAPI(
@@ -122,6 +122,8 @@ class Portfolio(Base):
     likes = Column(Integer, default=0)
     reactions = Column(Text, nullable=True)
     featured = Column(Boolean, default=False)
+    featured_focal_x = Column(Float, default=50.0)
+    featured_focal_y = Column(Float, default=50.0)
     order = Column(Integer, default=0)
     aspect_ratio = Column(String, default="16:9")
     collaborators = Column(Text, nullable=True)
@@ -303,6 +305,8 @@ def _run_migrations():
         ("portfolios", "bts_photos", "TEXT"),
         ("portfolios", "seo_title", "VARCHAR"),
         ("portfolios", "seo_description", "TEXT"),
+        ("portfolios", "featured_focal_x", "FLOAT"),
+        ("portfolios", "featured_focal_y", "FLOAT"),
         ("testimonials", "approved", "BOOLEAN"),
     ]
     with engine.connect() as conn:
@@ -370,6 +374,8 @@ class PortfolioCreate(BaseModel):
     video_type: str = "youtube"
     embed_code: Optional[str] = None
     featured: bool = False
+    featured_focal_x: Optional[float] = 50.0
+    featured_focal_y: Optional[float] = 50.0
     order: int = 0
     aspect_ratio: str = "16:9"
     collaborators: Optional[str] = None
@@ -385,6 +391,8 @@ class PortfolioUpdate(BaseModel):
     video_type: Optional[str] = None
     embed_code: Optional[str] = None
     featured: Optional[bool] = None
+    featured_focal_x: Optional[float] = None
+    featured_focal_y: Optional[float] = None
     order: Optional[int] = None
     aspect_ratio: Optional[str] = None
     collaborators: Optional[str] = None
@@ -405,6 +413,8 @@ class PortfolioResponse(BaseModel):
     likes: int = 0
     reactions: Optional[str]
     featured: bool
+    featured_focal_x: Optional[float] = 50.0
+    featured_focal_y: Optional[float] = 50.0
     order: int
     aspect_ratio: str = "16:9"
     collaborators: Optional[str]

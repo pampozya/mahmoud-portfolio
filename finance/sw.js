@@ -1,4 +1,4 @@
-const VERSION = 'v0.2';
+const VERSION = 'v0.3.7';
 const CACHE_NAME = `finance-${VERSION}`;
 const URLS_TO_CACHE = [
     '/finance/',
@@ -91,23 +91,19 @@ self.addEventListener('fetch', (event) => {
         return;
     }
 
-    // Shell assets (HTML, CSS, JS): cache-first, network fallback
+    // Shell assets (HTML, CSS, JS): network-first so updates propagate fast
     event.respondWith(
-        caches.match(request).then((cached) => {
-            if (cached) return cached;
-            return fetch(request).then((response) => {
-                if (!response || response.status !== 200 || response.type === 'error') {
-                    return response;
-                }
-                const cloned = response.clone();
-                caches.open(CACHE_NAME).then((cache) => {
-                    cache.put(request, cloned);
-                });
-                return response;
-            }).catch(() => {
-                // Return cached version if network fails
-                return caches.match(request);
+        fetch(request).then((response) => {
+            if (!response || response.status !== 200 || response.type === 'error') {
+                return caches.match(request).then(c => c || response);
+            }
+            const cloned = response.clone();
+            caches.open(CACHE_NAME).then((cache) => {
+                cache.put(request, cloned);
             });
+            return response;
+        }).catch(() => {
+            return caches.match(request);
         })
     );
 });
