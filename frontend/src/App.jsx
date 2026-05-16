@@ -673,10 +673,6 @@ function HeroMasthead({ settings, heroImg, siteTitle, featuredItem, isAr }) {
             <span className="hero-scroll-cue-line" aria-hidden="true" />
             <span>{isAr ? 'اكتشف الأعمال' : 'Scroll to explore'}</span>
           </button>
-          <div className="hero-meta">
-            <span className="hero-meta-row">SONY FX3 · S-LOG3</span>
-            <span className="hero-meta-row">{(new Date()).getFullYear()} — LENS MANIA</span>
-          </div>
         </div>
       </div>
     </section>
