@@ -574,30 +574,28 @@ function HeroMasthead({ settings, heroImg, siteTitle, featuredItem, isAr }) {
   const fallbackImg = featuredItem ? (getThumbnail(featuredItem) || heroImg) : heroImg;
 
   // GSAP parallax drift on the media layer as the hero scrolls past
+  // (disabled on touch / small screens — iOS URL-bar resize fights it and weaker GPUs jank)
   useEffect(() => {
     if (!sectionRef.current || !mediaRef.current) return;
     if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    const isSmallOrTouch = window.matchMedia('(max-width: 900px), (hover: none)').matches;
     const ctx = gsap.context(() => {
-      gsap.to(mediaRef.current, {
-        yPercent: 18,
-        ease: 'none',
-        scrollTrigger: {
-          trigger: sectionRef.current,
-          start: 'top top',
-          end: 'bottom top',
-          scrub: 0.8,
-        },
-      });
+      if (!isSmallOrTouch) {
+        gsap.to(mediaRef.current, {
+          yPercent: 18,
+          ease: 'none',
+          scrollTrigger: {
+            trigger: sectionRef.current,
+            start: 'top top',
+            end: 'bottom top',
+            scrub: 0.8,
+          },
+        });
+      }
       gsap.fromTo(
         '.hero-frame',
-        { opacity: 0, y: 36 },
-        {
-          opacity: 1,
-          y: 0,
-          duration: 1.4,
-          ease: 'expo.out',
-          delay: 0.15,
-        }
+        { opacity: 0, y: 24 },
+        { opacity: 1, y: 0, duration: 1.2, ease: 'expo.out', delay: 0.15 }
       );
     }, sectionRef);
     return () => ctx.revert();
