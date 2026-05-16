@@ -1,12 +1,25 @@
 :root {
   --color-dark: #0a0a0a;
-  --color-maroon: #111111;
-  --color-peach: #ffffff;
+  --color-maroon: #141414;
+  --color-peach: #eaeaea;
   --color-black: #000000;
-  --color-light: #e8e8e8;
-  --color-text: #ffffff;
-  --color-text-muted: #aaaaaa;
-  --transition: all 0.3s ease;
+  --color-light: #eaeaea;
+  --color-text: #eaeaea;
+  --color-text-muted: #888888;
+  --color-charcoal: #1f1f1f;
+  --color-accent: #c8a86a;
+  --color-accent-soft: rgba(200,168,106,0.18);
+  --ease-cinematic: cubic-bezier(0.16, 1, 0.3, 1);
+  --transition: all 0.4s var(--ease-cinematic);
+
+  /* Fluid typography scale */
+  --fs-hero:     clamp(3.5rem, 10vw, 9rem);
+  --fs-display:  clamp(2.25rem, 5vw, 4.5rem);
+  --fs-h1:       clamp(1.75rem, 3.5vw, 2.75rem);
+  --fs-h2:       clamp(1.35rem, 2.4vw, 1.85rem);
+  --fs-body:     clamp(0.95rem, 1.05vw, 1.05rem);
+  --fs-small:    clamp(0.78rem, 0.85vw, 0.88rem);
+  --fs-micro:    clamp(0.7rem, 0.75vw, 0.78rem);
 }
 /* LIGHT MODE */
 :root[data-theme="light"] {
@@ -16,14 +29,23 @@
   --color-light: #0a0a0a;
   --color-text: #1a1a1a;
   --color-text-muted: #555555;
+  --color-charcoal: #d8d8d8;
 }
 * { margin: 0; padding: 0; box-sizing: border-box; }
 body {
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+  font-family: 'Manrope', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+  font-weight: 400;
   -webkit-font-smoothing: antialiased;
   background: var(--color-dark);
   color: var(--color-peach);
   transition: background 0.3s ease, color 0.3s ease;
+}
+html.lenis, html.lenis body { height: auto; }
+.lenis.lenis-smooth { scroll-behavior: auto !important; }
+.lenis.lenis-smooth [data-lenis-prevent] { overscroll-behavior: contain; }
+.lenis.lenis-stopped { overflow: clip; }
+@media (prefers-reduced-motion: reduce) {
+  html.lenis { scroll-behavior: auto !important; }
 }
 
 /* Film grain overlay — sits above everything, transparent to clicks */
@@ -248,49 +270,161 @@ body::after {
 .theme-toggle-btn:hover { border-color: var(--color-peach); }
 
 /* HERO */
+/* ==================== HERO — SILENT SHOWREEL MASTHEAD ==================== */
 .hero {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  text-align: center;
   position: relative;
   width: 100%;
-  background-color: var(--color-dark);
+  min-height: 100svh;
+  background-color: #000;
   overflow: hidden;
+  isolation: isolate;
 }
-.hero-bg-img {
-  width: 100%;
-  height: auto;
-  display: block;
-  object-fit: contain;
-}
-.hero .hero-overlay,
-.hero .hero-content,
-.hero .showreel-bg {
+.hero-media {
   position: absolute;
+  inset: -8%;
+  width: 116%;
+  height: 116%;
+  z-index: 0;
+  will-change: transform;
+  transform: translate3d(0, 0, 0);
 }
-.hero .hero-content {
+.hero-media video,
+.hero-media img {
+  position: absolute;
   inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
+  display: block;
+  pointer-events: none;
+}
+.hero-vignette {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  background:
+    linear-gradient(180deg, rgba(0,0,0,0.55) 0%, rgba(0,0,0,0.10) 25%, rgba(0,0,0,0.20) 65%, rgba(0,0,0,0.85) 100%),
+    radial-gradient(ellipse at center, rgba(0,0,0,0) 35%, rgba(0,0,0,0.55) 100%);
+  pointer-events: none;
+}
+.hero-frame {
+  position: relative;
+  z-index: 2;
+  width: 100%;
+  min-height: 100svh;
+  padding: clamp(1.5rem, 4vw, 3.5rem);
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+  pointer-events: none;
+}
+.hero-frame > * { pointer-events: auto; }
+.hero-topline {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-family: 'Manrope', sans-serif;
+  font-weight: 500;
+  font-size: var(--fs-micro);
+  color: var(--color-text-muted);
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+}
+.hero-topline-mark { display: flex; align-items: center; gap: 0.6rem; color: var(--color-peach); }
+.hero-topline-mark::before { content: ''; width: 8px; height: 8px; background: var(--color-accent); border-radius: 50%; display: inline-block; box-shadow: 0 0 12px var(--color-accent-soft); }
+.hero-name-wrap {
+  align-self: end;
   display: flex;
   flex-direction: column;
+  gap: 0.5rem;
+}
+.hero-name {
+  font-family: 'Manrope', sans-serif;
+  font-weight: 200;
+  font-size: var(--fs-hero);
+  color: var(--color-peach);
+  line-height: 0.92;
+  letter-spacing: -0.04em;
+  text-transform: uppercase;
+  margin: 0;
+}
+.hero-name .hero-name-em {
+  font-weight: 700;
+  font-style: normal;
+  display: block;
+}
+.hero-rule {
+  width: clamp(60px, 8vw, 120px);
+  height: 1px;
+  background: linear-gradient(90deg, var(--color-accent), transparent);
+  margin-top: 1rem;
+}
+.hero-bottomline {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 1.5rem;
+}
+.hero-scroll-cue {
+  display: flex;
   align-items: center;
-  justify-content: center;
-  padding: 2rem;
-  z-index: 2;
+  gap: 0.7rem;
+  font-family: 'Manrope', sans-serif;
+  font-size: var(--fs-micro);
+  color: var(--color-text-muted);
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  font-weight: 500;
+  cursor: pointer;
+  background: none;
+  border: none;
+  padding: 0;
+  transition: color 0.4s var(--ease-cinematic);
 }
+.hero-scroll-cue:hover { color: var(--color-accent); }
+.hero-scroll-cue-line {
+  display: inline-block;
+  width: 32px;
+  height: 1px;
+  background: currentColor;
+  position: relative;
+  overflow: hidden;
+}
+.hero-scroll-cue-line::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: var(--color-accent);
+  transform: translateX(-100%);
+  animation: scroll-cue-pulse 2.6s var(--ease-cinematic) infinite;
+}
+@keyframes scroll-cue-pulse {
+  0% { transform: translateX(-100%); }
+  60% { transform: translateX(100%); }
+  100% { transform: translateX(100%); }
+}
+.hero-meta {
+  font-family: 'Manrope', sans-serif;
+  font-size: var(--fs-micro);
+  color: var(--color-text-muted);
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  font-weight: 500;
+  text-align: right;
+}
+.hero-meta-row { display: block; }
+.hero-meta-row + .hero-meta-row { margin-top: 0.3rem; }
+
 @media (max-width: 768px) {
-  .hero { min-height: 78vh; }
-  .hero-bg-img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: center; }
-  .hero .hero-content { padding: 1.5rem 1rem; }
+  .hero-frame { padding: 1.5rem 1.25rem 2rem; }
+  .hero-topline { font-size: 0.65rem; letter-spacing: 0.18em; }
+  .hero-bottomline { flex-direction: column; align-items: flex-start; gap: 1.5rem; }
+  .hero-meta { text-align: left; }
 }
-.hero-overlay { position: absolute; inset: 0; background: linear-gradient(180deg, rgba(10,10,10,0.25) 0%, rgba(10,10,10,0.15) 45%, rgba(10,10,10,0.55) 100%); z-index: 0; }
-.hero-content { max-width: 700px; position: relative; z-index: 1; }
-.hero-title { font-size: clamp(2.5rem, 6vw, 5rem); font-weight: 900; color: var(--color-peach); letter-spacing: -0.02em; line-height: 1.1; margin-bottom: 1.25rem; font-family: 'Playfair Display', serif; text-shadow: 0 2px 16px rgba(0,0,0,0.7), 0 1px 3px rgba(0,0,0,0.9); }
-.hero-tagline { font-size: clamp(1rem, 2.5vw, 1.35rem); color: var(--color-light); margin-bottom: 2.5rem; line-height: 1.5; text-shadow: 0 1px 8px rgba(0,0,0,0.8), 0 1px 2px rgba(0,0,0,0.9); }
-.hero-cta { display: inline-block; padding: 0.9rem 2.5rem; background: var(--color-peach); color: var(--color-dark); text-decoration: none; border-radius: 4px; font-weight: 700; font-size: 1rem; transition: var(--transition); }
-.hero-cta:hover { background: #e0e0e0; box-shadow: 0 6px 24px rgba(255,255,255,0.2); transform: translateY(-2px); }
-.showreel-bg { position: absolute; inset: 0; z-index: 0; overflow: hidden; }
-.showreel-bg iframe { position: absolute; top: 50%; left: 50%; width: 177.78vh; height: 56.25vw; min-width: 100%; min-height: 100%; transform: translate(-50%, -50%); pointer-events: none; }
+
+@media (prefers-reduced-motion: reduce) {
+  .hero-media { inset: 0; width: 100%; height: 100%; transform: none !important; }
+}
 
 /* CLIENT LOGOS — infinite scrolling marquee under hero */
 .client-logos-bar {

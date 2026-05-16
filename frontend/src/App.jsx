@@ -2,6 +2,11 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import './App.css';
 import jsPDF from 'jspdf';
 import QRCode from 'qrcode';
+import Lenis from 'lenis';
+import { gsap } from 'gsap';
+import { ScrollTrigger } from 'gsap/ScrollTrigger';
+
+gsap.registerPlugin(ScrollTrigger);
 
 const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:8000/api';
 const BASE_URL = process.env.REACT_APP_BASE_URL || '';
@@ -498,6 +503,128 @@ function CookieConsent({ lang }) {
   );
 }
 
+// ==================== HERO — SILENT SHOWREEL MASTHEAD ====================
+
+function HeroMasthead({ settings, heroImg, siteTitle, featuredItem, isAr }) {
+  const sectionRef = useRef(null);
+  const mediaRef = useRef(null);
+  const videoRef = useRef(null);
+
+  const showreelUrl = featuredItem && featuredItem.video_type === 'direct' && featuredItem.video_url
+    ? resolveUrl(featuredItem.video_url, 'video')
+    : null;
+  const fallbackImg = featuredItem ? (getThumbnail(featuredItem) || heroImg) : heroImg;
+
+  // GSAP parallax drift on the media layer as the hero scrolls past
+  useEffect(() => {
+    if (!sectionRef.current || !mediaRef.current) return;
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    const ctx = gsap.context(() => {
+      gsap.to(mediaRef.current, {
+        yPercent: 18,
+        ease: 'none',
+        scrollTrigger: {
+          trigger: sectionRef.current,
+          start: 'top top',
+          end: 'bottom top',
+          scrub: 0.8,
+        },
+      });
+      gsap.fromTo(
+        '.hero-frame',
+        { opacity: 0, y: 36 },
+        {
+          opacity: 1,
+          y: 0,
+          duration: 1.4,
+          ease: 'expo.out',
+          delay: 0.15,
+        }
+      );
+    }, sectionRef);
+    return () => ctx.revert();
+  }, []);
+
+  // Best-effort autoplay (some mobile browsers refuse silent autoplay until interaction)
+  useEffect(() => {
+    if (!videoRef.current || !showreelUrl) return;
+    const v = videoRef.current;
+    const tryPlay = () => v.play().catch(() => {});
+    tryPlay();
+    document.addEventListener('touchstart', tryPlay, { once: true, passive: true });
+    document.addEventListener('click', tryPlay, { once: true });
+    return () => {
+      document.removeEventListener('touchstart', tryPlay);
+      document.removeEventListener('click', tryPlay);
+    };
+  }, [showreelUrl]);
+
+  const scrollToNext = () => {
+    const next = document.querySelector('#portfolio') || document.querySelector('section + section');
+    if (next) next.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  };
+
+  if (!settings) {
+    return <section className="hero" ref={sectionRef}><div className="hero-vignette" /></section>;
+  }
+
+  const titleParts = (siteTitle || 'Mahmoud Dessoki').trim().split(/\s+/);
+  const firstName = titleParts[0] || '';
+  const lastName = titleParts.slice(1).join(' ');
+
+  return (
+    <section className="hero" ref={sectionRef} aria-label="Showreel">
+      <div className="hero-media" ref={mediaRef}>
+        {showreelUrl ? (
+          <video
+            ref={videoRef}
+            src={showreelUrl}
+            autoPlay
+            muted
+            loop
+            playsInline
+            preload="metadata"
+            poster={fallbackImg}
+            aria-hidden="true"
+          />
+        ) : (
+          <img src={fallbackImg} alt="" aria-hidden="true" />
+        )}
+      </div>
+      <div className="hero-vignette" aria-hidden="true" />
+      <div className="hero-frame">
+        <div className="hero-topline">
+          <span className="hero-topline-mark">
+            {settings?.available_for_booking !== false
+              ? (isAr ? 'متاح للحجز' : 'Available for booking')
+              : (isAr ? 'محجوز حالياً' : 'Currently booked')}
+          </span>
+          <span>{isAr ? 'بكرة سينما · دبي' : 'Cinema Line · Dubai'}</span>
+        </div>
+
+        <div className="hero-name-wrap">
+          <h1 className="hero-name">
+            {firstName}
+            {lastName && <span className="hero-name-em">{lastName}</span>}
+          </h1>
+          <span className="hero-rule" aria-hidden="true" />
+        </div>
+
+        <div className="hero-bottomline">
+          <button type="button" className="hero-scroll-cue" onClick={scrollToNext}>
+            <span className="hero-scroll-cue-line" aria-hidden="true" />
+            <span>{isAr ? 'اكتشف الأعمال' : 'Scroll to explore'}</span>
+          </button>
+          <div className="hero-meta">
+            <span className="hero-meta-row">SONY FX3 · S-LOG3</span>
+            <span className="hero-meta-row">{(new Date()).getFullYear()} — LENS MANIA</span>
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
 // ==================== VIDEO PLAYER ====================
 
 function VideoPlayer({ url }) {
@@ -799,6 +926,26 @@ function PublicSite({ onAdminClick }) {
     return () => obs.disconnect();
   }, [portfolio]);
 
+  // Lenis smooth scroll + GSAP ScrollTrigger sync (cinematic weighted scroll)
+  useEffect(() => {
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    const lenis = new Lenis({
+      duration: 1.15,
+      easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t)),
+      smoothWheel: true,
+      smoothTouch: false,
+    });
+    const onScroll = () => ScrollTrigger.update();
+    lenis.on('scroll', onScroll);
+    const raf = (time) => { lenis.raf(time * 1000); };
+    gsap.ticker.add(raf);
+    gsap.ticker.lagSmoothing(0);
+    return () => {
+      gsap.ticker.remove(raf);
+      lenis.destroy();
+    };
+  }, []);
+
   const sortedPortfolio = [...portfolio].sort((a, b) => {
     if (sort === 'views') return b.views - a.views;
     if (sort === 'likes') return (b.likes || 0) - (a.likes || 0);
@@ -885,16 +1032,13 @@ function PublicSite({ onAdminClick }) {
         </div>
       </header>
 
-      <section className="hero">
-        {settings && <img key={heroImg} src={heroImg} alt={siteTitle} className="hero-bg-img" />}
-        {showreelEmbed && <div className="showreel-bg"><iframe src={showreelEmbed} frameBorder="0" allowFullScreen title="Showreel" /></div>}
-        <div className="hero-overlay" />
-        <div className="hero-content">
-          <h1 className="hero-title">{siteTitle}</h1>
-          <p className="hero-tagline">{siteDesc}</p>
-          <a href="#portfolio" className="hero-cta">View Portfolio</a>
-        </div>
-      </section>
+      <HeroMasthead
+        settings={settings}
+        heroImg={heroImg}
+        siteTitle={siteTitle}
+        featuredItem={portfolio.find(p => p.featured && p.video_type === 'direct' && p.video_url) || portfolio.find(p => p.featured)}
+        isAr={isAr}
+      />
 
       {clientLogos.length > 0 && (
         <section className="client-logos-bar fade-in-section" aria-label="Trusted by">
