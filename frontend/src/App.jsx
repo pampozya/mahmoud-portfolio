@@ -1149,7 +1149,7 @@ function PublicSite({ onAdminClick }) {
       <header className="public-header">
         <div className="header-inner">
           <a href="#" className="site-logo">
-            <img src="/logo.png" alt={siteTitle} className="header-logo-img" onError={e => { e.target.style.display='none'; e.target.nextSibling.style.display='block'; }} />
+            <img src="/logo-white.svg" alt={siteTitle} className="header-logo-img" onError={e => { e.target.style.display='none'; e.target.nextSibling.style.display='block'; }} />
             <span style={{ display: 'none' }}>{siteTitle}</span>
           </a>
           <nav className="header-nav">
