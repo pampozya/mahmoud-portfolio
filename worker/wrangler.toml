@@ -1,3 +1,8 @@
 name = "lensmania-sign"
 main = "index.js"
 compatibility_date = "2024-10-01"
+
+[vars]
+R2_ACCOUNT_ID = "20929e1aa464aad12903aa438c39dc2c"
+R2_BUCKET = "lensmania-videos"
+R2_PUBLIC_URL = "https://pub-534146b836b546889e3727f44f5adb93.r2.dev"

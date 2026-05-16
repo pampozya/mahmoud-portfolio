@@ -1,0 +1,17 @@
+{
+  "rules": [
+    {
+      "allowed": {
+        "origins": [
+          "https://portfolio.lensmania.ae",
+          "https://lensmania.ae",
+          "http://localhost:3000"
+        ],
+        "methods": ["PUT", "GET", "HEAD", "POST"],
+        "headers": ["*"]
+      },
+      "exposeHeaders": ["ETag"],
+      "maxAgeSeconds": 3600
+    }
+  ]
+}

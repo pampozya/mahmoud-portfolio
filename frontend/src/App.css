@@ -820,6 +820,13 @@ body::after {
 
 /* PORTFOLIO GRID — premium editorial cards */
 .portfolio-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: clamp(2.5rem, 4vw, 3.5rem); }
+@media (max-width: 768px) {
+  .portfolio-grid { grid-template-columns: 1fr; gap: 2.75rem; }
+  /* Cap very tall aspect ratios (9:16) so vertical reels don't dominate the screen */
+  .portfolio-grid .card-thumb { max-height: 78vh; aspect-ratio: auto !important; height: auto; }
+  .portfolio-grid .card-thumb img,
+  .portfolio-grid .card-thumb video { position: relative !important; height: auto; max-height: 78vh; width: 100%; object-position: center; }
+}
 .video-card {
   background: transparent;
   border: none;

@@ -101,7 +101,40 @@ const api = {
     return data;
   },
 
-  uploadFile: (token, file, onProgress, preSig = null) => new Promise(async (resolve, reject) => {
+  // PRIMARY upload path — Cloudflare R2 (no forced compression, full original quality)
+  // `uploadFile` is aliased to this below so every existing caller goes to R2 transparently.
+  uploadFile: (token, file, onProgress) => api.uploadFileR2(token, file, onProgress),
+  uploadFileR2: (token, file, onProgress) => new Promise(async (resolve, reject) => {
+    try {
+      const sigR = await fetch('https://lensmania-sign.pampozya.workers.dev/r2', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ filename: file.name, contentType: file.type || 'application/octet-stream' }),
+      });
+      const sig = await sigR.json();
+      if (!sigR.ok) throw new Error(sig.error || `R2 signature failed (${sigR.status})`);
+      if (!sig.uploadUrl || !sig.publicUrl) throw new Error('R2 not configured on Worker');
+
+      const xhr = new XMLHttpRequest();
+      xhr.open('PUT', sig.uploadUrl);
+      // Don't send Authorization header — presigned URL contains its own auth via query string
+      xhr.upload.onprogress = (e) => {
+        if (e.lengthComputable && onProgress) onProgress(Math.round((e.loaded / e.total) * 100));
+      };
+      xhr.onload = () => {
+        if (xhr.status >= 200 && xhr.status < 300) {
+          resolve({ url: sig.publicUrl, filename: file.name });
+        } else {
+          reject(new Error(`R2 upload failed (${xhr.status}): ${xhr.responseText?.slice(0, 200) || 'unknown'}`));
+        }
+      };
+      xhr.onerror = () => reject(new Error('R2 network error'));
+      xhr.send(file);
+    } catch (e) { reject(new Error(`Upload failed: ${e.message}`)); }
+  }),
+
+  // LEGACY upload path — Cloudinary. Kept as fallback; existing video_urls already on Cloudinary keep working.
+  uploadFileCloudinary: (token, file, onProgress, preSig = null) => new Promise(async (resolve, reject) => {
     try {
       // Use pre-fetched signature if provided, else fetch fresh
       let sig = preSig;
@@ -331,10 +364,7 @@ function getShowreelEmbed(url) {
 function resolveUrl(url, type = 'auto') {
   if (!url) return null;
   if (url.startsWith('/')) return `${BASE_URL}${url}`;
-  // Inject Cloudinary streaming optimizations for video URLs
-  if (url.includes('res.cloudinary.com') && type === 'video') {
-    return url.replace('/upload/', '/upload/f_auto,q_auto,vc_auto,fl_streaming_attachment:false/');
-  }
+  // Serve Cloudinary videos at original quality (no q_auto compression). R2 URLs pass through as-is.
   return url;
 }
 
@@ -1769,24 +1799,11 @@ function PortfolioManager({ portfolio, categories, token, onUpdate, settings }) 
 
   const handleUpload = async (e, field) => {
     let file = e.target.files[0]; if (!file) return;
-    const isVideo = /\.(mp4|mov|webm|avi|mkv)$/i.test(file.name) || file.type.startsWith('video/');
-    const LIMIT = 80 * 1024 * 1024; // auto-compress if > 80MB (Cloudinary free limit is 100MB)
-
     setUploading(true); setUploadStatus('');
     setUploadFilename(file.name); setUploadProgress(0);
 
     try {
-      if (isVideo && file.size > LIMIT) {
-        const origMB = (file.size / 1024 / 1024).toFixed(0);
-        setUploadFilename(`🔌 Preparing upload server…`);
-        setUploadProgress(2);
-        // Warm up Render (result discarded — fresh signature is fetched post-compression)
-        try { await api.getUploadSignature(token); } catch {}
-        file = await compressWithFFmpeg(file, origMB, p => setUploadProgress(p), setUploadFilename);
-        setUploadFilename(`📤 Uploading to Cloudinary…`);
-        setUploadProgress(1);
-      }
-
+      // R2 upload — no client-side compression, full original quality preserved.
       const res = await api.uploadFile(token, file, p => setUploadProgress(Math.max(1, p)));
       if (res.url) { set({ [field]: res.url }); setUploadProgress(100); setUploadStatus('done'); }
       else setUploadStatus('error');
