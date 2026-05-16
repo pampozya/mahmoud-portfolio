@@ -655,7 +655,6 @@ function HeroMasthead({ settings, heroImg, siteTitle, featuredItem, isAr }) {
               ? (isAr ? 'متاح للحجز' : 'Available for booking')
               : (isAr ? 'محجوز حالياً' : 'Currently booked')}
           </span>
-          <span>{isAr ? 'بكرة سينما · دبي' : 'Cinema Line · Dubai'}</span>
         </div>
 
         <div className="hero-name-wrap">
@@ -1037,23 +1036,23 @@ function PublicSite({ onAdminClick }) {
     }
   }, [settings?.ga_tracking_id]);
 
-  // Scroll-triggered fade-ins (re-trigger as section enters viewport from any direction)
+  // Scroll-triggered fade-ins — fire as section enters viewport (not before)
   useEffect(() => {
     const obs = new IntersectionObserver((entries) => {
       entries.forEach(e => {
         if (e.isIntersecting) e.target.classList.add('visible');
         else e.target.classList.remove('visible');
       });
-    }, { threshold: 0, rootMargin: '0px 0px 200px 0px' });
+    }, { threshold: 0.05, rootMargin: '0px' });
     document.querySelectorAll('.fade-in-section').forEach(el => obs.observe(el));
-    // Safety net: force-reveal anything still hidden after 1.5s (fallback if IO never fires)
-    const safety = setTimeout(() => {
+    // Reveal anything already on-screen at load (top of page) so it's not stuck hidden
+    requestAnimationFrame(() => {
       document.querySelectorAll('.fade-in-section').forEach(el => {
         const r = el.getBoundingClientRect();
-        if (r.top < window.innerHeight && r.bottom > 0) el.classList.add('visible');
+        if (r.top < window.innerHeight * 0.85 && r.bottom > 0) el.classList.add('visible');
       });
-    }, 1500);
-    return () => { obs.disconnect(); clearTimeout(safety); };
+    });
+    return () => obs.disconnect();
   }, [portfolio]);
 
   // Lenis smooth scroll + GSAP ScrollTrigger sync (cinematic weighted scroll)
