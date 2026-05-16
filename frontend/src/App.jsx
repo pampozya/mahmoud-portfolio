@@ -886,7 +886,7 @@ function PublicSite({ onAdminClick }) {
       </header>
 
       <section className="hero">
-        <img src={heroImg} alt={siteTitle} className="hero-bg-img" />
+        {settings && <img key={heroImg} src={heroImg} alt={siteTitle} className="hero-bg-img" />}
         {showreelEmbed && <div className="showreel-bg"><iframe src={showreelEmbed} frameBorder="0" allowFullScreen title="Showreel" /></div>}
         <div className="hero-overlay" />
         <div className="hero-content">
