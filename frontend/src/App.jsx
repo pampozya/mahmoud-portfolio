@@ -1044,9 +1044,16 @@ function PublicSite({ onAdminClick }) {
         if (e.isIntersecting) e.target.classList.add('visible');
         else e.target.classList.remove('visible');
       });
-    }, { threshold: 0.12, rootMargin: '0px 0px -80px 0px' });
+    }, { threshold: 0, rootMargin: '0px 0px 200px 0px' });
     document.querySelectorAll('.fade-in-section').forEach(el => obs.observe(el));
-    return () => obs.disconnect();
+    // Safety net: force-reveal anything still hidden after 1.5s (fallback if IO never fires)
+    const safety = setTimeout(() => {
+      document.querySelectorAll('.fade-in-section').forEach(el => {
+        const r = el.getBoundingClientRect();
+        if (r.top < window.innerHeight && r.bottom > 0) el.classList.add('visible');
+      });
+    }, 1500);
+    return () => { obs.disconnect(); clearTimeout(safety); };
   }, [portfolio]);
 
   // Lenis smooth scroll + GSAP ScrollTrigger sync (cinematic weighted scroll)
