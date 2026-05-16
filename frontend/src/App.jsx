@@ -402,43 +402,101 @@ function ReactionPicker({ itemId, reactions, userReaction, onReact }) {
   );
 }
 
-// ==================== FEATURED CAROUSEL ====================
+// ==================== SELECTED WORK (FEATURED) ====================
 
 function FeaturedCarousel({ items, onSelect, lang }) {
   const [idx, setIdx] = useState(0);
-  const timer = useRef(null);
+  const sectionRef = useRef(null);
+  const total = items.length;
+  const isAr = lang === 'ar';
 
+  // GSAP scroll-reveal — image scale-in + meta stagger-rise
   useEffect(() => {
-    if (items.length <= 1) return;
-    timer.current = setInterval(() => setIdx(i => (i + 1) % items.length), 5000);
-    return () => clearInterval(timer.current);
-  }, [items.length]);
+    if (!sectionRef.current) return;
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    const ctx = gsap.context(() => {
+      gsap.from('.featured-image-inner', {
+        scale: 1.08,
+        opacity: 0,
+        duration: 1.4,
+        ease: 'expo.out',
+        scrollTrigger: { trigger: sectionRef.current, start: 'top 80%', toggleActions: 'play none none reverse' },
+      });
+      gsap.from('.featured-meta > *', {
+        y: 30,
+        opacity: 0,
+        duration: 0.9,
+        stagger: 0.08,
+        ease: 'expo.out',
+        scrollTrigger: { trigger: sectionRef.current, start: 'top 78%', toggleActions: 'play none none reverse' },
+      });
+    }, sectionRef);
+    return () => ctx.revert();
+  }, [idx]);
 
-  if (!items.length) return null;
+  if (!total) return null;
   const item = items[idx];
   const thumb = getThumbnail(item);
   const fx = item.featured_focal_x ?? 50;
   const fy = item.featured_focal_y ?? 50;
+  const year = item.created_at ? new Date(item.created_at).getFullYear() : null;
+  const prev = () => setIdx(i => (i - 1 + total) % total);
+  const next = () => setIdx(i => (i + 1) % total);
 
   return (
-    <section className="carousel-section fade-in-section">
-      <div className="carousel-inner" onClick={() => onSelect(item)}>
-        <div className="carousel-bg" style={thumb ? { backgroundImage: `url(${thumb})`, backgroundPosition: `${fx}% ${fy}%` } : {}} />
-        <div className="carousel-overlay" />
-        <div className="carousel-content">
-          <span className="carousel-tag">✨ Featured</span>
-          <h2>{item.title}</h2>
-          {item.description && <p>{item.description}</p>}
-          <button className="hero-cta" style={{ marginTop: '1rem' }}>▶ Watch Now</button>
-        </div>
-        {items.length > 1 && (
-          <div className="carousel-dots">
-            {items.map((_, i) => (
-              <button key={i} className={`carousel-dot${i === idx ? ' active' : ''}`} onClick={e => { e.stopPropagation(); setIdx(i); clearInterval(timer.current); }} />
-            ))}
-          </div>
+    <section className="featured-section" ref={sectionRef} aria-label="Selected work">
+      <div className="featured-header">
+        <span className="featured-chapter">02 — {isAr ? 'أعمال مختارة' : 'Selected Work'}</span>
+        {total > 1 && (
+          <span className="featured-count">
+            <span className="featured-count-current">{String(idx + 1).padStart(2, '0')}</span>
+            <span className="featured-count-divider"> · </span>
+            <span className="featured-count-total">{String(total).padStart(2, '0')}</span>
+          </span>
         )}
       </div>
+      <div className="featured-spread">
+        <button
+          type="button"
+          className="featured-image"
+          onClick={() => onSelect(item)}
+          aria-label={`Open ${item.title}`}
+        >
+          <div
+            className="featured-image-inner"
+            style={thumb ? { backgroundImage: `url(${thumb})`, backgroundPosition: `${fx}% ${fy}%` } : {}}
+          />
+          <span className="featured-image-shade" aria-hidden="true" />
+          <span className="featured-watch">
+            <span className="featured-watch-icon" aria-hidden="true">▶</span>
+            <span>{isAr ? 'مشاهدة' : 'Play Reel'}</span>
+          </span>
+        </button>
+        <div className="featured-meta">
+          <span className="featured-meta-label">{isAr ? 'مشروع' : 'Project'}</span>
+          <h2 className="featured-title">{item.title}</h2>
+          {item.description && <p className="featured-desc">{item.description}</p>}
+          <div className="featured-tags">
+            {year && <span className="featured-tag">{year}</span>}
+            <span className="featured-tag">SONY FX3</span>
+            <span className="featured-tag">S-LOG3</span>
+          </div>
+          <button type="button" className="featured-cta" onClick={() => onSelect(item)}>
+            <span>{isAr ? 'مشاهدة المشروع' : 'View Project'}</span>
+            <span className="featured-cta-arrow" aria-hidden="true">→</span>
+          </button>
+        </div>
+      </div>
+      {total > 1 && (
+        <div className="featured-nav">
+          <button type="button" onClick={prev} className="featured-nav-btn" aria-label="Previous featured project">
+            <span aria-hidden="true">←</span>
+          </button>
+          <button type="button" onClick={next} className="featured-nav-btn" aria-label="Next featured project">
+            <span aria-hidden="true">→</span>
+          </button>
+        </div>
+      )}
     </section>
   );
 }
