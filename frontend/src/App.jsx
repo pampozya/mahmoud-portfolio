@@ -683,6 +683,77 @@ function HeroMasthead({ settings, heroImg, siteTitle, featuredItem, isAr }) {
   );
 }
 
+// ==================== SPOTLIGHT (REEL OF THE MONTH) ====================
+
+function SpotlightSection({ item, categories, onOpen, isAr }) {
+  const sectionRef = useRef(null);
+  const cat = categories.find(c => c.id === item.category_id);
+  const thumb = getThumbnail(item);
+  const year = item.created_at ? new Date(item.created_at).getFullYear() : null;
+
+  useEffect(() => {
+    if (!sectionRef.current) return;
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    const ctx = gsap.context(() => {
+      gsap.from('.spotlight-frame-inner', {
+        scale: 1.05,
+        opacity: 0,
+        duration: 1.6,
+        ease: 'expo.out',
+        scrollTrigger: { trigger: sectionRef.current, start: 'top 80%', toggleActions: 'play none none reverse' },
+      });
+      gsap.from('.spotlight-meta-row', {
+        y: 30,
+        opacity: 0,
+        duration: 0.9,
+        stagger: 0.1,
+        ease: 'expo.out',
+        scrollTrigger: { trigger: sectionRef.current, start: 'top 75%', toggleActions: 'play none none reverse' },
+      });
+    }, sectionRef);
+    return () => ctx.revert();
+  }, []);
+
+  return (
+    <section className="spotlight-section" ref={sectionRef} aria-label="Reel of the month">
+      <div className="spotlight-header">
+        <span className="spotlight-chapter">03 — {isAr ? 'في الواجهة' : 'Spotlight'}</span>
+        <span className="spotlight-now-playing">{isAr ? '— يعرض الآن —' : '— Now Playing —'}</span>
+      </div>
+      <button
+        type="button"
+        className="spotlight-frame"
+        onClick={() => onOpen(item)}
+        aria-label={`Play ${item.title}`}
+      >
+        <div
+          className="spotlight-frame-inner"
+          style={thumb ? { backgroundImage: `url(${thumb})` } : {}}
+        />
+        <span className="spotlight-frame-shade" aria-hidden="true" />
+        <span className="spotlight-play-icon" aria-hidden="true">
+          <span className="spotlight-play-glyph">▶</span>
+        </span>
+      </button>
+      <div className="spotlight-info">
+        <div className="spotlight-meta-row spotlight-credits">
+          {cat && <span className="spotlight-credit-chip">{cat.name}</span>}
+          {year && <span className="spotlight-credit-chip">{year}</span>}
+          {item.views > 0 && <span className="spotlight-credit-chip">{item.views} {isAr ? 'مشاهدة' : 'views'}</span>}
+        </div>
+        <h2 className="spotlight-meta-row spotlight-title-new">{item.title}</h2>
+        {item.description && <p className="spotlight-meta-row spotlight-desc-new">{item.description}</p>}
+        <div className="spotlight-meta-row">
+          <button type="button" className="featured-cta" onClick={() => onOpen(item)}>
+            <span>{isAr ? 'مشاهدة' : 'Watch Reel'}</span>
+            <span className="featured-cta-arrow" aria-hidden="true">→</span>
+          </button>
+        </div>
+      </div>
+    </section>
+  );
+}
+
 // ==================== VIDEO PLAYER ====================
 
 function VideoPlayer({ url }) {
@@ -1118,42 +1189,9 @@ function PublicSite({ onAdminClick }) {
         <FeaturedCarousel items={portfolio.filter(p => p.featured).slice(0, 5)} onSelect={openItem} lang={lang} />
       )}
 
-      {reelOfMonth && (() => {
-        const romThumb = getThumbnail(reelOfMonth);
-        const romPlatform = PLATFORMS[reelOfMonth.video_type || detectPlatform(reelOfMonth.video_url)];
-        const romCat = categories.find(c => c.id === reelOfMonth.category_id);
-        const romPadding = getAspectPadding(reelOfMonth.aspect_ratio || '16:9');
-        return (
-          <section className="reel-of-month fade-in-section">
-            <span className="ghost-watermark ghost-watermark--right" aria-hidden="true">SPOTLIGHT</span>
-            <div className="section-inner">
-              <div className="spotlight-label">{isAr ? '✨ في الواجهة' : '✨ Spotlight'}</div>
-              <div className="spotlight-card" onClick={() => openItem(reelOfMonth)}>
-                <div className="spotlight-thumb" style={{ paddingTop: romPadding }}>
-                  {romThumb
-                    ? <img src={romThumb} alt={reelOfMonth.title} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }} />
-                    : <div className="thumb-placeholder" style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: romPlatform ? `${romPlatform.color}22` : '#1a0a12' }}><span style={{ fontSize: '3rem' }}>▶</span></div>}
-                  <div className="play-overlay" style={{ position: 'absolute', inset: 0 }}><span>▶</span></div>
-                  {reelOfMonth.views > 0 && <span className="view-count-badge">👁 {reelOfMonth.views}</span>}
-                  {romPlatform && <span className="spotlight-platform-badge" style={{ background: romPlatform.color }}>{romPlatform.label}</span>}
-                </div>
-                <div className="spotlight-info">
-                  <div className="spotlight-meta">
-                    {romCat && <span className="card-category-badge">{romCat.name}</span>}
-                  </div>
-                  <h2 className="spotlight-title">{reelOfMonth.title}</h2>
-                  {reelOfMonth.description && <p className="spotlight-desc">{reelOfMonth.description}</p>}
-                  <div className="spotlight-stats">
-                    {reelOfMonth.views > 0 && <span>👁 {reelOfMonth.views} {isAr ? 'مشاهدة' : 'views'}</span>}
-                    {reelOfMonth.likes > 0 && <span>♥ {reelOfMonth.likes} {isAr ? 'إعجاب' : 'likes'}</span>}
-                  </div>
-                  <button className="spotlight-watch-btn">{isAr ? '▶ شاهد الآن' : '▶ Watch Now'}</button>
-                </div>
-              </div>
-            </div>
-          </section>
-        );
-      })()}
+      {reelOfMonth && (
+        <SpotlightSection item={reelOfMonth} categories={categories} onOpen={openItem} isAr={isAr} />
+      )}
 
       <section className="portfolio-section fade-in-section" id="portfolio">
         <span className="ghost-watermark ghost-watermark--right" aria-hidden="true">WORK</span>
