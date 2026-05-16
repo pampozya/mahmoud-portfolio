@@ -1076,6 +1076,30 @@ function PublicSite({ onAdminClick }) {
     };
   }, []);
 
+  // GSAP per-card scroll-reveal (slide up + fade, staggered)
+  useEffect(() => {
+    if (!portfolio.length) return;
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    const cards = document.querySelectorAll('.portfolio-grid .video-card, .portfolio-masonry .video-card');
+    if (!cards.length) return;
+    const ctx = gsap.context(() => {
+      cards.forEach((card) => {
+        gsap.fromTo(
+          card,
+          { opacity: 0, y: 30 },
+          {
+            opacity: 1,
+            y: 0,
+            duration: 0.9,
+            ease: 'power3.out',
+            scrollTrigger: { trigger: card, start: 'top 88%', toggleActions: 'play none none none' },
+          }
+        );
+      });
+    });
+    return () => ctx.revert();
+  }, [portfolio, sort, activeCategory, gridMode]);
+
   const sortedPortfolio = [...portfolio].sort((a, b) => {
     if (sort === 'views') return b.views - a.views;
     if (sort === 'likes') return (b.likes || 0) - (a.likes || 0);
