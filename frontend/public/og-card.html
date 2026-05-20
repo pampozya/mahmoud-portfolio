@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <style>
+      * { box-sizing: border-box; }
+      html,
+      body {
+        width: 1200px;
+        height: 630px;
+        margin: 0;
+        overflow: hidden;
+        background: #050505;
+        font-family: Manrope, Inter, Arial, sans-serif;
+      }
+      .card {
+        position: relative;
+        width: 1200px;
+        height: 630px;
+        overflow: hidden;
+        background: #050505;
+        color: #f2eee7;
+        isolation: isolate;
+      }
+      .photo {
+        position: absolute;
+        inset: 0;
+        background-image: url('./hero.jpg');
+        background-size: cover;
+        background-position: center 42%;
+        filter: saturate(0.95) contrast(1.08);
+        transform: scale(1.02);
+        z-index: -3;
+      }
+      .shade {
+        position: absolute;
+        inset: 0;
+        z-index: -2;
+        background:
+          linear-gradient(90deg, rgba(0,0,0,0.96) 0%, rgba(0,0,0,0.76) 38%, rgba(0,0,0,0.34) 72%, rgba(0,0,0,0.72) 100%),
+          linear-gradient(180deg, rgba(0,0,0,0.46) 0%, rgba(0,0,0,0.08) 46%, rgba(0,0,0,0.88) 100%);
+      }
+      .grain {
+        position: absolute;
+        inset: 0;
+        z-index: -1;
+        opacity: 0.18;
+        background-image:
+          radial-gradient(circle at 20% 10%, rgba(200,168,106,0.18), transparent 28%),
+          radial-gradient(circle at 84% 18%, rgba(255,167,129,0.12), transparent 30%);
+      }
+      .logo {
+        position: absolute;
+        top: 58px;
+        left: 70px;
+        width: 118px;
+        height: auto;
+        filter: drop-shadow(0 10px 30px rgba(0,0,0,0.75));
+      }
+      .copy {
+        position: absolute;
+        left: 70px;
+        bottom: 66px;
+        max-width: 710px;
+      }
+      .kicker {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        color: #c8a86a;
+        font-size: 15px;
+        font-weight: 700;
+        letter-spacing: 0.28em;
+        text-transform: uppercase;
+        margin-bottom: 22px;
+      }
+      .kicker::before {
+        content: '';
+        width: 44px;
+        height: 1px;
+        background: #c8a86a;
+      }
+      h1 {
+        margin: 0;
+        color: #f1eee8;
+        font-size: 86px;
+        line-height: 0.92;
+        letter-spacing: -0.055em;
+        font-weight: 300;
+        text-transform: uppercase;
+        text-shadow: 0 8px 34px rgba(0,0,0,0.82);
+      }
+      h1 strong {
+        display: block;
+        font-weight: 700;
+      }
+      p {
+        margin: 28px 0 0;
+        max-width: 620px;
+        color: rgba(242,238,231,0.8);
+        font-size: 28px;
+        line-height: 1.34;
+        font-weight: 300;
+      }
+      .meta {
+        position: absolute;
+        right: 70px;
+        bottom: 72px;
+        display: flex;
+        gap: 12px;
+      }
+      .meta span {
+        color: #f1eee8;
+        border: 1px solid rgba(242,238,231,0.24);
+        background: rgba(0,0,0,0.34);
+        padding: 14px 18px;
+        font-size: 14px;
+        letter-spacing: 0.22em;
+        text-transform: uppercase;
+      }
+    </style>
+  </head>
+  <body>
+    <main class="card">
+      <div class="photo"></div>
+      <div class="shade"></div>
+      <div class="grain"></div>
+      <img class="logo" src="./logo-white.svg" alt="" />
+      <section class="copy">
+        <div class="kicker">Dubai Videographer</div>
+        <h1>Mahmoud <strong>Adel</strong></h1>
+        <p>Cinematic films, reels, and commissioned visual work.</p>
+      </section>
+      <div class="meta">
+        <span>Films</span>
+        <span>Medical</span>
+        <span>Events</span>
+      </div>
+    </main>
+  </body>
+</html>

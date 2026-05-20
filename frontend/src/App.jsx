@@ -409,21 +409,18 @@ const REACTIONS = [
   { key: 'wow', emoji: '😮', label: 'Wow' },
 ];
 
-function ReactionPicker({ itemId, reactions, userReaction, onReact }) {
+function ReactionPicker({ itemId, userReaction, onReact }) {
   const [open, setOpen] = useState(false);
-  const parsed = reactions ? JSON.parse(reactions) : { heart: 0, fire: 0, clap: 0, wow: 0 };
-  const total = Object.values(parsed).reduce((a, b) => a + b, 0);
   return (
     <div className="reaction-wrap" onMouseLeave={() => setOpen(false)}>
       <button className={`reaction-trigger${userReaction ? ' reacted' : ''}`} onClick={e => { e.stopPropagation(); setOpen(!open); }}>
-        {userReaction ? REACTIONS.find(r => r.key === userReaction)?.emoji : '😊'} {total > 0 ? total : ''}
+        {userReaction ? REACTIONS.find(r => r.key === userReaction)?.emoji : '😊'}
       </button>
       {open && (
         <div className="reaction-picker" onClick={e => e.stopPropagation()}>
           {REACTIONS.map(r => (
             <button key={r.key} className={`reaction-btn${userReaction === r.key ? ' active' : ''}`} onClick={() => { onReact(itemId, r.key); setOpen(false); }} title={r.label}>
               <span>{r.emoji}</span>
-              <span className="reaction-count">{parsed[r.key] || 0}</span>
             </button>
           ))}
         </div>
@@ -470,6 +467,7 @@ function FeaturedCarousel({ items, onSelect, lang }) {
   const fx = item.featured_focal_x ?? 50;
   const fy = item.featured_focal_y ?? 50;
   const year = item.created_at ? new Date(item.created_at).getFullYear() : null;
+  const featuredSummary = (item.description || '').split(/\n{2,}|\n/)[0].trim();
   const prev = () => setIdx(i => (i - 1 + total) % total);
   const next = () => setIdx(i => (i + 1) % total);
 
@@ -505,7 +503,7 @@ function FeaturedCarousel({ items, onSelect, lang }) {
         <div className="featured-meta">
           <span className="featured-meta-label">{isAr ? 'مشروع' : 'Project'}</span>
           <h2 className="featured-title">{item.title}</h2>
-          {item.description && <p className="featured-desc">{item.description}</p>}
+          {featuredSummary && <p className="featured-desc">{featuredSummary}</p>}
           <div className="featured-tags">
             {year && <span className="featured-tag">{year}</span>}
             <span className="featured-tag">SONY FX3</span>
@@ -602,6 +600,7 @@ function HeroMasthead({ settings, heroImg, siteTitle, featuredItem, isAr }) {
     ? resolveUrl(featuredItem.video_url, 'video')
     : null;
   const fallbackImg = featuredItem ? (getThumbnail(featuredItem) || heroImg) : heroImg;
+  const heroCollaborators = featuredItem ? parseCollaborators(featuredItem.collaborators) : [];
 
   // GSAP parallax drift on the media layer as the hero scrolls past
   // (disabled on touch / small screens — iOS URL-bar resize fights it and weaker GPUs jank)
@@ -700,6 +699,62 @@ function HeroMasthead({ settings, heroImg, siteTitle, featuredItem, isAr }) {
             <span className="hero-scroll-cue-line" aria-hidden="true" />
             <span>{isAr ? 'اكتشف الأعمال' : 'Scroll to explore'}</span>
           </button>
+          {heroCollaborators.length > 0 && (
+            <div className="hero-collaborators" aria-label={isAr ? 'المتعاونون' : 'Project credits'}>
+              <span className="hero-collaborators-label">{isAr ? 'بمشاركة' : 'Credits'}</span>
+              <div className="hero-collaborators-list">
+                {heroCollaborators.map((c, i) => {
+                  const clean = (c.handle || c).replace('@', '');
+                  return (
+                    <a key={i} href={`https://instagram.com/${clean}`} target="_blank" rel="noreferrer">
+                      @{clean}{c.role && <span>{c.role}</span>}
+                    </a>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function CinematicBrief({ portfolio, settings, siteDesc, isAr }) {
+  const items = Array.isArray(portfolio) ? portfolio : [];
+  const latestItem = [...items].sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0))[0];
+  const latestYear = latestItem?.created_at ? new Date(latestItem.created_at).getFullYear() : new Date().getFullYear();
+  const signals = [
+    { label: isAr ? 'الأسلوب' : 'Visual style', value: isAr ? 'سينمائي' : 'Cinematic' },
+    { label: isAr ? 'الإنتاج' : 'Production', value: isAr ? 'مرن' : 'Agile' },
+    { label: isAr ? 'التسليم' : 'Delivery', value: isAr ? 'جاهز' : 'Ready' },
+    { label: isAr ? 'الوجهة' : 'Based in', value: (settings?.location || 'Dubai').split(',')[0] },
+  ];
+
+  return (
+    <section className="cinematic-brief fade-in-section" aria-label="Portfolio briefing">
+      <div className="cinematic-brief-inner">
+        <div className="brief-copy">
+          <span className="brief-kicker">{isAr ? 'ملخص بصري' : 'Director-ready portfolio'}</span>
+          <h2>{siteDesc || (isAr ? 'تصوير فيديو احترافي' : 'Cinematic video work for brands, people, and places.')}</h2>
+          <p>
+            {isAr
+              ? `مجموعة منظمة من أعمال ${settings?.location || 'دبي'} مع فئات واضحة وروابط سريعة للمشاهدة.`
+              : 'Cinematic storytelling, curated reels, and a direct path to the work that best fits the brief.'}
+          </p>
+        </div>
+        <div className="brief-stats" aria-label="Portfolio highlights">
+          {signals.map(signal => (
+            <div className="brief-stat" key={signal.label}>
+              <strong>{signal.value}</strong>
+              <span>{signal.label}</span>
+            </div>
+          ))}
+        </div>
+        <div className="brief-routing" aria-label="Quick routes">
+          <a href="#portfolio">View work</a>
+          <a href="#contact">Book a shoot</a>
+          <span>{latestYear} / {settings?.location || 'Dubai, UAE'}</span>
         </div>
       </div>
     </section>
@@ -710,9 +765,13 @@ function HeroMasthead({ settings, heroImg, siteTitle, featuredItem, isAr }) {
 
 function SpotlightSection({ item, categories, onOpen, isAr }) {
   const sectionRef = useRef(null);
-  const cat = categories.find(c => c.id === item.category_id);
+  const rawCat = categories.find(c => c.id === item.category_id);
+  const cat = rawCat && ['cinematic-interviews', 'cinematic-videos'].includes(rawCat.slug)
+    ? { ...rawCat, name: 'Cinematic Videos' }
+    : rawCat;
   const thumb = getThumbnail(item);
   const year = item.created_at ? new Date(item.created_at).getFullYear() : null;
+  const spotlightSummary = (item.description || '').split(/\n{2,}|\n/)[0].trim();
 
   useEffect(() => {
     if (!sectionRef.current) return;
@@ -762,10 +821,9 @@ function SpotlightSection({ item, categories, onOpen, isAr }) {
         <div className="spotlight-meta-row spotlight-credits">
           {cat && <span className="spotlight-credit-chip">{cat.name}</span>}
           {year && <span className="spotlight-credit-chip">{year}</span>}
-          {item.views > 0 && <span className="spotlight-credit-chip">{item.views} {isAr ? 'مشاهدة' : 'views'}</span>}
         </div>
         <h2 className="spotlight-meta-row spotlight-title-new">{item.title}</h2>
-        {item.description && <p className="spotlight-meta-row spotlight-desc-new">{item.description}</p>}
+        {spotlightSummary && <p className="spotlight-meta-row spotlight-desc-new">{spotlightSummary}</p>}
         <div className="spotlight-meta-row">
           <button type="button" className="featured-cta" onClick={() => onOpen(item)}>
             <span>{isAr ? 'مشاهدة' : 'Watch Reel'}</span>
@@ -819,6 +877,8 @@ function VideoModal({ item, onClose, lang }) {
   const [btsIndex, setBtsIndex] = useState(null);
   const btsCount = bts.length;
   const btsOpen = btsIndex !== null && btsIndex >= 0 && btsIndex < btsCount;
+  const year = item.created_at ? new Date(item.created_at).getFullYear() : null;
+  const platformLabel = PLATFORMS[platform]?.label || 'Video';
   const isBtsVideo = (url) => /\.(mp4|mov|webm|m4v)(\?|$)/i.test(url || '');
   const closeBts = () => setBtsIndex(null);
   const prevBts = () => setBtsIndex(i => (i - 1 + btsCount) % btsCount);
@@ -840,32 +900,37 @@ function VideoModal({ item, onClose, lang }) {
 
   return (
     <div className="modal-overlay" onClick={onClose}>
-      <div className={`modal-content${(item.aspect_ratio === '9:16' || item.aspect_ratio === '1:1') ? ' modal-vertical' : ''}`} onClick={e => e.stopPropagation()}>
+      <div className={`modal-content project-modal${(item.aspect_ratio === '9:16' || item.aspect_ratio === '1:1') ? ' modal-vertical project-modal--vertical' : ''}`} onClick={e => e.stopPropagation()}>
         <button className="modal-close" onClick={onClose}>✕</button>
-        <div className="video-wrapper" style={{ paddingTop: padding }}>
-          {isInstagram && (
-            <div className="instagram-card" style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: '#0a0a0a', gap: '1.2rem' }}>
-              {item.thumbnail_url && <img src={resolveUrl(item.thumbnail_url)} alt={item.title} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', opacity: 0.35 }} />}
-              <div style={{ position: 'relative', zIndex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1rem' }}>
-                <svg width="52" height="52" viewBox="0 0 24 24" fill="none" style={{ filter: 'drop-shadow(0 2px 8px rgba(0,0,0,0.5))' }}>
-                  <defs><radialGradient id="ig" cx="30%" cy="107%" r="150%"><stop offset="0%" stopColor="#fdf497"/><stop offset="5%" stopColor="#fdf497"/><stop offset="45%" stopColor="#fd5949"/><stop offset="60%" stopColor="#d6249f"/><stop offset="90%" stopColor="#285AEB"/></radialGradient></defs>
-                  <rect width="24" height="24" rx="6" fill="url(#ig)"/>
-                  <circle cx="12" cy="12" r="4" stroke="white" strokeWidth="1.5" fill="none"/>
-                  <circle cx="17.5" cy="6.5" r="1" fill="white"/>
-                </svg>
-                <p style={{ color: '#fff', fontSize: '0.95rem', opacity: 0.85, textAlign: 'center', margin: 0 }}>Instagram doesn't allow embedded playback</p>
-                <a href={item.video_url} target="_blank" rel="noreferrer" style={{ background: 'linear-gradient(135deg,#f09433,#e6683c,#dc2743,#cc2366,#bc1888)', color: '#fff', padding: '0.7rem 1.8rem', borderRadius: '2rem', textDecoration: 'none', fontWeight: 600, fontSize: '1rem', boxShadow: '0 4px 15px rgba(0,0,0,0.4)' }}>
-                  Watch on Instagram ↗
-                </a>
+        <div className="project-modal-stage">
+          <div className="video-wrapper" style={{ paddingTop: padding }}>
+            {isInstagram && (
+              <div className="instagram-card">
+                {item.thumbnail_url && <img src={resolveUrl(item.thumbnail_url)} alt={item.title} />}
+                <div className="instagram-card-content">
+                  <svg width="52" height="52" viewBox="0 0 24 24" fill="none">
+                    <defs><radialGradient id="ig" cx="30%" cy="107%" r="150%"><stop offset="0%" stopColor="#fdf497"/><stop offset="5%" stopColor="#fdf497"/><stop offset="45%" stopColor="#fd5949"/><stop offset="60%" stopColor="#d6249f"/><stop offset="90%" stopColor="#285AEB"/></radialGradient></defs>
+                    <rect width="24" height="24" rx="6" fill="url(#ig)"/>
+                    <circle cx="12" cy="12" r="4" stroke="white" strokeWidth="1.5" fill="none"/>
+                    <circle cx="17.5" cy="6.5" r="1" fill="white"/>
+                  </svg>
+                  <p>Instagram doesn't allow embedded playback</p>
+                  <a href={item.video_url} target="_blank" rel="noreferrer">Watch on Instagram ↗</a>
+                </div>
               </div>
-            </div>
-          )}
-          {!isInstagram && embedUrl && <iframe src={embedUrl} title={item.title} frameBorder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowFullScreen style={{ position: 'absolute', inset: 0, width: '100%', height: '100%' }} />}
-          {directUrl && <VideoPlayer url={directUrl} />}
-          {isEmbed && item.embed_code && <div dangerouslySetInnerHTML={{ __html: item.embed_code }} style={{ position: 'absolute', inset: 0 }} />}
-          {!isInstagram && !embedUrl && !directUrl && !isEmbed && <div className="no-video">{item.video_url ? <a href={item.video_url} target="_blank" rel="noreferrer" className="btn-primary" style={{ textDecoration: 'none' }}>Watch on {PLATFORMS[item.video_type]?.label || 'Platform'} ↗</a> : 'No video'}</div>}
+            )}
+            {!isInstagram && embedUrl && <iframe src={embedUrl} title={item.title} frameBorder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowFullScreen style={{ position: 'absolute', inset: 0, width: '100%', height: '100%' }} />}
+            {directUrl && <VideoPlayer url={directUrl} />}
+            {isEmbed && item.embed_code && <div dangerouslySetInnerHTML={{ __html: item.embed_code }} style={{ position: 'absolute', inset: 0 }} />}
+            {!isInstagram && !embedUrl && !directUrl && !isEmbed && <div className="no-video">{item.video_url ? <a href={item.video_url} target="_blank" rel="noreferrer" className="btn-primary" style={{ textDecoration: 'none' }}>Watch on {PLATFORMS[item.video_type]?.label || 'Platform'} ↗</a> : 'No video'}</div>}
+          </div>
         </div>
-        <div className="modal-info">
+        <div className="modal-info project-modal-info">
+          <div className="project-modal-kicker">
+            <span>{platformLabel}</span>
+            {year && <span>{year}</span>}
+            {item.aspect_ratio && <span>{item.aspect_ratio}</span>}
+          </div>
           <div className="modal-title-row">
             <h3>{item.title}</h3>
             <TranslateToggle text={item.title} />
@@ -876,8 +941,13 @@ function VideoModal({ item, onClose, lang }) {
               <TranslateToggle text={item.description} />
             </div>
           )}
+          <div className="project-modal-actions">
+            {item.video_url && <a href={item.video_url} target="_blank" rel="noreferrer">Open source ↗</a>}
+            <a href="#contact" onClick={onClose}>Start a project →</a>
+          </div>
           {collabs.length > 0 && (
             <div className="modal-collaborators">
+              <span className="modal-section-label">Credits</span>
               {collabs.map((c, i) => {
                 const clean = (c.handle || c).replace('@', '');
                 return (
@@ -1002,7 +1072,6 @@ function PublicSite({ onAdminClick }) {
   const [loading, setLoading] = useState(true);
   const [contactForm, setContactForm] = useState({ name: '', email: '', message: '', service: '', source: '' });
   const [contactSent, setContactSent] = useState(false);
-  const [gridMode, setGridMode] = useState('masonry');
   const [qrItem, setQrItem] = useState(null);
   const [hoveredVideo, setHoveredVideo] = useState(null);
   const [clientLogos, setClientLogos] = useState([]);
@@ -1109,7 +1178,7 @@ function PublicSite({ onAdminClick }) {
   useEffect(() => {
     if (!portfolio.length) return;
     if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
-    const cards = document.querySelectorAll('.portfolio-grid .video-card, .portfolio-masonry .video-card');
+    const cards = document.querySelectorAll('.portfolio-masonry .video-card');
     if (!cards.length) return;
     const ctx = gsap.context(() => {
       cards.forEach((card) => {
@@ -1127,17 +1196,42 @@ function PublicSite({ onAdminClick }) {
       });
     });
     return () => ctx.revert();
-  }, [portfolio, sort, activeCategory, gridMode]);
+  }, [portfolio, sort, activeCategory]);
 
   const sortedPortfolio = [...portfolio].sort((a, b) => {
-    if (sort === 'views') return b.views - a.views;
-    if (sort === 'likes') return (b.likes || 0) - (a.likes || 0);
     if (sort === 'featured') return (b.featured ? 1 : 0) - (a.featured ? 1 : 0);
     return new Date(b.created_at) - new Date(a.created_at);
   });
 
-  const filteredItems = activeCategory === 'all' ? sortedPortfolio
-    : sortedPortfolio.filter(item => { const cat = categories.find(c => c.id === item.category_id); return cat && cat.slug === activeCategory; });
+  const publicCategoryGroups = categories.reduce((groups, cat) => {
+    const isCinematic = ['cinematic-videos', 'cinematic-interviews'].includes(cat.slug);
+    if (isCinematic) {
+      const existing = groups.find(group => group.slug === 'cinematic-videos');
+      if (existing) existing.ids.push(cat.id);
+      else groups.push({ id: 'cinematic-videos', ids: [cat.id], name: 'Cinematic Videos', slug: 'cinematic-videos' });
+      return groups;
+    }
+    groups.push({ id: cat.id, ids: [cat.id], name: cat.name, slug: cat.slug });
+    return groups;
+  }, []);
+  const activeGroup = publicCategoryGroups.find(group =>
+    group.slug === activeCategory || (activeCategory === 'cinematic-interviews' && group.slug === 'cinematic-videos')
+  );
+  const filteredItems = !activeGroup ? sortedPortfolio
+    : sortedPortfolio.filter(item => activeGroup.ids.includes(item.category_id));
+  const categoryCounts = portfolio.reduce((counts, item) => {
+    counts[item.category_id] = (counts[item.category_id] || 0) + 1;
+    return counts;
+  }, {});
+  const publicCategoryGroupsWithThumbs = publicCategoryGroups.map(group => {
+    const groupItems = portfolio.filter(item => group.ids.includes(item.category_id));
+    const heroItem = groupItems.find(item => item.featured && getThumbnail(item)) || groupItems.find(item => getThumbnail(item));
+    return { ...group, thumb: heroItem ? getThumbnail(heroItem) : null };
+  });
+  const publicCategoryById = publicCategoryGroupsWithThumbs.reduce((map, group) => {
+    group.ids.forEach(id => { map[id] = group; });
+    return map;
+  }, {});
 
   const reelOfMonth = settings?.reel_of_month_id ? portfolio.find(p => p.id === settings.reel_of_month_id) : null;
 
@@ -1198,15 +1292,15 @@ function PublicSite({ onAdminClick }) {
   );
 
   return (
-    <div className="public-site" dir="ltr">
+    <div id="top" className="public-site" dir="ltr">
       <header className="public-header">
         <div className="header-inner">
-          <a href="#" className="site-logo">
+          <a href="#top" className="site-logo">
             <img src="/logo-white.svg" alt={siteTitle} className="header-logo-img" onError={e => { e.target.style.display='none'; e.target.nextSibling.style.display='block'; }} />
             <span style={{ display: 'none' }}>{siteTitle}</span>
           </a>
           <nav className="header-nav">
-            <a href="#portfolio">Portfolio</a>
+            <a href="#portfolio">Work</a>
             {settings?.about_text && <a href="#about">About</a>}
             {testimonials.length > 0 && <a href="#testimonials">Reviews</a>}
             <a href="#contact">Contact</a>
@@ -1220,6 +1314,13 @@ function PublicSite({ onAdminClick }) {
         heroImg={heroImg}
         siteTitle={siteTitle}
         featuredItem={portfolio.find(p => p.featured && p.video_type === 'direct' && p.video_url) || portfolio.find(p => p.featured)}
+        isAr={isAr}
+      />
+
+      <CinematicBrief
+        portfolio={portfolio}
+        settings={settings}
+        siteDesc={siteDesc}
         isAr={isAr}
       />
 
@@ -1251,40 +1352,77 @@ function PublicSite({ onAdminClick }) {
         <span className="ghost-watermark ghost-watermark--right" aria-hidden="true">WORK</span>
         <div className="section-inner">
           <div className="portfolio-header">
-            <h2 className="section-title">{isAr ? 'الأعمال' : 'Portfolio'}</h2>
+            <div>
+              <h2 className="section-title">{isAr ? 'الأعمال المختارة' : 'Selected Work'}</h2>
+              <p className="section-intro">
+                {isAr ? 'مجموعة مختارة من الأفلام والريلز والأعمال البصرية.' : 'A curated selection of films, reels, and commissioned visual work.'}
+              </p>
+            </div>
             <div className="sort-tabs">
-              {[['latest', isAr ? 'الأحدث' : 'Latest'], ['views', isAr ? 'الأكثر مشاهدة' : 'Most Viewed'], ['likes', isAr ? 'الأكثر إعجاباً' : 'Most Liked'], ['featured', isAr ? 'المميزة' : 'Featured']].map(([val, label]) => (
+              {[['latest', isAr ? 'الأحدث' : 'Latest'], ['featured', isAr ? 'المميزة' : 'Featured']].map(([val, label]) => (
                 <button key={val} className={sort === val ? 'tab-btn tab-active' : 'tab-btn'} onClick={() => setSort(val)}>{label}</button>
               ))}
             </div>
           </div>
 
           {categories.length > 0 && (
-            <div className="category-tabs">
-              <button className={activeCategory === 'all' ? 'tab-btn tab-active' : 'tab-btn'} onClick={() => setActiveCategory('all')}>{isAr ? 'الكل' : 'All'}</button>
-              {categories.map(cat => (
-                <div key={cat.id} className="tab-with-share">
-                  <button className={activeCategory === cat.slug ? 'tab-btn tab-active' : 'tab-btn'} onClick={() => setActiveCategory(cat.slug)}>{cat.name}</button>
-                  <button className="tab-share-btn" title="Copy link to this category" onClick={e => { e.stopPropagation(); const url = `${window.location.origin}/portfolio?cat=${cat.slug}`; navigator.clipboard.writeText(url); const btn = e.currentTarget; btn.textContent = '✅'; setTimeout(() => btn.textContent = '🔗', 2000); }}>🔗</button>
-                </div>
-              ))}
+            <div className="category-preview-shell">
+              <div className="category-preview-rail" aria-label={isAr ? 'تصنيفات الأعمال' : 'Work categories'}>
+                <button
+                  className={activeCategory === 'all' ? 'category-preview-card active' : 'category-preview-card'}
+                  onClick={() => setActiveCategory('all')}
+                >
+                  <span className="category-preview-index">00</span>
+                  <strong>{isAr ? 'الكل' : 'All work'}</strong>
+                  <span>{portfolio.length} {isAr ? 'عمل' : portfolio.length === 1 ? 'project' : 'projects'}</span>
+                </button>
+                {publicCategoryGroupsWithThumbs.map((cat, index) => {
+                  const count = cat.ids.reduce((sum, id) => sum + (categoryCounts[id] || 0), 0);
+                  return (
+                  <button
+                    key={cat.id}
+                    className={(activeCategory === cat.slug || (activeCategory === 'cinematic-interviews' && cat.slug === 'cinematic-videos')) ? 'category-preview-card active' : 'category-preview-card'}
+                    onClick={() => setActiveCategory(cat.slug)}
+                    style={cat.thumb ? { '--category-thumb': `url(${cat.thumb})` } : undefined}
+                  >
+                    <span className="category-preview-index">{String(index + 1).padStart(2, '0')}</span>
+                    <strong>{cat.name}</strong>
+                    <span>
+                      {count} {isAr ? 'عمل' : count === 1 ? 'project' : 'projects'}
+                    </span>
+                  </button>
+                  );
+                })}
+              </div>
+              <div className="category-swipe-cue" aria-hidden="true">
+                <span />
+                <span />
+                <span />
+              </div>
             </div>
           )}
 
-          <div className="grid-controls">
-            <button className={gridMode === 'grid' ? 'tab-btn tab-active' : 'tab-btn'} onClick={() => setGridMode('grid')}>⊞ Grid</button>
-            <button className={gridMode === 'masonry' ? 'tab-btn tab-active' : 'tab-btn'} onClick={() => setGridMode('masonry')}>⊟ Masonry</button>
-          </div>
-
-          {loading ? <p className="state-text">Loading…</p> : filteredItems.length === 0 ? <p className="state-text">{isAr ? 'لا توجد أعمال بعد' : 'No portfolio items yet.'}</p> : (
-            <div className={gridMode === 'masonry' ? 'portfolio-masonry' : 'portfolio-grid'}>
+          {loading ? (
+            <div className="state-panel">
+              <span>{isAr ? 'جاري تجهيز الأعمال' : 'Preparing the selection'}</span>
+              <p>{isAr ? 'لحظات قليلة.' : 'A few frames are getting into place.'}</p>
+            </div>
+          ) : filteredItems.length === 0 ? (
+            <div className="state-panel">
+              <span>{isAr ? 'لا توجد أعمال هنا بعد' : 'No films in this cut yet'}</span>
+              <p>{isAr ? 'جرّب فئة أخرى أو عد لاحقاً.' : 'Try another category, or come back for the next edit.'}</p>
+            </div>
+          ) : (
+            <div className="portfolio-masonry">
               {filteredItems.map(item => {
                 const thumb = getThumbnail(item);
-                const padding = getAspectPadding(item.aspect_ratio || '16:9');
                 const liked = likedItems[item.id];
                 const platform = PLATFORMS[item.video_type || detectPlatform(item.video_url)];
                 const isHovered = hoveredVideo === item.id;
                 const isDirect = item.video_type === 'direct' && item.video_url;
+                const cat = publicCategoryById[item.category_id] || categories.find(c => c.id === item.category_id);
+                const cleanDescription = (item.description || '').trim();
+                const showDescription = cleanDescription && !/^cinematic social media reel\.?$/i.test(cleanDescription);
                 return (
                   <div key={item.id} className={`video-card${item.featured ? ' video-card--featured' : ''}`}
                     onClick={() => openItem(item)}
@@ -1303,14 +1441,16 @@ function PublicSite({ onAdminClick }) {
                         </div>
                       )}
                       <div className="play-overlay" style={{ position: 'absolute', inset: 0 }}><span>▶</span></div>
-                      {item.views > 0 && <span className="view-count-badge">👁 {item.views}</span>}
+                      <div className="card-thumb-meta">
+                        {cat && <span>{cat.name}</span>}
+                        {item.featured && <span>{isAr ? 'مميز' : 'Featured'}</span>}
+                      </div>
                     </div>
                     <div className="card-body">
-                      {(() => { const cat = categories.find(c => c.id === item.category_id); return cat ? <span className="card-category-badge">{cat.name}</span> : null; })()}
                       <h3>{item.title}</h3>
                       <TranslateToggle text={item.title} />
-                      {item.description && <p>{item.description}</p>}
-                      <TranslateToggle text={item.description} />
+                      {showDescription && <p>{cleanDescription}</p>}
+                      {showDescription && <TranslateToggle text={cleanDescription} />}
                       {item.collaborators && parseCollaborators(item.collaborators).length > 0 && (
                         <div className="card-collaborators">
                           {parseCollaborators(item.collaborators).map((c, i) => {
@@ -1324,12 +1464,14 @@ function PublicSite({ onAdminClick }) {
                         </div>
                       )}
                       <div className="card-actions-row">
-                        {item.featured && <span className="featured-badge">{isAr ? 'مميز' : 'Featured'}</span>}
+                        <button type="button" className="card-watch-link" onClick={() => openItem(item)}>
+                          {isAr ? 'مشاهدة العمل' : 'Watch project'} <span aria-hidden="true">→</span>
+                        </button>
                         <div className="card-btns">
                           <button className={`card-like-btn${liked ? ' liked' : ''}`} onClick={e => handleLike(e, item)}>
-                            {liked ? '❤️' : '🤍'} {item.likes || 0}
+                            {liked ? '❤️' : '♡'}
                           </button>
-                          <ReactionPicker itemId={item.id} reactions={item.reactions} userReaction={reactedItems[item.id]} onReact={handleReact} />
+                          <ReactionPicker itemId={item.id} userReaction={reactedItems[item.id]} onReact={handleReact} />
                           <button className="card-share-btn" onClick={e => handleShare(e, item)} title="Share">🔗</button>
                           <button className="card-share-btn" onClick={e => { e.stopPropagation(); setQrItem(item); }} title="QR Code">📱</button>
                         </div>
@@ -3442,7 +3584,7 @@ function ReviewPortal({ reviewToken }) {
           <div style={{ width: '100%', maxWidth: 860, position: 'relative', paddingTop: item.aspect_ratio === '9:16' ? '56.25%' : '56.25%' }}>
             {item.video_type === 'direct' && item.video_url
               ? <video ref={videoRef} src={resolveUrl(item.video_url, 'video')} controls style={{ position: 'absolute', inset: 0, width: '100%', height: '100%' }} onTimeUpdate={e => setCurrentTime(e.target.currentTime)} />
-              : embedUrl ? <iframe src={embedUrl} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', border: 'none' }} allowFullScreen />
+              : embedUrl ? <iframe title={`${item.title} review video`} src={embedUrl} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', border: 'none' }} allowFullScreen />
               : item.thumbnail_url ? <img src={resolveUrl(item.thumbnail_url)} alt={item.title} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }} /> : null}
           </div>
           {/* Timestamp markers */}

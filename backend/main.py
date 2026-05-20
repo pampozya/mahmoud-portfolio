@@ -9,7 +9,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from sqlalchemy import create_engine, Column, Integer, String, Text, DateTime, Boolean, Float, func, text
 from sqlalchemy.orm import declarative_base, sessionmaker, Session
-from pydantic import BaseModel
+from pydantic import BaseModel, EmailStr, Field, field_validator
 from datetime import datetime, timedelta
 from typing import List, Optional
 from pathlib import Path
@@ -21,6 +21,8 @@ import smtplib
 import ssl
 import httpx
 import asyncio
+import bcrypt
+import hmac
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from dotenv import load_dotenv
@@ -34,6 +36,19 @@ DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./portfolio.db")
 SECRET_KEY = os.getenv("SECRET_KEY", "your-secret-key-change-in-production")
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 10080  # 7 days
+RATE_LIMITS = {
+    "login": (8, 15 * 60),
+    "contact": (5, 15 * 60),
+    "testimonial": (3, 60 * 60),
+    "reaction": (30, 60),
+    "video_view": (60, 60),
+    "delivery": (30, 60),
+    "review_comment": (20, 10 * 60),
+    "track": (30, 60),
+    "translate": (20, 10 * 60),
+}
+_rate_buckets = {}
+_translate_cache = {}
 
 # Create FastAPI app
 app = FastAPI(
@@ -49,7 +64,9 @@ UPLOAD_DIR.mkdir(exist_ok=True)
 # CORS configuration
 ALLOWED_ORIGINS = [
     "http://localhost:3000",
+    "http://127.0.0.1:3000",
     "http://localhost:5173",
+    "http://127.0.0.1:5173",
     "https://lensmania.ae",
     "https://www.lensmania.ae",
     "https://portfolio.lensmania.ae",
@@ -325,6 +342,28 @@ def _run_migrations():
 
 _run_migrations()
 
+def _hash_secret(secret: str) -> str:
+    return bcrypt.hashpw(secret.encode("utf-8"), bcrypt.gensalt()).decode("utf-8")
+
+def _is_bcrypt_hash(value: Optional[str]) -> bool:
+    return bool(value and value.startswith(("$2a$", "$2b$", "$2y$")))
+
+def _verify_secret(provided: str, stored: Optional[str]) -> bool:
+    if not stored:
+        return False
+    if _is_bcrypt_hash(stored):
+        try:
+            return bcrypt.checkpw(provided.encode("utf-8"), stored.encode("utf-8"))
+        except ValueError:
+            return False
+    # Backward compatible with existing plaintext admin/delivery passwords.
+    return hmac.compare_digest(provided, stored)
+
+def _prepare_optional_secret(secret: Optional[str]) -> Optional[str]:
+    if not secret:
+        return None
+    return _hash_secret(secret)
+
 # Seed admin user from .env on first run
 def _seed_admin():
     db = SessionLocal()
@@ -332,7 +371,7 @@ def _seed_admin():
         if not db.query(User).first():
             admin_email = os.getenv("ADMIN_EMAIL", "admin@lensmania.ae")
             admin_password = os.getenv("ADMIN_PASSWORD", "change-this-password")
-            db.add(User(email=admin_email, password_hash=admin_password))
+            db.add(User(email=admin_email, password_hash=_hash_secret(admin_password)))
             db.commit()
     finally:
         db.close()
@@ -342,8 +381,8 @@ _seed_admin()
 # ==================== PYDANTIC SCHEMAS ====================
 
 class UserLogin(BaseModel):
-    email: str
-    password: str
+    email: EmailStr
+    password: str = Field(min_length=1, max_length=256)
 
 class TokenResponse(BaseModel):
     access_token: str
@@ -351,9 +390,9 @@ class TokenResponse(BaseModel):
     expires_in: int
 
 class CategoryCreate(BaseModel):
-    name: str
-    slug: str
-    description: Optional[str] = None
+    name: str = Field(min_length=1, max_length=80)
+    slug: str = Field(min_length=1, max_length=100)
+    description: Optional[str] = Field(default=None, max_length=500)
 
 class CategoryResponse(BaseModel):
     id: int
@@ -367,23 +406,24 @@ class CategoryResponse(BaseModel):
 
 class PortfolioCreate(BaseModel):
     category_id: int
-    title: str
-    description: Optional[str] = None
-    thumbnail_url: Optional[str] = None
-    video_url: Optional[str] = None
-    video_type: str = "youtube"
+    title: str = Field(min_length=1, max_length=180)
+    description: Optional[str] = Field(default=None, max_length=5000)
+    thumbnail_url: Optional[str] = Field(default=None, max_length=2000)
+    video_url: Optional[str] = Field(default=None, max_length=2000)
+    video_type: str = Field(default="youtube", max_length=40)
     embed_code: Optional[str] = None
     featured: bool = False
     featured_focal_x: Optional[float] = 50.0
     featured_focal_y: Optional[float] = 50.0
     order: int = 0
-    aspect_ratio: str = "16:9"
-    collaborators: Optional[str] = None
-    bts_photos: Optional[str] = None
-    seo_title: Optional[str] = None
-    seo_description: Optional[str] = None
+    aspect_ratio: str = Field(default="16:9", max_length=20)
+    collaborators: Optional[str] = Field(default=None, max_length=5000)
+    bts_photos: Optional[str] = Field(default=None, max_length=10000)
+    seo_title: Optional[str] = Field(default=None, max_length=180)
+    seo_description: Optional[str] = Field(default=None, max_length=500)
 
 class PortfolioUpdate(BaseModel):
+    category_id: Optional[int] = None
     title: Optional[str] = None
     description: Optional[str] = None
     thumbnail_url: Optional[str] = None
@@ -428,11 +468,11 @@ class PortfolioResponse(BaseModel):
         from_attributes = True
 
 class TestimonialCreate(BaseModel):
-    name: str
-    role: Optional[str] = None
-    text: str
-    rating: int = 5
-    photo_url: Optional[str] = None
+    name: str = Field(min_length=1, max_length=120)
+    role: Optional[str] = Field(default=None, max_length=160)
+    text: str = Field(min_length=2, max_length=2000)
+    rating: int = Field(default=5, ge=1, le=5)
+    photo_url: Optional[str] = Field(default=None, max_length=2000)
     order: int = 0
 
 class TestimonialResponse(BaseModel):
@@ -451,8 +491,8 @@ class TestimonialResponse(BaseModel):
         from_attributes = True
 
 class ChangePasswordRequest(BaseModel):
-    current_password: str
-    new_password: str
+    current_password: str = Field(min_length=1, max_length=256)
+    new_password: str = Field(min_length=8, max_length=256)
 
 class CategoryReorderRequest(BaseModel):
     ids: List[int]
@@ -512,11 +552,16 @@ class ReactRequest(BaseModel):
     reaction: str
 
 class ContactRequest(BaseModel):
-    name: str
-    email: str
+    name: str = Field(min_length=1, max_length=120)
+    email: EmailStr
     service: Optional[str] = None
-    message: str
-    source: Optional[str] = None
+    message: str = Field(min_length=2, max_length=5000)
+    source: Optional[str] = Field(default=None, max_length=120)
+
+    @field_validator("service")
+    @classmethod
+    def trim_service(cls, value):
+        return value[:120] if value else value
 
 class NotificationResponse(BaseModel):
     id: int
@@ -539,6 +584,22 @@ def get_db():
 
 security = HTTPBearer()
 
+def _client_ip(request: Request) -> str:
+    forwarded = request.headers.get("X-Forwarded-For", "")
+    if forwarded:
+        return forwarded.split(",")[0].strip()
+    return request.client.host if request.client else "unknown"
+
+def _rate_limit(request: Request, bucket: str):
+    limit, window = RATE_LIMITS[bucket]
+    now = datetime.utcnow().timestamp()
+    key = (bucket, _client_ip(request))
+    hits = [ts for ts in _rate_buckets.get(key, []) if now - ts < window]
+    if len(hits) >= limit:
+        raise HTTPException(status_code=429, detail="Too many requests. Please try again later.")
+    hits.append(now)
+    _rate_buckets[key] = hits
+
 def verify_token(credentials: HTTPAuthorizationCredentials = Depends(security)):
     token = credentials.credentials
     try:
@@ -556,19 +617,28 @@ def verify_token(credentials: HTTPAuthorizationCredentials = Depends(security)):
         )
     return email
 
+def _ensure_category_exists(category_id: int, db: Session):
+    exists = db.query(Category.id).filter(Category.id == category_id).first()
+    if not exists:
+        raise HTTPException(status_code=400, detail="Category does not exist")
+
 # ==================== AUTHENTICATION ROUTES ====================
 
 @app.post("/api/auth/login", response_model=TokenResponse)
-def login(credentials: UserLogin, db: Session = Depends(get_db)):
+def login(credentials: UserLogin, request: Request, db: Session = Depends(get_db)):
     """Admin login endpoint"""
-    # In production, hash passwords with bcrypt
+    _rate_limit(request, "login")
     user = db.query(User).filter(User.email == credentials.email).first()
     
-    if not user or user.password_hash != credentials.password:
+    if not user or not _verify_secret(credentials.password, user.password_hash):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid credentials"
         )
+
+    if not _is_bcrypt_hash(user.password_hash):
+        user.password_hash = _hash_secret(credentials.password)
+        db.commit()
     
     # Create JWT token
     access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
@@ -621,6 +691,12 @@ def update_category(cat_id: int, category: CategoryCreate, email: str = Depends(
 def delete_category(cat_id: int, email: str = Depends(verify_token), db: Session = Depends(get_db)):
     cat = db.query(Category).filter(Category.id == cat_id).first()
     if not cat: raise HTTPException(404, "Not found")
+    item_count = db.query(Portfolio).filter(Portfolio.category_id == cat_id).count()
+    if item_count:
+        raise HTTPException(
+            status_code=409,
+            detail=f"Cannot delete category with {item_count} portfolio item{'s' if item_count != 1 else ''}. Move or delete those items first."
+        )
     db.delete(cat); db.commit()
     return {"ok": True}
 
@@ -639,6 +715,8 @@ def get_portfolio(
         cat = db.query(Category).filter(Category.slug == category).first()
         if cat:
             query = query.filter(Portfolio.category_id == cat.id)
+        else:
+            return []
     
     if featured:
         query = query.filter(Portfolio.featured == True)
@@ -665,6 +743,7 @@ def create_portfolio_item(
     db: Session = Depends(get_db)
 ):
     """Create new portfolio item (admin only)"""
+    _ensure_category_exists(portfolio.category_id, db)
     db_portfolio = Portfolio(**portfolio.model_dump())
     db.add(db_portfolio)
     db.commit()
@@ -684,6 +763,8 @@ def update_portfolio_item(
         raise HTTPException(status_code=404, detail="Portfolio item not found")
     
     update_data = portfolio.model_dump(exclude_unset=True)
+    if "category_id" in update_data and update_data["category_id"] is not None:
+        _ensure_category_exists(update_data["category_id"], db)
     for field, value in update_data.items():
         setattr(db_item, field, value)
     
@@ -825,6 +906,7 @@ def _cloudinary_upload(file_bytes: bytes, resource_type: str = "auto"):
 
 @app.post("/api/upload")
 async def upload_file(
+    request: Request,
     file: UploadFile = File(...),
     email: str = Depends(verify_token),
 ):
@@ -954,8 +1036,8 @@ class TrackRequest(BaseModel):
 
 @app.post("/api/track")
 async def track_visit(request: Request, background_tasks: BackgroundTasks, db: Session = Depends(get_db)):
-    forwarded = request.headers.get("X-Forwarded-For", "")
-    ip = forwarded.split(",")[0].strip() if forwarded else (request.client.host if request.client else "unknown")
+    _rate_limit(request, "track")
+    ip = _client_ip(request)
     ua = request.headers.get("User-Agent", "")[:200]
     try:
         body = await request.json()
@@ -1002,7 +1084,8 @@ def get_all_testimonials(email: str = Depends(verify_token), db: Session = Depen
     return db.query(Testimonial).order_by(Testimonial.created_at.desc()).all()
 
 @app.post("/api/testimonials/submit")
-def submit_testimonial_public(t: TestimonialCreate, db: Session = Depends(get_db)):
+def submit_testimonial_public(t: TestimonialCreate, request: Request, db: Session = Depends(get_db)):
+    _rate_limit(request, "testimonial")
     item = Testimonial(**t.model_dump(), approved=False, active=True)
     db.add(item); db.commit(); db.refresh(item)
     try:
@@ -1102,7 +1185,8 @@ def reorder_client_logos(data: ClientLogoReorder, email: str = Depends(verify_to
 # ==================== LIKES ====================
 
 @app.post("/api/portfolio/{item_id}/like")
-def like_portfolio(item_id: int, db: Session = Depends(get_db)):
+def like_portfolio(item_id: int, request: Request, db: Session = Depends(get_db)):
+    _rate_limit(request, "reaction")
     item = db.query(Portfolio).filter(Portfolio.id == item_id).first()
     if not item: raise HTTPException(404, "Not found")
     item.likes = (item.likes or 0) + 1
@@ -1146,9 +1230,9 @@ def reorder_categories(data: CategoryReorderRequest, email: str = Depends(verify
 @app.put("/api/auth/change-password")
 def change_password(data: ChangePasswordRequest, email: str = Depends(verify_token), db: Session = Depends(get_db)):
     user = db.query(User).filter(User.email == email).first()
-    if not user or user.password_hash != data.current_password:
+    if not user or not _verify_secret(data.current_password, user.password_hash):
         raise HTTPException(400, "Current password is incorrect")
-    user.password_hash = data.new_password
+    user.password_hash = _hash_secret(data.new_password)
     db.commit()
     return {"ok": True}
 
@@ -1174,7 +1258,8 @@ def export_data(email: str = Depends(verify_token), db: Session = Depends(get_db
 import json as _json
 
 @app.post("/api/portfolio/{item_id}/react")
-def react_portfolio(item_id: int, req: ReactRequest, db: Session = Depends(get_db)):
+def react_portfolio(item_id: int, req: ReactRequest, request: Request, db: Session = Depends(get_db)):
+    _rate_limit(request, "reaction")
     item = db.query(Portfolio).filter(Portfolio.id == item_id).first()
     if not item: raise HTTPException(404, "Not found")
     valid = {"heart", "fire", "clap", "wow"}
@@ -1194,14 +1279,15 @@ def react_portfolio(item_id: int, req: ReactRequest, db: Session = Depends(get_d
 
 @app.post("/api/portfolio/{item_id}/view-track")
 async def track_video_view(item_id: int, request: Request, background_tasks: BackgroundTasks, db: Session = Depends(get_db)):
-    forwarded = request.headers.get("X-Forwarded-For", "")
-    ip = forwarded.split(",")[0].strip() if forwarded else (request.client.host if request.client else "unknown")
+    _rate_limit(request, "video_view")
+    item = db.query(Portfolio).filter(Portfolio.id == item_id).first()
+    if not item: raise HTTPException(404, "Not found")
+    ip = _client_ip(request)
     view = VideoView(portfolio_id=item_id, ip=ip)
     db.add(view); db.commit()
     one_hour_ago = datetime.utcnow() - timedelta(hours=24)
     count = db.query(VideoView).filter(VideoView.portfolio_id == item_id, VideoView.ip == ip, VideoView.timestamp >= one_hour_ago).count()
     if count >= 3:
-        item = db.query(Portfolio).filter(Portfolio.id == item_id).first()
         title = item.title if item else f"Video #{item_id}"
         existing = db.query(Notification).filter(Notification.type == "interested", Notification.title.contains(title)).order_by(Notification.created_at.desc()).first()
         if not existing or (datetime.utcnow() - existing.created_at).seconds > 3600:
@@ -1230,7 +1316,8 @@ async def _send_interested_email(title: str, count: int, ip: str):
 # ==================== CONTACT FORM ====================
 
 @app.post("/api/contact")
-async def submit_contact(data: ContactRequest, background_tasks: BackgroundTasks, db: Session = Depends(get_db)):
+async def submit_contact(data: ContactRequest, request: Request, background_tasks: BackgroundTasks, db: Session = Depends(get_db)):
+    _rate_limit(request, "contact")
     submission = ContactSubmission(name=data.name, email=data.email, service=data.service, message=data.message, source=data.source)
     db.add(submission); db.commit()
     notif = Notification(type="contact", title=f"📩 New inquiry from {data.name}", body=f"Service: {data.service or 'Not specified'}\n{data.message[:100]}")
@@ -1281,7 +1368,7 @@ def delete_notification(nid: int, email: str = Depends(verify_token), db: Sessio
 # ==================== AUTO THUMBNAIL FETCH ====================
 
 class ThumbnailRequest(BaseModel):
-    url: str
+    url: str = Field(min_length=1, max_length=2000)
 
 def _scrape_og(html: str) -> dict:
     """Extract og:title, og:description, og:image from raw HTML."""
@@ -1404,8 +1491,8 @@ def _get_anthropic():
         raise HTTPException(503, "Anthropic package not installed")
 
 class AIChatRequest(BaseModel):
-    message: str
-    context: Optional[str] = None
+    message: str = Field(min_length=1, max_length=4000)
+    context: Optional[str] = Field(default=None, max_length=4000)
 
 class AIThumbnailRequest(BaseModel):
     frames: List[str]  # base64 JPEG strings
@@ -1477,17 +1564,19 @@ async def ai_best_thumbnail(data: AIThumbnailRequest, email: str = Depends(verif
 
 class ReviewSessionCreate(BaseModel):
     portfolio_id: int
-    client_name: Optional[str] = None
-    expires_days: Optional[int] = 30
+    client_name: Optional[str] = Field(default=None, max_length=120)
+    expires_days: Optional[int] = Field(default=30, ge=0, le=365)
 
 class ReviewCommentCreate(BaseModel):
-    timestamp_sec: float
-    text: str
-    author: Optional[str] = "Client"
+    timestamp_sec: float = Field(ge=0)
+    text: str = Field(min_length=1, max_length=3000)
+    author: Optional[str] = Field(default="Client", max_length=120)
 
 @app.post("/api/review-sessions")
 def create_review_session(data: ReviewSessionCreate, db: Session = Depends(get_db), email: str = Depends(verify_token)):
     import secrets
+    item = db.query(Portfolio).filter(Portfolio.id == data.portfolio_id).first()
+    if not item: raise HTTPException(400, "Portfolio item does not exist")
     token = secrets.token_urlsafe(16)
     expires = datetime.utcnow() + timedelta(days=data.expires_days or 30)
     session = ReviewSession(token=token, portfolio_id=data.portfolio_id, client_name=data.client_name, expires_at=expires)
@@ -1528,7 +1617,8 @@ def get_review(token: str, db: Session = Depends(get_db)):
                            "author": c.author, "resolved": c.resolved, "created_at": c.created_at} for c in comments]}
 
 @app.post("/api/review/{token}/comments")
-def add_review_comment(token: str, data: ReviewCommentCreate, db: Session = Depends(get_db)):
+def add_review_comment(token: str, data: ReviewCommentCreate, request: Request, db: Session = Depends(get_db)):
+    _rate_limit(request, "review_comment")
     s = db.query(ReviewSession).filter(ReviewSession.token == token).first()
     if not s: raise HTTPException(404, "Review link not found")
     if s.expires_at and s.expires_at < datetime.utcnow(): raise HTTPException(410, "Link expired")
@@ -1563,18 +1653,18 @@ def get_inquiry_sources(db: Session = Depends(get_db), email: str = Depends(veri
 # ==================== CLIENT DELIVERIES ====================
 
 class DeliveryFile(BaseModel):
-    name: str
-    url: str
+    name: str = Field(min_length=1, max_length=180)
+    url: str = Field(min_length=1, max_length=2000)
     size_mb: Optional[float] = None
-    note: Optional[str] = None
+    note: Optional[str] = Field(default=None, max_length=500)
 
 class DeliveryCreate(BaseModel):
-    client_name: str
-    project_title: str
-    message: Optional[str] = None
+    client_name: str = Field(min_length=1, max_length=120)
+    project_title: str = Field(min_length=1, max_length=180)
+    message: Optional[str] = Field(default=None, max_length=3000)
     files: List[DeliveryFile] = []
-    password: Optional[str] = None
-    expires_days: Optional[int] = 30
+    password: Optional[str] = Field(default=None, max_length=256)
+    expires_days: Optional[int] = Field(default=30, ge=0, le=365)
 
 @app.post("/api/deliveries")
 def create_delivery(data: DeliveryCreate, db: Session = Depends(get_db), email: str = Depends(verify_token)):
@@ -1587,7 +1677,7 @@ def create_delivery(data: DeliveryCreate, db: Session = Depends(get_db), email: 
         project_title=data.project_title,
         message=data.message,
         files=json.dumps([f.dict() for f in data.files]),
-        password=data.password or None,
+        password=_prepare_optional_secret(data.password),
         expires_at=expires,
     )
     db.add(delivery); db.commit(); db.refresh(delivery)
@@ -1614,7 +1704,8 @@ def update_delivery(delivery_id: int, data: DeliveryCreate, db: Session = Depend
     d.project_title = data.project_title
     d.message = data.message
     d.files = json.dumps([f.dict() for f in data.files])
-    if data.password is not None: d.password = data.password or None
+    if data.password:
+        d.password = _prepare_optional_secret(data.password)
     if data.expires_days is not None:
         d.expires_at = datetime.utcnow() + timedelta(days=data.expires_days) if data.expires_days else None
     db.commit()
@@ -1626,16 +1717,20 @@ def delete_delivery(delivery_id: int, db: Session = Depends(get_db), email: str 
     db.commit(); return {"ok": True}
 
 class DeliveryAccess(BaseModel):
-    password: Optional[str] = None
+    password: Optional[str] = Field(default=None, max_length=256)
 
 @app.post("/api/delivery/{token}/access")
-def access_delivery(token: str, body: DeliveryAccess, db: Session = Depends(get_db)):
+def access_delivery(token: str, body: DeliveryAccess, request: Request, db: Session = Depends(get_db)):
+    _rate_limit(request, "delivery")
     import json
     d = db.query(ClientDelivery).filter(ClientDelivery.token == token).first()
     if not d: raise HTTPException(404, "Delivery not found")
     if d.expires_at and d.expires_at < datetime.utcnow(): raise HTTPException(410, "This delivery link has expired")
-    if d.password and d.password != (body.password or ""):
+    provided_password = body.password or ""
+    if d.password and not _verify_secret(provided_password, d.password):
         return {"locked": True, "client_name": d.client_name, "project_title": d.project_title}
+    if d.password and provided_password and not _is_bcrypt_hash(d.password):
+        d.password = _hash_secret(provided_password)
     d.last_accessed = datetime.utcnow(); db.commit()
     return {
         "locked": False,
@@ -1648,9 +1743,11 @@ def access_delivery(token: str, body: DeliveryAccess, db: Session = Depends(get_
     }
 
 @app.post("/api/delivery/{token}/track")
-def track_download(token: str, db: Session = Depends(get_db)):
+def track_download(token: str, request: Request, db: Session = Depends(get_db)):
+    _rate_limit(request, "delivery")
     d = db.query(ClientDelivery).filter(ClientDelivery.token == token).first()
     if not d: raise HTTPException(404)
+    if d.expires_at and d.expires_at < datetime.utcnow(): raise HTTPException(410, "This delivery link has expired")
     d.download_count = (d.download_count or 0) + 1
     db.commit(); return {"count": d.download_count}
 
@@ -1664,15 +1761,21 @@ def health_check():
 # ==================== TRANSLATE ====================
 
 class TranslateRequest(BaseModel):
-    text: str
+    text: str = Field(min_length=1, max_length=2000)
     target: str = "en"  # "en" or "ar"
 
 @app.post("/api/translate")
-async def translate_text(data: TranslateRequest):
+async def translate_text(data: TranslateRequest, request: Request):
+    _rate_limit(request, "translate")
     if not data.text or not data.text.strip():
         raise HTTPException(400, "No text provided")
     if len(data.text) > 2000:
         raise HTTPException(400, "Text too long (max 2000 chars)")
+    if data.target not in {"en", "ar"}:
+        raise HTTPException(400, "Unsupported target language")
+    cache_key = (data.target, data.text.strip())
+    if cache_key in _translate_cache:
+        return {"translation": _translate_cache[cache_key]}
     client = _get_anthropic()
     target_lang = "English" if data.target == "en" else "Arabic"
     msg = client.messages.create(
@@ -1683,7 +1786,11 @@ async def translate_text(data: TranslateRequest):
             "content": f"Translate the following text to {target_lang}. Return only the translation, no explanation, no quotes:\n\n{data.text.strip()}"
         }]
     )
-    return {"translation": msg.content[0].text.strip()}
+    translation = msg.content[0].text.strip()
+    if len(_translate_cache) > 500:
+        _translate_cache.clear()
+    _translate_cache[cache_key] = translation
+    return {"translation": translation}
 
 # ==================== ROOT ====================
 
