@@ -1832,7 +1832,7 @@
     <div class="toast" id="toast">Saved</div>
 
     <script>
-        const VERSION = 'v0.5.9';
+        const VERSION = 'v0.6.0';
         const DEPLOY_DATE = '2026-05-21';
         const CURRENT_SCHEMA_VERSION = 1;
         const LOCAL_WRITE_SUPPRESSION_MS = 5000;
@@ -1889,6 +1889,12 @@
         async function initNotifications() {
             if (!('serviceWorker' in navigator) || !('PushManager' in window)) return;
             updateNotifBtn();
+            try {
+                const reg = await navigator.serviceWorker.ready;
+                const sub = await reg.pushManager.getSubscription();
+                if (sub) localStorage.setItem('pushEndpoint', sub.endpoint);
+                else localStorage.removeItem('pushEndpoint');
+            } catch {}
         }
 
         function updateNotifBtn() {
@@ -1925,6 +1931,7 @@
                             headers: { 'Content-Type': 'application/json', 'X-Auth': AUTH_TOKEN },
                             body: JSON.stringify({ endpoint: existing.endpoint })
                         });
+                        localStorage.removeItem('pushEndpoint');
                         toast('Notifications turned off', 'info');
                     }
                 } else {
@@ -1939,6 +1946,7 @@
                         headers: { 'Content-Type': 'application/json', 'X-Auth': AUTH_TOKEN },
                         body: JSON.stringify(sub.toJSON())
                     });
+                    localStorage.setItem('pushEndpoint', sub.endpoint);
                     toast('Notifications enabled ✓', 'success');
                 }
                 updateNotifBtn();
@@ -2280,9 +2288,15 @@
             renderDataSafety();
             updateSync('syncing');
             try {
+                const headers = { 'X-Auth': AUTH_TOKEN, 'Content-Type': 'application/json' };
+                // Tell the server which device is saving so it skips sending a
+                // self-push back. Endpoint is cached in localStorage when the
+                // bell button subscribes to push.
+                const selfEndpoint = localStorage.getItem('pushEndpoint');
+                if (selfEndpoint) headers['X-Device-Id'] = selfEndpoint;
                 const r = await fetch(API_URL, {
                     method: 'POST',
-                    headers: { 'X-Auth': AUTH_TOKEN, 'Content-Type': 'application/json' },
+                    headers,
                     body: JSON.stringify(appData)
                 });
                 if (r.ok) {

@@ -1,4 +1,4 @@
-const VERSION = 'v0.5.9';
+const VERSION = 'v0.6.0';
 const CACHE_NAME = `finance-${VERSION}`;
 const URLS_TO_CACHE = [
     '/finance/',

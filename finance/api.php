@@ -128,6 +128,58 @@ function saveSubscriptions(array $subs): void {
     @chmod($SUBS_FILE, 0600);
 }
 
+function sendPushToAll(string $title, string $body, ?string $excludeEndpoint = null): array {
+    $subs = loadSubscriptions();
+    if (count($subs) === 0) return ['sent' => 0, 'staleRemoved' => 0];
+
+    $autoload = __DIR__ . '/vendor/autoload.php';
+    if (!file_exists($autoload)) return ['sent' => 0, 'error' => 'web-push not installed'];
+    require_once $autoload;
+
+    $webPush = new \Minishlink\WebPush\WebPush([
+        'VAPID' => [
+            'subject'    => VAPID_SUBJECT,
+            'publicKey'  => VAPID_PUBLIC,
+            'privateKey' => VAPID_PRIVATE,
+        ]
+    ]);
+
+    $pushPayload = json_encode(['title' => $title, 'body' => $body, 'url' => '/finance/']);
+    $stale = [];
+    $sent  = 0;
+
+    foreach ($subs as $sub) {
+        if ($excludeEndpoint && $sub['endpoint'] === $excludeEndpoint) continue;
+        $subscription = \Minishlink\WebPush\Subscription::create([
+            'endpoint' => $sub['endpoint'],
+            'keys'     => [
+                'p256dh' => $sub['keys']['p256dh'],
+                'auth'   => $sub['keys']['auth'],
+            ]
+        ]);
+        $webPush->queueNotification($subscription, $pushPayload);
+    }
+
+    foreach ($webPush->flush() as $report) {
+        if ($report->isSuccess()) {
+            $sent++;
+        } else {
+            $code = $report->getResponse()?->getStatusCode();
+            if ($code === 404 || $code === 410) {
+                $stale[] = $report->getRequest()->getUri()->__toString();
+            }
+        }
+    }
+
+    if (!empty($stale)) {
+        $subs = loadSubscriptions();
+        $subs = array_filter($subs, fn($s) => !in_array($s['endpoint'], $stale, true));
+        saveSubscriptions($subs);
+    }
+
+    return ['sent' => $sent, 'staleRemoved' => count($stale)];
+}
+
 function listBackups(): array {
     global $BACKUP_DIR;
     if (!is_dir($BACKUP_DIR)) return [];
@@ -269,73 +321,31 @@ if ($method === 'POST') {
     fclose($fp);
 
     $revision = $decoded['_meta']['revision'] ?? null;
+
+    // Push notification to OTHER devices that data was updated.
+    // The saving device sends its subscription endpoint in X-Device-Id so it
+    // doesn't notify itself. Failures here never block the save response.
+    $excludeEndpoint = $_SERVER['HTTP_X_DEVICE_ID'] ?? null;
+    try {
+        sendPushToAll('Finance updated', 'Sync to see latest changes', $excludeEndpoint);
+    } catch (\Throwable $e) { /* never block save on push failure */ }
+
     echo json_encode(['ok' => true, 'savedAt' => date('c'), 'revision' => $revision]);
     exit;
 }
 
-// POST ?action=push — send a push to all stored subscriptions
+// POST ?action=push — manual push trigger (admin / debugging)
 if ($method === 'POST' && $action === 'push') {
     $sent = $_SERVER['HTTP_X_AUTH'] ?? '';
     if (!is_string($sent) || !hash_equals($TOKEN, $sent)) fail(401, 'unauthorized');
 
     $raw = file_get_contents('php://input');
     $payload = json_decode($raw ?: '{}', true);
-    $title   = $payload['title']   ?? 'Finance Alert';
-    $body    = $payload['body']    ?? '';
-    $url     = $payload['url']     ?? '/finance/';
+    $title   = $payload['title'] ?? 'Finance Alert';
+    $body    = $payload['body']  ?? '';
 
-    $subs = loadSubscriptions();
-    if (count($subs) === 0) {
-        echo json_encode(['ok' => true, 'sent' => 0, 'note' => 'no subscriptions']);
-        exit;
-    }
-
-    $autoload = __DIR__ . '/vendor/autoload.php';
-    if (!file_exists($autoload)) fail(500, 'web-push library not installed');
-    require_once $autoload;
-
-    $webPush = new \Minishlink\WebPush\WebPush([
-        'VAPID' => [
-            'subject'    => VAPID_SUBJECT,
-            'publicKey'  => VAPID_PUBLIC,
-            'privateKey' => VAPID_PRIVATE,
-        ]
-    ]);
-
-    $pushPayload = json_encode(['title' => $title, 'body' => $body, 'url' => $url]);
-    $sent = 0;
-    $staleEndpoints = [];
-
-    foreach ($subs as $sub) {
-        $subscription = \Minishlink\WebPush\Subscription::create([
-            'endpoint'        => $sub['endpoint'],
-            'keys'            => [
-                'p256dh' => $sub['keys']['p256dh'],
-                'auth'   => $sub['keys']['auth'],
-            ]
-        ]);
-        $webPush->queueNotification($subscription, $pushPayload);
-    }
-
-    foreach ($webPush->flush() as $report) {
-        if ($report->isSuccess()) {
-            $sent++;
-        } else {
-            // 404/410 means subscription is gone — remove it
-            $code = $report->getResponse()?->getStatusCode();
-            if ($code === 404 || $code === 410) {
-                $staleEndpoints[] = $report->getRequest()->getUri()->__toString();
-            }
-        }
-    }
-
-    if (!empty($staleEndpoints)) {
-        $subs = loadSubscriptions();
-        $subs = array_filter($subs, fn($s) => !in_array($s['endpoint'], $staleEndpoints, true));
-        saveSubscriptions($subs);
-    }
-
-    echo json_encode(['ok' => true, 'sent' => $sent, 'staleRemoved' => count($staleEndpoints)]);
+    $result = sendPushToAll($title, $body);
+    echo json_encode(['ok' => true] + $result);
     exit;
 }
 
