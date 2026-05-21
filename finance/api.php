@@ -26,7 +26,7 @@ $TOKEN = 'xZwQp8mKL9cVf2nRoJ4tYsH6bGuA5dE';
 $DATA_FILE   = __DIR__ . '/finance-data.json';
 $SEED_FILE   = __DIR__ . '/data-seed.json';
 $BACKUP_DIR  = __DIR__ . '/.backups';
-$SUBS_FILE   = __DIR__ . '/.push-subscriptions.json';
+$SUBS_FILE   = __DIR__ . '/.backups/.push-subscriptions.json';
 $MAX_BACKUPS = 50;
 
 // VAPID credentials — generated once, never change
@@ -123,12 +123,9 @@ function loadSubscriptions(): array {
 
 function saveSubscriptions(array $subs): void {
     global $SUBS_FILE;
+    ensureBackupDir(); // guarantees .backups/ exists with its own .htaccess
     file_put_contents($SUBS_FILE, json_encode(array_values($subs), JSON_PRETTY_PRINT), LOCK_EX);
     @chmod($SUBS_FILE, 0600);
-    $htaccess = dirname($SUBS_FILE) . '/.htaccess';
-    if (!file_exists($htaccess)) {
-        file_put_contents(dirname($SUBS_FILE) . '/.htaccess', "Require all denied\nDeny from all\n");
-    }
 }
 
 function listBackups(): array {
