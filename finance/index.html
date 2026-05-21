@@ -1831,7 +1831,7 @@
     <div class="toast" id="toast">Saved</div>
 
     <script>
-        const VERSION = 'v0.5.7';
+        const VERSION = 'v0.5.8';
         const DEPLOY_DATE = '2026-05-21';
         const CURRENT_SCHEMA_VERSION = 1;
         const LOCAL_WRITE_SUPPRESSION_MS = 5000;
@@ -1864,6 +1864,7 @@
             populateDayDropdown();
             await loadData();
             renderAll();
+            setTimeout(requestNotificationPermission, 2500);
             pollPendingTracker();
             pollTimer = setInterval(pollPendingTracker, 10000);
             // Sync data from other devices every 15 seconds (silent, only if changed)
@@ -1875,6 +1876,45 @@
         });
 
         let installPrompt = null;
+
+        async function requestNotificationPermission() {
+            if (!('Notification' in window)) return;
+            if (Notification.permission === 'denied') return;
+            if (Notification.permission === 'default') {
+                const result = await Notification.requestPermission();
+                if (result !== 'granted') return;
+            }
+            fireUrgentNotifications();
+        }
+
+        async function fireUrgentNotifications() {
+            if (Notification.permission !== 'granted') return;
+            const actions = buildActionQueue();
+            const critical = actions.filter(a => a.severity === 'critical');
+            const warn = actions.filter(a => a.severity === 'warn');
+            if (critical.length === 0 && warn.length === 0) return;
+
+            const topItem = critical[0] || warn[0];
+            const extras = critical.length + warn.length - 1;
+            const title = critical.length > 0
+                ? `⚠️ ${critical.length} overdue item${critical.length === 1 ? '' : 's'}`
+                : `📋 ${warn.length} item${warn.length === 1 ? '' : 's'} need attention`;
+            const body = topItem.title + (extras > 0 ? ` +${extras} more` : '');
+
+            try {
+                const reg = await navigator.serviceWorker.ready;
+                reg.showNotification(title, {
+                    body,
+                    icon: 'icon-192.png',
+                    badge: 'icon-192.png',
+                    tag: 'finance-alert',
+                    renotify: false,
+                    data: { url: location.href }
+                });
+            } catch {
+                new Notification(title, { body, icon: 'icon-192.png' });
+            }
+        }
 
         async function registerSW() {
             if (!('serviceWorker' in navigator)) return;

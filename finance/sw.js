@@ -1,4 +1,4 @@
-const VERSION = 'v0.5.7';
+const VERSION = 'v0.5.8';
 const CACHE_NAME = `finance-${VERSION}`;
 const URLS_TO_CACHE = [
     '/finance/',
@@ -76,7 +76,19 @@ self.addEventListener('fetch', (event) => {
         return;
     }
 
-    // Shell assets (HTML, CSS, JS): network-first so updates propagate fast
+self.addEventListener('notificationclick', (event) => {
+    event.notification.close();
+    const target = event.notification.data?.url || '/finance/';
+    event.waitUntil(
+        self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then(clientList => {
+            const existing = clientList.find(c => c.url.includes('/finance'));
+            if (existing) return existing.focus();
+            return self.clients.openWindow(target);
+        })
+    );
+});
+
+// Shell assets (HTML, CSS, JS): network-first so updates propagate fast
     event.respondWith(
         fetch(request).then((response) => {
             if (!response || response.status !== 200 || response.type === 'error') {
