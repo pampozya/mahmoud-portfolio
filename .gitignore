@@ -15,6 +15,12 @@ frontend/.env
 worker/node_modules/
 worker/.wrangler/
 
+# Finance local data previews/backups
+finance/__pycache__/
+finance/finance-data.json
+finance/backups/
+finance/.backups/
+
 # OS
 .DS_Store
 Thumbs.db

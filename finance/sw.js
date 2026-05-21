@@ -1,11 +1,10 @@
-const VERSION = 'v0.3.7';
+const VERSION = 'v0.5.7';
 const CACHE_NAME = `finance-${VERSION}`;
 const URLS_TO_CACHE = [
     '/finance/',
     '/finance/index.html',
     '/finance/manifest.json',
     '/finance/sw.js',
-    '/finance/api.php',
     'https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js'
 ];
 
@@ -47,27 +46,13 @@ self.addEventListener('fetch', (event) => {
         return;
     }
 
-    // API requests: network-first with cache fallback
+    // API requests stay network-only so stale cached JSON cannot replace edits.
     if (url.pathname.includes('api.php') || url.pathname.includes('/finance/api.php')) {
         event.respondWith(
-            fetch(request)
-                .then((response) => {
-                    if (response.ok) {
-                        const cloned = response.clone();
-                        caches.open(CACHE_NAME).then((cache) => {
-                            cache.put(request, cloned);
-                        });
-                    }
-                    return response;
-                })
-                .catch(() => {
-                    return caches.match(request).then((cached) => {
-                        return cached || new Response(
-                            JSON.stringify({ error: 'offline', data: { income: [], expenses: {}, payouts: [] } }),
-                            { status: 200, headers: { 'Content-Type': 'application/json' } }
-                        );
-                    });
-                })
+            fetch(request).catch(() => new Response(
+                JSON.stringify({ error: 'offline' }),
+                { status: 503, headers: { 'Content-Type': 'application/json' } }
+            ))
         );
         return;
     }

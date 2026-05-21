@@ -6,7 +6,7 @@
     <title>Lens Mania — Finance Tracker</title>
 
     <link rel="manifest" href="manifest.json">
-    <meta name="theme-color" content="#0f1419">
+    <meta name="theme-color" content="#0a0a0a">
     <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
     <link rel="icon" type="image/png" sizes="512x512" href="icon-512.png">
 
@@ -19,6 +19,25 @@
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
 
+        :root {
+            --finance-bg: #0a0a0a;
+            --finance-bg-soft: #101010;
+            --finance-panel: rgba(20, 20, 20, 0.86);
+            --finance-panel-2: rgba(31, 31, 31, 0.74);
+            --finance-line: rgba(234, 234, 234, 0.10);
+            --finance-line-strong: rgba(234, 234, 234, 0.18);
+            --finance-text: #eaeaea;
+            --finance-muted: #888888;
+            --finance-muted-2: #a8a8a8;
+            --finance-accent: #c8a86a;
+            --finance-accent-soft: rgba(200, 168, 106, 0.16);
+            --finance-good: #9fd8b1;
+            --finance-info: #9db5d3;
+            --finance-warn: #d7ae62;
+            --finance-bad: #ef827a;
+            --finance-ease: cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
         html, body {
             -webkit-tap-highlight-color: transparent;
             -webkit-user-select: none;
@@ -27,15 +46,32 @@
         }
 
         body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            background: linear-gradient(135deg, #0f1419 0%, #1a1f2e 100%);
-            color: #e0e0e0;
+            font-family: 'Manrope', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background:
+                linear-gradient(180deg, rgba(200, 168, 106, 0.045) 0%, rgba(10, 10, 10, 0) 320px),
+                var(--finance-bg);
+            color: var(--finance-text);
             min-height: 100vh;
             padding: 20px;
             padding-top: max(20px, env(safe-area-inset-top));
             padding-bottom: max(20px, env(safe-area-inset-bottom));
             padding-left: max(20px, env(safe-area-inset-left));
             padding-right: max(20px, env(safe-area-inset-right));
+        }
+
+        body::after {
+            content: '';
+            position: fixed;
+            inset: 0;
+            background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.05'/%3E%3C/svg%3E");
+            pointer-events: none;
+            z-index: 9999;
+            opacity: 0.28;
+            mix-blend-mode: overlay;
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            body::after { display: none; }
         }
 
         input, textarea { -webkit-user-select: text; user-select: text; }
@@ -46,15 +82,15 @@
 
         h1 {
             font-size: 28px;
-            font-weight: 300;
-            color: #fff;
-            letter-spacing: 0.5px;
+            font-weight: 600;
+            color: var(--finance-text);
+            letter-spacing: 0;
             margin-bottom: 8px;
         }
 
         .header-meta {
             font-size: 13px;
-            color: #888;
+            color: var(--finance-muted);
             display: flex;
             gap: 12px;
             align-items: center;
@@ -71,9 +107,9 @@
             font-weight: 500;
             text-transform: uppercase;
             letter-spacing: 0.5px;
-            background: rgba(255, 255, 255, 0.06);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            color: #888;
+            background: rgba(234, 234, 234, 0.04);
+            border: 1px solid var(--finance-line);
+            color: var(--finance-muted);
         }
 
         .sync-indicator::before {
@@ -84,18 +120,18 @@
             background: currentColor;
         }
 
-        .sync-indicator.synced { color: #4caf50; border-color: rgba(76, 175, 80, 0.3); }
-        .sync-indicator.syncing { color: #ffc107; border-color: rgba(255, 193, 7, 0.3); }
-        .sync-indicator.error { color: #f44336; border-color: rgba(244, 67, 54, 0.3); }
-        .sync-indicator.offline { color: #888; }
+        .sync-indicator.synced { color: var(--finance-accent); border-color: rgba(200, 168, 106, 0.34); }
+        .sync-indicator.syncing { color: var(--finance-warn); border-color: rgba(215, 174, 98, 0.32); }
+        .sync-indicator.error { color: var(--finance-bad); border-color: rgba(239, 130, 122, 0.35); }
+        .sync-indicator.offline { color: var(--finance-muted); }
 
         .version-badge {
             position: fixed;
             top: max(8px, env(safe-area-inset-top));
             right: max(8px, env(safe-area-inset-right));
             font-size: 10px;
-            color: #666;
-            background: rgba(0, 0, 0, 0.4);
+            color: rgba(234, 234, 234, 0.48);
+            background: rgba(0, 0, 0, 0.52);
             padding: 3px 8px;
             border-radius: 4px;
             z-index: 1000;
@@ -106,9 +142,10 @@
             display: flex;
             gap: 4px;
             margin-bottom: 20px;
-            background: rgba(255, 255, 255, 0.04);
+            background: rgba(234, 234, 234, 0.035);
             padding: 4px;
-            border-radius: 10px;
+            border: 1px solid var(--finance-line);
+            border-radius: 8px;
             overflow-x: auto;
             -webkit-overflow-scrolling: touch;
         }
@@ -117,19 +154,19 @@
             padding: 10px 18px;
             border: none;
             background: transparent;
-            color: #888;
+            color: var(--finance-muted);
             font-size: 14px;
             font-weight: 500;
             cursor: pointer;
-            border-radius: 7px;
+            border-radius: 4px;
             white-space: nowrap;
-            transition: all 0.2s;
+            transition: all 0.35s var(--finance-ease);
             font-family: inherit;
         }
 
         .tab-btn.active {
-            color: #fff;
-            background: rgba(255, 255, 255, 0.08);
+            color: var(--finance-bg);
+            background: var(--finance-accent);
         }
 
         .tab-content { display: none; }
@@ -144,9 +181,9 @@
         }
 
         .summary-stat {
-            background: rgba(255, 255, 255, 0.04);
-            border: 1px solid rgba(255, 255, 255, 0.08);
-            border-radius: 10px;
+            background: var(--finance-panel);
+            border: 1px solid var(--finance-line);
+            border-radius: 8px;
             padding: 14px 16px;
         }
 
@@ -154,7 +191,7 @@
             font-size: 11px;
             text-transform: uppercase;
             letter-spacing: 0.5px;
-            color: #888;
+            color: var(--finance-muted);
             margin-bottom: 6px;
             font-weight: 500;
         }
@@ -162,69 +199,102 @@
         .summary-stat-value {
             font-size: 22px;
             font-weight: 500;
-            color: #fff;
+            color: var(--finance-text);
         }
 
         .summary-stat-percent {
             font-size: 12px;
             margin-top: 4px;
-            color: #888;
+            color: var(--finance-muted);
         }
 
-        .summary-stat.paid .summary-stat-value { color: #76d776; }
-        .summary-stat.remaining .summary-stat-value { color: #ffa726; }
+        .summary-stat.paid .summary-stat-value { color: var(--finance-good); }
+        .summary-stat.remaining .summary-stat-value { color: var(--finance-warn); }
+
+        #dashboard .summary-bar {
+            gap: 16px;
+            margin-bottom: 22px;
+        }
+
+        #dashboard .summary-stat {
+            padding: 18px;
+            border-radius: 8px;
+        }
+
+        #dashboard .summary-stat-label {
+            font-size: 12px;
+            color: var(--finance-muted-2);
+        }
+
+        #dashboard .summary-stat-value {
+            font-size: 28px;
+            font-weight: 650;
+            line-height: 1.05;
+            letter-spacing: 0;
+        }
+
+        #dashboard .summary-stat-percent {
+            font-size: 13px;
+            line-height: 1.35;
+        }
 
         /* Snapshot strip — 3-tile hero at top of dashboard */
         .snapshot-strip {
             display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 10px;
-            margin-bottom: 16px;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 14px;
+            margin-bottom: 18px;
         }
         .snap-tile {
-            background: rgba(255, 255, 255, 0.04);
-            border: 1px solid rgba(255, 255, 255, 0.10);
-            border-radius: 12px;
-            padding: 14px 14px;
+            background: linear-gradient(180deg, rgba(234,234,234,0.065), rgba(234,234,234,0.028));
+            border: 1px solid var(--finance-line-strong);
+            border-radius: 8px;
+            padding: 18px 18px;
             position: relative;
             overflow: hidden;
+            box-shadow: 0 16px 32px rgba(0, 0, 0, 0.18);
         }
         .snap-tile::before {
             content: '';
             position: absolute; left: 0; top: 0; bottom: 0; width: 3px;
-            background: rgba(255,255,255,0.18);
+            background: rgba(234,234,234,0.22);
         }
-        .snap-tile.good::before  { background: #76d776; }
-        .snap-tile.warn::before  { background: #ffa726; }
-        .snap-tile.bad::before   { background: #f44336; }
+        .snap-tile.good::before  { background: var(--finance-good); }
+        .snap-tile.info::before  { background: var(--finance-info); }
+        .snap-tile.warn::before  { background: var(--finance-warn); }
+        .snap-tile.bad::before   { background: var(--finance-bad); }
         .snap-tile-label {
             font-size: 10px;
             text-transform: uppercase;
             letter-spacing: 0.6px;
-            color: #888;
+            color: var(--finance-muted-2);
             font-weight: 600;
             margin-bottom: 4px;
         }
         .snap-tile-value {
-            font-size: 22px;
-            font-weight: 600;
-            color: #fff;
+            font-size: 30px;
+            font-weight: 700;
+            color: var(--finance-text);
             font-variant-numeric: tabular-nums;
             line-height: 1.1;
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
         }
-        .snap-tile.good .snap-tile-value { color: #76d776; }
-        .snap-tile.warn .snap-tile-value { color: #ffa726; }
-        .snap-tile.bad  .snap-tile-value { color: #f44336; }
+        .snap-tile.good .snap-tile-value { color: var(--finance-text); }
+        .snap-tile.info .snap-tile-value { color: var(--finance-info); }
+        .snap-tile.warn .snap-tile-value { color: var(--finance-warn); }
+        .snap-tile.bad  .snap-tile-value { color: var(--finance-bad); }
         .snap-tile-sub {
-            font-size: 11px;
-            color: #999;
-            margin-top: 4px;
+            font-size: 12px;
+            color: var(--finance-muted);
+            margin-top: 6px;
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
+        }
+        @media (max-width: 1050px) {
+            .snapshot-strip { grid-template-columns: repeat(2, 1fr); }
         }
         @media (max-width: 700px) {
             .snapshot-strip { grid-template-columns: 1fr; gap: 8px; }
@@ -234,14 +304,15 @@
 
         /* Compact data table */
         .data-list {
-            background: rgba(255, 255, 255, 0.03);
-            border: 1px solid rgba(255, 255, 255, 0.06);
-            border-radius: 12px;
+            background: var(--finance-panel);
+            border: 1px solid var(--finance-line);
+            border-radius: 8px;
             overflow: hidden;
             margin-bottom: 20px;
+            box-shadow: 0 14px 30px rgba(0, 0, 0, 0.16);
         }
 
-        .category-block { border-bottom: 1px solid rgba(255, 255, 255, 0.06); }
+        .category-block { border-bottom: 1px solid var(--finance-line); }
         .category-block:last-child { border-bottom: none; }
 
         .category-header {
@@ -250,26 +321,26 @@
             align-items: center;
             gap: 12px;
             padding: 14px 16px;
-            background: rgba(255, 255, 255, 0.04);
+            background: rgba(234, 234, 234, 0.035);
             font-weight: 600;
             font-size: 12px;
             text-transform: uppercase;
             letter-spacing: 0.5px;
-            color: #ddd;
+            color: var(--finance-text);
             cursor: pointer;
             user-select: none;
             transition: background 0.15s;
         }
 
-        .category-header:hover { background: rgba(255, 255, 255, 0.08); }
-        .category-header:focus { outline: 2px solid rgba(118, 215, 118, 0.3); outline-offset: -2px; }
+        .category-header:hover { background: rgba(200, 168, 106, 0.08); }
+        .category-header:focus { outline: 2px solid rgba(200, 168, 106, 0.32); outline-offset: -2px; }
 
         .category-arrow {
             display: inline-flex;
             align-items: center;
             justify-content: center;
             font-size: 10px;
-            color: #888;
+            color: var(--finance-muted);
             transition: transform 0.2s;
             flex-shrink: 0;
             width: 16px;
@@ -289,14 +360,14 @@
             display: flex;
             gap: 14px;
             font-size: 11px;
-            color: #888;
+            color: var(--finance-muted);
             font-weight: 400;
             text-transform: none;
             letter-spacing: 0;
             flex-shrink: 0;
         }
 
-        .category-totals .paid { color: #76d776; }
+        .category-totals .paid { color: var(--finance-good); }
 
         .row-list { display: flex; flex-direction: column; }
 
@@ -306,38 +377,76 @@
             gap: 8px;
             padding: 12px 16px;
             align-items: center;
-            border-top: 1px solid rgba(255, 255, 255, 0.04);
+            border-top: 1px solid rgba(234, 234, 234, 0.055);
             transition: background 0.15s;
         }
 
-        .row:hover { background: rgba(255, 255, 255, 0.02); }
+        .row:hover { background: rgba(200, 168, 106, 0.045); }
 
         .row-description {
-            color: #e0e0e0;
+            color: var(--finance-text);
             font-size: 14px;
             min-width: 0;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .row-name {
             overflow: hidden;
             text-overflow: ellipsis;
             white-space: nowrap;
+            min-width: 0;
+        }
+
+        .row-badge {
+            font-size: 12px;
+            flex-shrink: 0;
+            line-height: 1;
+            cursor: default;
+            opacity: 0.75;
+        }
+
+        .recurring-label {
+            display: flex !important;
+            align-items: center;
+            gap: 8px;
+            cursor: pointer;
+            text-transform: none !important;
+            letter-spacing: 0 !important;
+            font-size: 13px !important;
+        }
+
+        .recurring-label input[type="checkbox"] {
+            width: 16px;
+            height: 16px;
+            accent-color: var(--finance-accent);
+            cursor: pointer;
+            flex-shrink: 0;
+        }
+
+        textarea.modal-input {
+            resize: vertical;
+            min-height: 58px;
         }
 
         .row-cell {
             font-size: 13px;
             text-align: right;
-            color: #aaa;
+            color: var(--finance-muted-2);
             font-variant-numeric: tabular-nums;
         }
 
-        .row-cell.paid { color: #76d776; font-weight: 500; }
-        .row-cell.remaining { color: #aaa; }
-        .row-cell.percent { color: #ffa726; font-size: 12px; }
+        .row-cell.paid { color: var(--finance-good); font-weight: 500; }
+        .row-cell.remaining { color: var(--finance-muted-2); }
+        .row-cell.percent { color: var(--finance-warn); font-size: 12px; }
 
         .edit-btn {
             width: 36px;
             height: 36px;
             border: none;
-            background: rgba(255, 255, 255, 0.06);
-            color: #aaa;
+            background: rgba(234, 234, 234, 0.055);
+            color: var(--finance-muted-2);
             border-radius: 8px;
             cursor: pointer;
             font-size: 14px;
@@ -350,8 +459,8 @@
         }
 
         .edit-btn:active, .edit-btn:hover {
-            background: rgba(118, 215, 118, 0.15);
-            color: #76d776;
+            background: var(--finance-accent-soft);
+            color: var(--finance-accent);
         }
 
         .row-list-header {
@@ -361,8 +470,8 @@
             padding: 8px 16px;
             font-size: 11px;
             text-transform: uppercase;
-            color: #666;
-            background: rgba(0, 0, 0, 0.2);
+            color: var(--finance-muted);
+            background: rgba(0, 0, 0, 0.22);
         }
 
         .row-list-header > div { text-align: right; }
@@ -370,15 +479,15 @@
 
         .add-item-row {
             padding: 10px 16px;
-            border-top: 1px solid rgba(255, 255, 255, 0.04);
+            border-top: 1px solid rgba(234, 234, 234, 0.055);
         }
 
         .add-item-btn {
             width: 100%;
             padding: 10px;
-            background: rgba(118, 215, 118, 0.08);
-            color: #76d776;
-            border: 1px dashed rgba(118, 215, 118, 0.3);
+            background: rgba(200, 168, 106, 0.08);
+            color: var(--finance-accent);
+            border: 1px dashed rgba(200, 168, 106, 0.32);
             border-radius: 8px;
             font-size: 13px;
             cursor: pointer;
@@ -386,13 +495,13 @@
             transition: background 0.15s;
         }
 
-        .add-item-btn:active { background: rgba(118, 215, 118, 0.18); }
+        .add-item-btn:active { background: rgba(200, 168, 106, 0.18); }
 
         .filter-btn {
             padding: 8px 14px;
-            background: rgba(255, 255, 255, 0.08);
-            color: #fff;
-            border: 1px solid rgba(255, 255, 255, 0.12);
+            background: rgba(234, 234, 234, 0.055);
+            color: var(--finance-text);
+            border: 1px solid var(--finance-line);
             border-radius: 6px;
             font-size: 12px;
             cursor: pointer;
@@ -401,15 +510,15 @@
             white-space: nowrap;
         }
 
-        .filter-btn:hover { background: rgba(255, 255, 255, 0.12); }
-        .filter-btn.active { background: rgba(118, 215, 118, 0.15); color: #76d776; border-color: rgba(118, 215, 118, 0.3); }
+        .filter-btn:hover { background: rgba(234, 234, 234, 0.095); }
+        .filter-btn.active { background: var(--finance-accent-soft); color: var(--finance-accent); border-color: rgba(200, 168, 106, 0.35); }
 
         /* Modal */
         .modal {
             display: none;
             position: fixed;
             inset: 0;
-            background: rgba(0, 0, 0, 0.7);
+            background: rgba(0, 0, 0, 0.78);
             z-index: 100;
             align-items: flex-end;
             justify-content: center;
@@ -424,19 +533,19 @@
         }
 
         .modal-content {
-            background: #1a1f2e;
-            border-radius: 16px 16px 0 0;
+            background: #101010;
+            border-radius: 12px 12px 0 0;
             padding: 24px;
             width: 100%;
             max-width: 540px;
             max-height: 90vh;
             overflow-y: auto;
-            border: 1px solid rgba(255, 255, 255, 0.1);
+            border: 1px solid var(--finance-line-strong);
             animation: slideUp 0.3s ease-out;
         }
 
         @media (min-width: 600px) {
-            .modal-content { border-radius: 16px; }
+            .modal-content { border-radius: 8px; }
         }
 
         @keyframes slideUp {
@@ -448,23 +557,23 @@
             font-size: 18px;
             font-weight: 500;
             margin-bottom: 4px;
-            color: #fff;
+            color: var(--finance-text);
         }
 
         .modal-subtitle {
             font-size: 12px;
-            color: #888;
+            color: var(--finance-muted);
             margin-bottom: 18px;
         }
 
         .modal-section-title {
             font-size: 11px;
             text-transform: uppercase;
-            color: #888;
+            color: var(--finance-muted);
             letter-spacing: 0.5px;
             margin: 18px 0 10px;
             padding-bottom: 6px;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+            border-bottom: 1px solid var(--finance-line);
         }
 
         .modal-field { margin-bottom: 12px; }
@@ -479,7 +588,7 @@
             display: block;
             font-size: 11px;
             text-transform: uppercase;
-            color: #888;
+            color: var(--finance-muted);
             margin-bottom: 6px;
             font-weight: 500;
             letter-spacing: 0.3px;
@@ -488,18 +597,18 @@
         .modal-input {
             width: 100%;
             padding: 10px 12px;
-            background: rgba(255, 255, 255, 0.06);
-            border: 1px solid rgba(255, 255, 255, 0.1);
+            background: rgba(234, 234, 234, 0.055);
+            border: 1px solid var(--finance-line);
             border-radius: 8px;
-            color: #fff;
+            color: var(--finance-text);
             font-size: 14px;
             font-family: inherit;
         }
 
         .modal-input:focus {
             outline: none;
-            border-color: #76d776;
-            background: rgba(76, 175, 80, 0.08);
+            border-color: var(--finance-accent);
+            background: rgba(200, 168, 106, 0.08);
         }
 
         select.modal-input {
@@ -517,7 +626,8 @@
             gap: 8px;
             margin: 14px 0;
             padding: 12px;
-            background: rgba(0, 0, 0, 0.25);
+            background: rgba(0, 0, 0, 0.24);
+            border: 1px solid var(--finance-line);
             border-radius: 8px;
         }
 
@@ -526,7 +636,7 @@
         .modal-stat-label {
             font-size: 10px;
             text-transform: uppercase;
-            color: #888;
+            color: var(--finance-muted);
             margin-bottom: 4px;
         }
 
@@ -536,9 +646,9 @@
             font-variant-numeric: tabular-nums;
         }
 
-        .modal-stat-value.paid { color: #76d776; }
-        .modal-stat-value.remaining { color: #ffa726; }
-        .modal-stat-value.percent { color: #ffc107; }
+        .modal-stat-value.paid { color: var(--finance-good); }
+        .modal-stat-value.remaining { color: var(--finance-warn); }
+        .modal-stat-value.percent { color: var(--finance-accent); }
 
         /* Day grid in modal */
         .day-grid {
@@ -550,8 +660,8 @@
 
         .day-cell {
             aspect-ratio: 1;
-            border: 1px solid rgba(255, 255, 255, 0.08);
-            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid var(--finance-line);
+            background: rgba(234, 234, 234, 0.035);
             border-radius: 6px;
             padding: 4px;
             cursor: pointer;
@@ -565,33 +675,33 @@
         }
 
         .day-cell:active, .day-cell:hover {
-            background: rgba(118, 215, 118, 0.1);
-            border-color: rgba(118, 215, 118, 0.3);
+            background: rgba(200, 168, 106, 0.10);
+            border-color: rgba(200, 168, 106, 0.32);
         }
 
         .day-cell.has-value {
-            background: rgba(118, 215, 118, 0.12);
-            border-color: rgba(118, 215, 118, 0.25);
+            background: rgba(200, 168, 106, 0.12);
+            border-color: rgba(200, 168, 106, 0.28);
         }
 
         .day-cell-num {
             font-size: 10px;
-            color: #888;
+            color: var(--finance-muted);
             line-height: 1;
         }
 
-        .day-cell.has-value .day-cell-num { color: #aaa; }
+        .day-cell.has-value .day-cell-num { color: var(--finance-muted-2); }
 
         .day-cell-value {
             font-size: 11px;
-            color: #76d776;
+            color: var(--finance-accent);
             font-weight: 500;
             margin-top: 2px;
             line-height: 1.1;
             font-variant-numeric: tabular-nums;
         }
 
-        .day-cell-value.empty { color: #555; }
+        .day-cell-value.empty { color: rgba(234, 234, 234, 0.32); }
 
         .quick-add {
             display: grid;
@@ -599,16 +709,16 @@
             gap: 8px;
             align-items: end;
             padding: 12px;
-            background: rgba(118, 215, 118, 0.05);
-            border: 1px solid rgba(118, 215, 118, 0.15);
+            background: rgba(200, 168, 106, 0.055);
+            border: 1px solid rgba(200, 168, 106, 0.18);
             border-radius: 8px;
             margin-bottom: 14px;
         }
 
         .quick-add-btn {
             padding: 10px 14px;
-            background: #76d776;
-            color: #000;
+            background: var(--finance-accent);
+            color: var(--finance-bg);
             border: none;
             border-radius: 8px;
             font-size: 13px;
@@ -618,7 +728,7 @@
             white-space: nowrap;
         }
 
-        .quick-add-btn:active { background: #5ac75a; }
+        .quick-add-btn:active { background: #d8bb7e; }
 
         .modal-buttons {
             display: flex;
@@ -640,44 +750,45 @@
             min-width: 100px;
         }
 
-        .modal-btn.primary { background: #76d776; color: #000; }
-        .modal-btn.primary:active { background: #5ac75a; }
+        .modal-btn.primary { background: var(--finance-accent); color: var(--finance-bg); }
+        .modal-btn.primary:active { background: #d8bb7e; }
 
         .modal-btn.secondary {
-            background: rgba(255, 255, 255, 0.1);
-            color: #fff;
-            border: 1px solid rgba(255, 255, 255, 0.15);
+            background: rgba(234, 234, 234, 0.08);
+            color: var(--finance-text);
+            border: 1px solid var(--finance-line-strong);
         }
 
-        .modal-btn.secondary:active { background: rgba(255, 255, 255, 0.18); }
+        .modal-btn.secondary:active { background: rgba(234, 234, 234, 0.14); }
 
         .modal-btn.danger {
-            background: rgba(244, 67, 54, 0.1);
-            color: #f44336;
-            border: 1px solid rgba(244, 67, 54, 0.2);
+            background: rgba(239, 130, 122, 0.10);
+            color: var(--finance-bad);
+            border: 1px solid rgba(239, 130, 122, 0.24);
         }
 
-        .modal-btn.danger:active { background: rgba(244, 67, 54, 0.25); }
+        .modal-btn.danger:active { background: rgba(239, 130, 122, 0.22); }
 
         /* Dashboard */
         .dashboard-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            grid-template-columns: repeat(auto-fit, minmax(310px, 1fr));
             gap: 16px;
-            margin-bottom: 20px;
+            margin-bottom: 22px;
         }
 
         .card {
-            background: rgba(255, 255, 255, 0.04);
-            border: 1px solid rgba(255, 255, 255, 0.08);
-            border-radius: 12px;
+            background: var(--finance-panel);
+            border: 1px solid var(--finance-line);
+            border-radius: 8px;
             padding: 18px;
+            box-shadow: 0 14px 30px rgba(0, 0, 0, 0.18);
         }
 
         .card-title {
             font-size: 12px;
             font-weight: 600;
-            color: #aaa;
+            color: var(--finance-muted-2);
             text-transform: uppercase;
             margin-bottom: 14px;
             letter-spacing: 0.5px;
@@ -693,21 +804,65 @@
             margin-bottom: 6px;
         }
 
-        .progress-label-name { color: #ddd; }
-        .progress-label-value { color: #888; font-variant-numeric: tabular-nums; }
+        .progress-label-name { color: var(--finance-text); }
+        .progress-label-value { color: var(--finance-muted-2); font-variant-numeric: tabular-nums; }
 
         .progress-bar {
             height: 6px;
-            background: rgba(255, 255, 255, 0.08);
+            background: rgba(234, 234, 234, 0.075);
             border-radius: 3px;
             overflow: hidden;
         }
 
         .progress-fill {
             height: 100%;
-            background: linear-gradient(90deg, #76d776, #5ac75a);
+            background: linear-gradient(90deg, var(--finance-accent), rgba(200,168,106,0.58));
             border-radius: 3px;
-            transition: width 0.3s ease;
+            transition: width 0.4s var(--finance-ease);
+        }
+
+        #dashboard .card-title {
+            font-size: 12px;
+            color: var(--finance-muted-2);
+        }
+
+        #dashboard .progress-item {
+            margin-bottom: 0;
+            padding: 10px 0;
+            border-bottom: 1px solid rgba(234, 234, 234, 0.065);
+        }
+
+        #dashboard .progress-item:last-child { border-bottom: none; }
+
+        #dashboard .progress-label {
+            font-size: 14px;
+            gap: 12px;
+            align-items: baseline;
+        }
+
+        #dashboard .progress-label-name {
+            font-weight: 650;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        #dashboard .progress-label-value {
+            color: var(--finance-muted-2);
+            font-size: 13px;
+            white-space: nowrap;
+        }
+
+        #dashboard .progress-bar {
+            height: 8px;
+            margin-top: 8px;
+        }
+
+        .dashboard-note {
+            color: var(--finance-muted);
+            font-size: 12px;
+            line-height: 1.4;
+            margin-top: 10px;
         }
 
         .chart-container {
@@ -738,9 +893,9 @@
 
         /* Team payouts */
         .team-member-card {
-            background: rgba(255, 255, 255, 0.04);
-            border: 1px solid rgba(255, 255, 255, 0.08);
-            border-radius: 10px;
+            background: var(--finance-panel);
+            border: 1px solid var(--finance-line);
+            border-radius: 8px;
             padding: 16px;
             margin-bottom: 12px;
         }
@@ -751,12 +906,12 @@
             align-items: center;
             margin-bottom: 12px;
             padding-bottom: 12px;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+            border-bottom: 1px solid var(--finance-line);
         }
 
         .team-member-name {
             font-size: 16px;
-            color: #fff;
+            color: var(--finance-text);
             font-weight: 600;
             letter-spacing: 0.3px;
         }
@@ -777,13 +932,13 @@
         }
 
         .stat-badge.owed {
-            background: rgba(255, 167, 38, 0.15);
-            color: #ffa726;
+            background: rgba(215, 174, 98, 0.14);
+            color: var(--finance-warn);
         }
 
         .stat-badge.paid {
-            background: rgba(118, 215, 118, 0.15);
-            color: #76d776;
+            background: rgba(159, 216, 177, 0.13);
+            color: var(--finance-good);
         }
 
         .team-member-payouts {
@@ -793,8 +948,8 @@
         }
 
         .team-payout-item {
-            background: rgba(255, 255, 255, 0.02);
-            border: 1px solid rgba(255, 255, 255, 0.06);
+            background: rgba(234, 234, 234, 0.025);
+            border: 1px solid var(--finance-line);
             border-radius: 8px;
             padding: 12px;
             display: grid;
@@ -804,28 +959,28 @@
         }
 
         .team-payout-item.owed {
-            border-color: rgba(255, 167, 38, 0.2);
-            background: rgba(255, 167, 38, 0.05);
+            border-color: rgba(215, 174, 98, 0.24);
+            background: rgba(215, 174, 98, 0.055);
         }
 
         .team-payout-item.paid {
-            border-color: rgba(118, 215, 118, 0.2);
-            background: rgba(118, 215, 118, 0.05);
+            border-color: rgba(159, 216, 177, 0.22);
+            background: rgba(159, 216, 177, 0.045);
             opacity: 0.7;
         }
 
         .payout-details { min-width: 0; }
-        .payout-project { font-size: 13px; color: #fff; font-weight: 500; }
-        .payout-amount { font-size: 14px; color: #ffa726; font-weight: 600; margin-top: 2px; font-variant-numeric: tabular-nums; }
-        .team-payout-item.paid .payout-amount { color: #76d776; }
+        .payout-project { font-size: 13px; color: var(--finance-text); font-weight: 500; }
+        .payout-amount { font-size: 14px; color: var(--finance-warn); font-weight: 600; margin-top: 2px; font-variant-numeric: tabular-nums; }
+        .team-payout-item.paid .payout-amount { color: var(--finance-good); }
 
         .payout-actions { display: flex; gap: 6px; }
 
         .payout-btn {
             padding: 6px 10px;
             border: none;
-            background: rgba(255, 255, 255, 0.08);
-            color: #fff;
+            background: rgba(234, 234, 234, 0.07);
+            color: var(--finance-text);
             border-radius: 5px;
             font-size: 11px;
             cursor: pointer;
@@ -833,10 +988,10 @@
             white-space: nowrap;
         }
 
-        .payout-btn.mark-paid { background: rgba(118, 215, 118, 0.15); color: #76d776; }
-        .payout-btn.mark-owed { background: rgba(255, 167, 38, 0.15); color: #ffa726; }
-        .payout-btn.edit { background: rgba(100, 181, 246, 0.15); color: #64b5f6; }
-        .payout-btn.danger { background: rgba(244, 67, 54, 0.12); color: #f44336; }
+        .payout-btn.mark-paid { background: rgba(159, 216, 177, 0.13); color: var(--finance-good); }
+        .payout-btn.mark-owed { background: rgba(215, 174, 98, 0.14); color: var(--finance-warn); }
+        .payout-btn.edit { background: rgba(200, 168, 106, 0.14); color: var(--finance-accent); }
+        .payout-btn.danger { background: rgba(239, 130, 122, 0.12); color: var(--finance-bad); }
 
         .income-cards-grid {
             display: grid;
@@ -845,9 +1000,9 @@
         }
 
         .income-card {
-            background: rgba(255, 255, 255, 0.04);
-            border: 1px solid rgba(255, 255, 255, 0.08);
-            border-radius: 10px;
+            background: var(--finance-panel);
+            border: 1px solid var(--finance-line);
+            border-radius: 8px;
             padding: 16px;
             display: flex;
             flex-direction: column;
@@ -863,7 +1018,7 @@
 
         .income-project-name {
             font-size: 15px;
-            color: #fff;
+            color: var(--finance-text);
             font-weight: 600;
             flex: 1;
             overflow: hidden;
@@ -884,8 +1039,8 @@
         }
 
         .income-stat {
-            background: rgba(255, 255, 255, 0.02);
-            border: 1px solid rgba(255, 255, 255, 0.06);
+            background: rgba(234, 234, 234, 0.025);
+            border: 1px solid var(--finance-line);
             border-radius: 6px;
             padding: 8px;
             text-align: center;
@@ -893,7 +1048,7 @@
 
         .income-stat .stat-label {
             font-size: 10px;
-            color: #888;
+            color: var(--finance-muted);
             text-transform: uppercase;
             letter-spacing: 0.3px;
             margin-bottom: 4px;
@@ -901,38 +1056,36 @@
 
         .income-stat .stat-value {
             font-size: 14px;
-            color: #ffa726;
+            color: var(--finance-warn);
             font-weight: 600;
             font-variant-numeric: tabular-nums;
         }
 
-        .income-stat .stat-value.earned { color: #76d776; }
-        .income-stat .stat-value.pending { color: #64b5f6; }
+        .income-stat .stat-value.earned { color: var(--finance-good); }
+        .income-stat .stat-value.pending { color: var(--finance-info); }
 
         .income-progress-bar {
             height: 6px;
-            background: rgba(255, 255, 255, 0.06);
+            background: rgba(234, 234, 234, 0.065);
             border-radius: 3px;
             overflow: hidden;
         }
 
-        .progress-fill {
-            height: 100%;
-            background: linear-gradient(90deg, #76d776 0%, #4caf50 100%);
-            border-radius: 3px;
-            transition: width 0.3s ease;
+        .income-progress-bar .progress-fill {
+            background: linear-gradient(90deg, var(--finance-accent), rgba(200, 168, 106, 0.58));
+            transition: width 0.35s var(--finance-ease);
         }
 
         .income-percent {
             font-size: 12px;
-            color: #888;
+            color: var(--finance-muted);
             text-align: center;
         }
 
         .empty-state {
             text-align: center;
             padding: 30px 20px;
-            color: #666;
+            color: var(--finance-muted);
             font-size: 14px;
         }
 
@@ -942,8 +1095,8 @@
             bottom: max(20px, calc(env(safe-area-inset-bottom) + 20px));
             left: 50%;
             transform: translateX(-50%);
-            background: #76d776;
-            color: #000;
+            background: var(--finance-accent);
+            color: var(--finance-bg);
             padding: 10px 18px;
             border-radius: 8px;
             font-size: 13px;
@@ -952,6 +1105,21 @@
             pointer-events: none;
             transition: opacity 0.3s, transform 0.3s;
             z-index: 200;
+        }
+
+        .toast.info {
+            background: var(--finance-info);
+            color: #07131f;
+        }
+
+        .toast.error {
+            background: var(--finance-bad);
+            color: #fff;
+        }
+
+        .toast.success {
+            background: var(--finance-good);
+            color: #06120a;
         }
 
         .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
@@ -1083,12 +1251,15 @@
             .modal-content { max-height: 95vh; border-radius: 8px; padding: 14px; }
         }
 
-        .install-btn {
-            display: none;
+        .install-btn,
+        .backup-btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
             padding: 6px 12px;
-            background: rgba(118, 215, 118, 0.15);
-            color: #76d776;
-            border: 1px solid rgba(118, 215, 118, 0.3);
+            background: var(--finance-accent-soft);
+            color: var(--finance-accent);
+            border: 1px solid rgba(200, 168, 106, 0.34);
             border-radius: 8px;
             font-size: 12px;
             font-weight: 500;
@@ -1100,12 +1271,15 @@
             white-space: nowrap;
         }
 
-        .install-btn:hover {
-            background: rgba(118, 215, 118, 0.25);
-            border-color: rgba(118, 215, 118, 0.5);
+        .install-btn { display: none; }
+
+        .install-btn:hover,
+        .backup-btn:hover {
+            background: rgba(200, 168, 106, 0.24);
+            border-color: rgba(200, 168, 106, 0.5);
         }
 
-        .install-btn.show { display: inline-block; }
+        .install-btn.show { display: inline-flex; }
 
         .refresh-btn {
             display: inline-flex;
@@ -1114,9 +1288,9 @@
             width: 36px;
             height: 36px;
             padding: 0;
-            background: rgba(255, 255, 255, 0.06);
-            color: #888;
-            border: 1px solid rgba(255, 255, 255, 0.1);
+            background: rgba(234, 234, 234, 0.055);
+            color: var(--finance-muted);
+            border: 1px solid var(--finance-line);
             border-radius: 8px;
             font-size: 16px;
             cursor: pointer;
@@ -1125,8 +1299,8 @@
         }
 
         .refresh-btn:hover {
-            background: rgba(255, 255, 255, 0.1);
-            color: #aaa;
+            background: rgba(200, 168, 106, 0.10);
+            color: var(--finance-accent);
         }
 
         .refresh-btn.spinning {
@@ -1138,8 +1312,173 @@
             to { transform: rotate(360deg); }
         }
 
+        .data-safety-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+            gap: 12px;
+        }
+
+        .data-safety-item {
+            padding: 12px;
+            background: rgba(234, 234, 234, 0.035);
+            border: 1px solid var(--finance-line);
+            border-radius: 8px;
+        }
+
+        .data-safety-label {
+            color: var(--finance-muted);
+            font-size: 11px;
+            font-weight: 600;
+            letter-spacing: 0.4px;
+            text-transform: uppercase;
+            margin-bottom: 6px;
+        }
+
+        .data-safety-value {
+            color: var(--finance-text);
+            font-size: 14px;
+            font-variant-numeric: tabular-nums;
+            overflow-wrap: anywhere;
+        }
+
+        .dashboard-focus-grid {
+            display: grid;
+            grid-template-columns: minmax(0, 1.65fr) minmax(300px, 1fr);
+            gap: 16px;
+            margin-bottom: 22px;
+        }
+
+        .card-title-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+            margin-bottom: 14px;
+        }
+
+        .card-title-row .card-title { margin-bottom: 0; }
+
+        .mini-btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 30px;
+            padding: 6px 10px;
+            border-radius: 7px;
+            border: 1px solid var(--finance-line);
+            background: rgba(234, 234, 234, 0.055);
+            color: var(--finance-text);
+            font-size: 11px;
+            font-weight: 600;
+            font-family: inherit;
+            cursor: pointer;
+            white-space: nowrap;
+        }
+
+        .mini-btn.primary {
+            background: var(--finance-accent-soft);
+            color: var(--finance-accent);
+            border-color: rgba(200, 168, 106, 0.34);
+        }
+
+        .mini-btn.danger {
+            background: rgba(239, 130, 122, 0.10);
+            color: var(--finance-bad);
+            border-color: rgba(239, 130, 122, 0.25);
+        }
+
+        .action-list,
+        .backup-list,
+        .rollover-list {
+            display: grid;
+            gap: 8px;
+        }
+
+        .action-item,
+        .backup-row,
+        .rollover-row {
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) auto;
+            gap: 14px;
+            align-items: center;
+            padding: 12px 14px;
+            border-radius: 8px;
+            background: rgba(234, 234, 234, 0.035);
+            border: 1px solid var(--finance-line);
+        }
+
+        .action-item.critical { border-left: 3px solid var(--finance-bad); }
+        .action-item.warn { border-left: 3px solid var(--finance-warn); }
+        .action-item.good { border-left: 3px solid var(--finance-good); }
+
+        .action-title,
+        .backup-title,
+        .rollover-title {
+            color: var(--finance-text);
+            font-size: 14px;
+            font-weight: 600;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .action-meta,
+        .backup-meta,
+        .rollover-meta {
+            color: var(--finance-muted);
+            font-size: 12px;
+            margin-top: 3px;
+        }
+
+        .action-amount,
+        .backup-revision,
+        .rollover-amount {
+            color: var(--finance-text);
+            font-size: 15px;
+            font-weight: 700;
+            font-variant-numeric: tabular-nums;
+            white-space: nowrap;
+        }
+
+        .backup-row {
+            cursor: pointer;
+            grid-template-columns: minmax(0, 1fr) auto;
+        }
+
+        .backup-row.selected {
+            background: var(--finance-accent-soft);
+            border-color: rgba(200, 168, 106, 0.36);
+        }
+
+        .backup-actions,
+        .safety-actions {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            margin-top: 12px;
+        }
+
+        .month-tool-value {
+            color: var(--finance-text);
+            font-size: 28px;
+            font-weight: 600;
+            font-variant-numeric: tabular-nums;
+            margin-bottom: 4px;
+        }
+
+        .month-tool-sub {
+            color: #888;
+            font-size: 13px;
+            line-height: 1.45;
+        }
+
         @media (max-width: 600px) {
             .refresh-btn { width: 40px; height: 40px; }
+            .backup-btn { height: 40px; }
+            .dashboard-focus-grid { grid-template-columns: 1fr; }
+            .action-item,
+            .backup-row,
+            .rollover-row { grid-template-columns: 1fr; }
         }
     </style>
 </head>
@@ -1156,6 +1495,7 @@
                 </div>
                 <div style="display: flex; gap: 8px; align-items: center;">
                     <button class="install-btn" id="installBtn">Install App</button>
+                    <button class="backup-btn" id="backupBtn" title="Export JSON backup">Backup</button>
                     <button class="refresh-btn" id="refreshBtn" title="Hard refresh—bypass cache">↻</button>
                 </div>
             </div>
@@ -1172,13 +1512,29 @@
         <div id="dashboard" class="tab-content active">
             <div id="snapshotStrip" class="snapshot-strip"></div>
             <div id="dashboardSummary"></div>
+            <div class="dashboard-focus-grid">
+                <div class="card">
+                    <div class="card-title-row">
+                        <div class="card-title">Needs Attention</div>
+                        <button class="mini-btn" id="refreshActionsBtn">Refresh</button>
+                    </div>
+                    <div id="actionQueue"></div>
+                </div>
+                <div class="card">
+                    <div class="card-title-row">
+                        <div class="card-title">Next Month</div>
+                        <button class="mini-btn primary" id="monthRolloverBtn">Preview</button>
+                    </div>
+                    <div id="monthToolsSummary"></div>
+                </div>
+            </div>
             <div class="dashboard-grid">
                 <div class="card">
-                    <div class="card-title">Expenses by Category</div>
+                    <div class="card-title">Spending</div>
                     <div id="expenseSummary"></div>
                 </div>
                 <div class="card">
-                    <div class="card-title">Income by Client</div>
+                    <div class="card-title">Receivables</div>
                     <div id="incomeSummary"></div>
                 </div>
                 <div class="card">
@@ -1200,6 +1556,10 @@
                 <div class="card">
                     <div class="card-title">Pending vs Paid</div>
                     <div id="pendingPaidSummary"></div>
+                </div>
+                <div class="card">
+                    <div class="card-title">Data Safety</div>
+                    <div id="dataSafetySummary"></div>
                 </div>
             </div>
         </div>
@@ -1263,6 +1623,17 @@
                 <input type="text" id="editPayday" class="modal-input" placeholder="e.g., 15 or 1, 15">
             </div>
 
+            <div class="modal-field" id="editRecurringWrapper">
+                <label class="modal-label recurring-label">
+                    <input type="checkbox" id="editRecurring">
+                    Recurring — carries to next month
+                </label>
+            </div>
+            <div class="modal-field">
+                <label class="modal-label">Note (optional)</label>
+                <textarea id="editNote" class="modal-input" rows="2" placeholder="e.g., waiting for client approval, partial payment pending…"></textarea>
+            </div>
+
             <div class="modal-section-title">Add Daily Entry</div>
             <div class="quick-add">
                 <div>
@@ -1313,6 +1684,16 @@
                 <div class="modal-field">
                     <label class="modal-label">Description / Name</label>
                     <input type="text" id="newItemDescription" class="modal-input" placeholder="e.g., Internet">
+                </div>
+                <div class="modal-field">
+                    <label class="modal-label recurring-label">
+                        <input type="checkbox" id="newItemRecurring" checked>
+                        Recurring — carries to next month
+                    </label>
+                </div>
+                <div class="modal-field">
+                    <label class="modal-label">Note (optional)</label>
+                    <textarea id="newItemNote" class="modal-input" rows="2" placeholder="e.g., waiting for client approval…"></textarea>
                 </div>
             </div>
 
@@ -1421,26 +1802,58 @@
         </div>
     </div>
 
-    <div class="version-badge" id="versionBadge">v0.2 · 2026-05-13</div>
+    <div id="backupHistoryModal" class="modal">
+        <div class="modal-content" style="max-width: 620px;">
+            <div class="modal-title">Backup History</div>
+            <div class="modal-subtitle" id="backupHistoryStatus">Loading backups...</div>
+            <div id="backupHistoryList" class="backup-list"></div>
+            <div class="modal-buttons">
+                <button class="modal-btn secondary" id="backupRefreshBtn">Refresh</button>
+                <button class="modal-btn danger" id="backupRestoreBtn">Restore Selected</button>
+                <button class="modal-btn secondary" id="backupCloseBtn">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="monthRolloverModal" class="modal">
+        <div class="modal-content" style="max-width: 620px;">
+            <div class="modal-title">Next Month Preview</div>
+            <div class="modal-subtitle" id="monthRolloverStatus"></div>
+            <div id="monthRolloverPreview" class="rollover-list"></div>
+            <div class="modal-buttons">
+                <button class="modal-btn primary" id="monthRolloverCreate">Create Month Copy</button>
+                <button class="modal-btn secondary" id="monthRolloverCancel">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="version-badge" id="versionBadge">v0.5.6 · 2026-05-21</div>
     <div class="toast" id="toast">Saved</div>
 
     <script>
-        const VERSION = 'v0.3.7';
-        const DEPLOY_DATE = '2026-05-13';
+        const VERSION = 'v0.5.7';
+        const DEPLOY_DATE = '2026-05-21';
+        const CURRENT_SCHEMA_VERSION = 1;
+        const LOCAL_WRITE_SUPPRESSION_MS = 5000;
         const API_URL = 'api.php';
         const PENDING_TRACKER_API = '/api.php';
         const AUTH_TOKEN = 'xZwQp8mKL9cVf2nRoJ4tYsH6bGuA5dE';
 
-        let appData = { month: '2026-05', expenses: {}, income: [], payouts: [] };
+        let appData = { month: '2026-05', expenses: {}, income: [], payouts: [], _meta: { schemaVersion: CURRENT_SCHEMA_VERSION, revision: 0, updatedAt: null } };
         let editingRow = null;        // { type: 'expense'|'income', category, itemIdx }
         let editingDayIdx = null;
         let editingPayoutIdx = null;  // for delete
         let addingTo = null;          // { type, category }
         let lastModalOpenedAt = 0;
         let pollTimer = null;
+        let syncTimer = null;
+        let lastLocalWriteAt = 0;
         let showPendingOnly = false;  // expenses filter
         let expenseSearch = '';        // expenses search query (lowercased)
         let importedIds = new Set();
+        let backupHistory = [];
+        let selectedBackupFile = null;
+        let rolloverDraft = null;
 
         // ---- Init ----
         document.addEventListener('DOMContentLoaded', async () => {
@@ -1555,7 +1968,7 @@
 
         function setupListeners() {
             // Close modal on backdrop click (with iOS ghost-click guard)
-            ['rowEditModal', 'dayEditModal', 'addItemModal', 'payoutModal', 'payoutEditModal', 'consolidatedIncomeModal'].forEach(id => {
+            ['rowEditModal', 'dayEditModal', 'addItemModal', 'payoutModal', 'payoutEditModal', 'consolidatedIncomeModal', 'backupHistoryModal', 'monthRolloverModal'].forEach(id => {
                 document.getElementById(id).addEventListener('click', (e) => {
                     if (e.target.id === id && Date.now() - lastModalOpenedAt > 400) {
                         closeModal(id);
@@ -1595,7 +2008,15 @@
             document.getElementById('payoutEditCancel').addEventListener('click', () => closeModal('payoutEditModal'));
 
             document.getElementById('installBtn').addEventListener('click', promptInstall);
+            document.getElementById('backupBtn').addEventListener('click', exportBackup);
             document.getElementById('refreshBtn').addEventListener('click', hardRefresh);
+            document.getElementById('refreshActionsBtn').addEventListener('click', renderActionQueue);
+            document.getElementById('backupRefreshBtn').addEventListener('click', loadBackupHistory);
+            document.getElementById('backupRestoreBtn').addEventListener('click', restoreSelectedBackup);
+            document.getElementById('backupCloseBtn').addEventListener('click', () => closeModal('backupHistoryModal'));
+            document.getElementById('monthRolloverBtn').addEventListener('click', openMonthRollover);
+            document.getElementById('monthRolloverCancel').addEventListener('click', () => closeModal('monthRolloverModal'));
+            document.getElementById('monthRolloverCreate').addEventListener('click', createMonthCopy);
         }
 
         async function hardRefresh() {
@@ -1645,26 +2066,66 @@
         }
 
         // ---- Data load/save ----
+        function readCachedData() {
+            const cached = localStorage.getItem('financeData');
+            if (!cached) return null;
+            try {
+                const parsed = JSON.parse(cached);
+                return normalizeData(parsed);
+            } catch (e) {
+                return null;
+            }
+        }
+
+        function dataRevision(data) {
+            return Number(data && data._meta && data._meta.revision) || 0;
+        }
+
+        function dataUpdatedAtMs(data) {
+            const value = data && data._meta && data._meta.updatedAt;
+            const ms = value ? Date.parse(value) : 0;
+            return Number.isFinite(ms) ? ms : 0;
+        }
+
+        function chooseNewestData(remoteData, cachedData) {
+            if (!cachedData) return remoteData;
+            if (!remoteData) return cachedData;
+
+            const remoteRevision = dataRevision(remoteData);
+            const cachedRevision = dataRevision(cachedData);
+            if (cachedRevision > remoteRevision) return cachedData;
+            if (remoteRevision > cachedRevision) return remoteData;
+
+            const remoteUpdated = dataUpdatedAtMs(remoteData);
+            const cachedUpdated = dataUpdatedAtMs(cachedData);
+            return cachedUpdated > remoteUpdated ? cachedData : remoteData;
+        }
+
         async function loadData(showStatus = true) {
+            if (!showStatus && Date.now() - lastLocalWriteAt < LOCAL_WRITE_SUPPRESSION_MS) {
+                return;
+            }
             if (showStatus) updateSync('syncing');
             try {
                 const r = await fetch(API_URL);
                 if (!r.ok) throw new Error('load failed');
-                const newData = await r.json();
+                const newData = normalizeData(await r.json());
+                const cachedData = readCachedData();
+                const nextData = chooseNewestData(newData, cachedData);
                 // Check if data changed before re-rendering
-                const dataChanged = JSON.stringify(appData) !== JSON.stringify(newData);
-                appData = newData;
+                const dataChanged = JSON.stringify(appData) !== JSON.stringify(nextData);
+                appData = nextData;
                 normalizeData();
+                localStorage.setItem('financeData', JSON.stringify(appData));
                 if (dataChanged) {
                     renderAll();
                 }
                 if (showStatus) updateSync('synced');
             } catch (e) {
                 console.log('Load fail, trying cache:', e);
-                const cached = localStorage.getItem('financeData');
-                if (cached) {
-                    appData = JSON.parse(cached);
-                    normalizeData();
+                const cachedData = readCachedData();
+                if (cachedData) {
+                    appData = cachedData;
                     if (showStatus) updateSync('offline');
                 } else {
                     try {
@@ -1679,14 +2140,23 @@
             }
         }
 
-        function normalizeData() {
-            if (!appData.expenses) appData.expenses = {};
-            if (!appData.income) appData.income = [];
-            if (!appData.payouts) appData.payouts = [];
-            if (!appData.importedIds) appData.importedIds = [];
-            importedIds = new Set(appData.importedIds);
+        function normalizeData(data = appData) {
+            if (!data || typeof data !== 'object') data = {};
+            if (!data.month) data.month = '2026-05';
+            if (!data.expenses || typeof data.expenses !== 'object' || Array.isArray(data.expenses)) data.expenses = {};
+            if (!Array.isArray(data.income)) data.income = [];
+            if (!Array.isArray(data.payouts)) data.payouts = [];
+            if (!Array.isArray(data.importedIds)) data.importedIds = [];
+            if (!data._meta || typeof data._meta !== 'object' || Array.isArray(data._meta)) data._meta = {};
+            data._meta.schemaVersion = Number(data._meta.schemaVersion) || CURRENT_SCHEMA_VERSION;
+            data._meta.revision = Number(data._meta.revision) || 0;
+            if (!data._meta.updatedAt) data._meta.updatedAt = null;
 
-            Object.values(appData.expenses).forEach(items => {
+            Object.keys(data.expenses).forEach(category => {
+                if (!Array.isArray(data.expenses[category])) data.expenses[category] = [];
+            });
+
+            Object.values(data.expenses).forEach(items => {
                 items.forEach(item => {
                     if (!Array.isArray(item.days) || item.days.length !== 31) {
                         item.days = Array.from({ length: 31 }, (_, i) => (item.days && item.days[i]) || 0);
@@ -1696,13 +2166,18 @@
                 });
             });
 
-            appData.income.forEach(p => {
+            data.income.forEach(p => {
                 if (!Array.isArray(p.days) || p.days.length !== 31) {
                     p.days = Array.from({ length: 31 }, (_, i) => (p.days && p.days[i]) || 0);
                 }
                 p.days = p.days.map(v => Number(v) || 0);
                 recalcIncome(p);
             });
+
+            if (data === appData) {
+                importedIds = new Set(data.importedIds);
+            }
+            return data;
         }
 
         function recalcItem(item) {
@@ -1717,8 +2192,20 @@
             p.percentEarned = p.expected > 0 ? (p.earned / p.expected) * 100 : 0;
         }
 
+        function stampMeta({ bumpRevision = false } = {}) {
+            normalizeData();
+            const currentRevision = dataRevision(appData);
+            appData._meta.schemaVersion = CURRENT_SCHEMA_VERSION;
+            appData._meta.revision = bumpRevision ? currentRevision + 1 : currentRevision;
+            appData._meta.updatedAt = new Date().toISOString();
+            appData._meta.appVersion = VERSION;
+        }
+
         async function saveData(showToast = true) {
+            stampMeta({ bumpRevision: true });
+            lastLocalWriteAt = Date.now();
             localStorage.setItem('financeData', JSON.stringify(appData));
+            renderDataSafety();
             updateSync('syncing');
             try {
                 const r = await fetch(API_URL, {
@@ -1738,15 +2225,301 @@
             }
         }
 
+        function exportBackup() {
+            normalizeData();
+            const now = new Date();
+            const stamp = now.toISOString().slice(0, 19).replace(/[-:T]/g, '');
+            const blob = new Blob([JSON.stringify(appData, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `finance-backup-${stamp}.json`;
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+            URL.revokeObjectURL(url);
+            showToast('Backup exported', 'success');
+        }
+
+        function escapeHtml(value) {
+            return String(value ?? '').replace(/[&<>"']/g, c => ({
+                '&': '&amp;',
+                '<': '&lt;',
+                '>': '&gt;',
+                '"': '&quot;',
+                "'": '&#39;'
+            }[c]));
+        }
+
+        function backupEndpoint(action, params = {}) {
+            const url = new URL(API_URL, window.location.href);
+            url.searchParams.set('action', action);
+            Object.entries(params).forEach(([key, value]) => url.searchParams.set(key, value));
+            return url.pathname + url.search;
+        }
+
+        async function openBackupHistory() {
+            selectedBackupFile = null;
+            document.getElementById('backupHistoryStatus').textContent = 'Loading backups...';
+            document.getElementById('backupHistoryList').innerHTML = '';
+            openModal('backupHistoryModal');
+            await loadBackupHistory();
+        }
+
+        async function loadBackupHistory() {
+            const status = document.getElementById('backupHistoryStatus');
+            const list = document.getElementById('backupHistoryList');
+            status.textContent = 'Loading backups...';
+            try {
+                const r = await fetch(backupEndpoint('backups'));
+                if (!r.ok) throw new Error('backup list failed');
+                const payload = await r.json();
+                backupHistory = Array.isArray(payload.backups) ? payload.backups : [];
+                selectedBackupFile = null;
+                renderBackupHistory();
+            } catch (e) {
+                backupHistory = [];
+                list.innerHTML = '<div class="empty-state">No backup history is available from this server yet.</div>';
+                status.textContent = 'Export still works from the Backup button.';
+            }
+        }
+
+        function renderBackupHistory() {
+            const status = document.getElementById('backupHistoryStatus');
+            const list = document.getElementById('backupHistoryList');
+            if (backupHistory.length === 0) {
+                list.innerHTML = '<div class="empty-state">No server backups yet. The next save will create one before replacing data.</div>';
+                status.textContent = '0 backups found';
+                return;
+            }
+            status.textContent = `${backupHistory.length} backup${backupHistory.length === 1 ? '' : 's'} found`;
+            list.innerHTML = backupHistory.map(b => {
+                const created = b.createdAt ? new Date(b.createdAt).toLocaleString('en', {
+                    month: 'short',
+                    day: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit'
+                }) : 'Unknown time';
+                const revision = Number(b.revision) || 0;
+                return `
+                    <div class="backup-row ${b.file === selectedBackupFile ? 'selected' : ''}" data-file="${escapeHtml(b.file)}">
+                        <div>
+                            <div class="backup-title">${escapeHtml(created)}</div>
+                            <div class="backup-meta">${escapeHtml(b.file)} · ${fmt((Number(b.size) || 0) / 1024)} KB</div>
+                        </div>
+                        <div class="backup-revision">rev ${revision}</div>
+                    </div>
+                `;
+            }).join('');
+            list.querySelectorAll('.backup-row').forEach(row => {
+                row.addEventListener('click', () => {
+                    selectedBackupFile = row.dataset.file;
+                    renderBackupHistory();
+                });
+            });
+        }
+
+        async function restoreSelectedBackup() {
+            if (!selectedBackupFile) {
+                showToast('Select a backup first', 'info');
+                return;
+            }
+            if (!confirm('Restore this backup? Current data will be backed up first.')) return;
+            updateSync('syncing');
+            try {
+                const r = await fetch(backupEndpoint('restore'), {
+                    method: 'POST',
+                    headers: { 'X-Auth': AUTH_TOKEN, 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ file: selectedBackupFile })
+                });
+                if (!r.ok) throw new Error('restore failed');
+                lastLocalWriteAt = 0;
+                localStorage.removeItem('financeData');
+                await loadData(true);
+                renderAll();
+                closeModal('backupHistoryModal');
+                showToast('Backup restored', 'success');
+            } catch (e) {
+                updateSync('error');
+                showToast('Restore failed', 'error');
+            }
+        }
+
+        function nextMonthValue(monthValue = appData.month) {
+            const [year, month] = String(monthValue || '').split('-').map(Number);
+            const base = Number.isFinite(year) && Number.isFinite(month)
+                ? new Date(year, month - 1, 1)
+                : new Date();
+            base.setMonth(base.getMonth() + 1);
+            return `${base.getFullYear()}-${String(base.getMonth() + 1).padStart(2, '0')}`;
+        }
+
+        function monthLabel(monthValue) {
+            const [year, month] = String(monthValue || '').split('-').map(Number);
+            if (!Number.isFinite(year) || !Number.isFinite(month)) return monthValue || '';
+            return new Date(year, month - 1, 1).toLocaleString('en', { month: 'long', year: 'numeric' });
+        }
+
+        function parseLocalDate(value) {
+            if (!value) return null;
+            const iso = String(value).match(/^(\d{4})-(\d{2})-(\d{2})/);
+            if (iso) return new Date(Number(iso[1]), Number(iso[2]) - 1, Number(iso[3]));
+            const date = new Date(value);
+            return isNaN(date.getTime()) ? null : date;
+        }
+
+        function isDateInTrackerMonth(date) {
+            const [year, month] = String(appData.month || '').split('-').map(Number);
+            if (!Number.isFinite(year) || !Number.isFinite(month) || !date) return true;
+            return date.getFullYear() === year && date.getMonth() + 1 === month;
+        }
+
+        function isPayoutInTrackerMonth(p) {
+            const date = parseLocalDate(p?.dateEntry || p?.date);
+            return date ? isDateInTrackerMonth(date) : true;
+        }
+
+        function trackerMonthPayoutPairs() {
+            return (appData.payouts || [])
+                .map((p, i) => ({ p, i }))
+                .filter(({ p }) => isPayoutInTrackerMonth(p));
+        }
+
+        function trackerMonthPayouts() {
+            return trackerMonthPayoutPairs().map(({ p }) => p);
+        }
+
+        function zeroedDays() {
+            return Array(31).fill(0);
+        }
+
+        function buildRolloverDraft() {
+            normalizeData();
+            const nextMonth = nextMonthValue(appData.month);
+            const draft = {
+                month: nextMonth,
+                expenses: {},
+                income: [],
+                payouts: [],
+                importedIds: [...(appData.importedIds || [])],
+                _meta: {
+                    schemaVersion: CURRENT_SCHEMA_VERSION,
+                    revision: dataRevision(appData),
+                    updatedAt: null,
+                    appVersion: VERSION,
+                    rolledFrom: appData.month
+                }
+            };
+
+            Object.entries(appData.expenses).forEach(([category, items]) => {
+                draft.expenses[category] = (Array.isArray(items) ? items : [])
+                    .filter(item => item.recurring !== false)
+                    .map(item => {
+                        const nextItem = {
+                            ...item,
+                            days: zeroedDays(),
+                            paid: 0,
+                            remaining: Number(item.expected) || 0,
+                            percentPaid: 0
+                        };
+                        recalcItem(nextItem);
+                        return nextItem;
+                    });
+            });
+            if (!draft.expenses['TEAM PAYOUTS']) draft.expenses['TEAM PAYOUTS'] = [];
+
+            appData.income
+                .filter(p => (Number(p.remaining) || 0) > 0)
+                .forEach(p => {
+                    const remaining = Number(p.remaining) || 0;
+                    const income = {
+                        ...p,
+                        id: `${p.id || 'income'}-carryover-${nextMonth}`,
+                        projectName: `${p.projectName || 'Income'} (carryover)`,
+                        expected: remaining,
+                        days: zeroedDays(),
+                        earned: 0,
+                        paid: 0,
+                        remaining,
+                        percentEarned: 0,
+                        percentPaid: 0
+                    };
+                    recalcIncome(income);
+                    draft.income.push(income);
+                });
+
+            draft.payouts = trackerMonthPayouts()
+                .filter(p => p.status === 'owed')
+                .map(p => ({
+                    ...p,
+                    id: `${p.id || 'payout'}-carryover-${nextMonth}`,
+                    status: 'owed',
+                    datePaid: null
+                }));
+
+            return draft;
+        }
+
+        function openMonthRollover() {
+            rolloverDraft = buildRolloverDraft();
+            const expenseItems = Object.values(rolloverDraft.expenses).flat().length;
+            const totalExpenseItems = Object.values(appData.expenses).flatMap(v => Array.isArray(v) ? v : []).filter(i => !i.__synthetic).length;
+            const droppedItems = totalExpenseItems - expenseItems;
+            const openIncomeTotal = rolloverDraft.income.reduce((s, p) => s + (Number(p.expected) || 0), 0);
+            const payoutTotal = rolloverDraft.payouts.reduce((s, p) => s + (Number(p.amountOwed) || 0), 0);
+            document.getElementById('monthRolloverStatus').textContent =
+                `${monthLabel(appData.month)} to ${monthLabel(rolloverDraft.month)}`;
+            document.getElementById('monthRolloverPreview').innerHTML = `
+                <div class="rollover-row">
+                    <div>
+                        <div class="rollover-title">Recurring Expenses</div>
+                        <div class="rollover-meta">${droppedItems > 0 ? `${droppedItems} one-off item${droppedItems === 1 ? '' : 's'} will be dropped` : 'Amounts stay, daily payments reset to zero'}</div>
+                    </div>
+                    <div class="rollover-amount">${expenseItems}</div>
+                </div>
+                <div class="rollover-row">
+                    <div>
+                        <div class="rollover-title">Open Income Carryover</div>
+                        <div class="rollover-meta">${rolloverDraft.income.length} unpaid project${rolloverDraft.income.length === 1 ? '' : 's'}</div>
+                    </div>
+                    <div class="rollover-amount">${fmt(openIncomeTotal)}</div>
+                </div>
+                <div class="rollover-row">
+                    <div>
+                        <div class="rollover-title">Open Team Payouts</div>
+                        <div class="rollover-meta">${rolloverDraft.payouts.length} owed payout${rolloverDraft.payouts.length === 1 ? '' : 's'}</div>
+                    </div>
+                    <div class="rollover-amount">${fmt(payoutTotal)}</div>
+                </div>
+            `;
+            openModal('monthRolloverModal');
+        }
+
+        async function createMonthCopy() {
+            if (!rolloverDraft) rolloverDraft = buildRolloverDraft();
+            if (!confirm(`Create ${monthLabel(rolloverDraft.month)} from the current month? Current data will be backed up first.`)) return;
+            appData = rolloverDraft;
+            rolloverDraft = null;
+            normalizeData();
+            await saveData(true);
+            renderAll();
+            closeModal('monthRolloverModal');
+        }
+
         function updateSync(status) {
             const el = document.getElementById('syncIndicator');
             el.className = `sync-indicator ${status}`;
             el.textContent = { syncing: 'Syncing', synced: 'Synced', error: 'Error', offline: 'Offline' }[status] || status;
         }
 
-        function toast(msg) {
+        function showToast(msg, type = 'info') {
+            toast(msg, type);
+        }
+
+        function toast(msg, type = 'info') {
             const t = document.getElementById('toast');
             t.textContent = msg;
+            t.className = `toast ${type}`;
             t.classList.add('show');
             setTimeout(() => t.classList.remove('show'), 1500);
         }
@@ -1761,13 +2534,182 @@
             renderIncome();
             renderPayouts();
             renderDashboard();
+            renderDataSafety();
+        }
+
+        function renderDataSafety() {
+            const el = document.getElementById('dataSafetySummary');
+            if (!el) return;
+            normalizeData();
+            const updatedAt = appData._meta.updatedAt
+                ? new Date(appData._meta.updatedAt).toLocaleString('en', {
+                    month: 'short',
+                    day: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit'
+                })
+                : 'Not saved yet';
+            el.innerHTML = `
+                <div class="data-safety-grid">
+                    <div class="data-safety-item">
+                        <div class="data-safety-label">Revision</div>
+                        <div class="data-safety-value">${dataRevision(appData)}</div>
+                    </div>
+                    <div class="data-safety-item">
+                        <div class="data-safety-label">Last Save</div>
+                        <div class="data-safety-value">${updatedAt}</div>
+                    </div>
+                    <div class="data-safety-item">
+                        <div class="data-safety-label">App Version</div>
+                        <div class="data-safety-value">${VERSION}</div>
+                    </div>
+                </div>
+                <div class="safety-actions">
+                    <button class="mini-btn primary" type="button" onclick="exportBackup()">Export</button>
+                    <button class="mini-btn" type="button" onclick="openBackupHistory()">History</button>
+                    <button class="mini-btn" type="button" onclick="openMonthRollover()">Next Month</button>
+                </div>
+            `;
+        }
+
+        function currentMonthDay() {
+            const [year, month] = String(appData.month || '').split('-').map(Number);
+            const now = new Date();
+            if (now.getFullYear() === year && now.getMonth() + 1 === month) return now.getDate();
+            return new Date(year || now.getFullYear(), month || now.getMonth() + 1, 0).getDate();
+        }
+
+        function parsePaydays(payday) {
+            return String(payday || '')
+                .match(/\d+/g)
+                ?.map(Number)
+                .filter(day => day >= 1 && day <= 31) || [];
+        }
+
+        function clientNameFromProject(projectName) {
+            return String(projectName || 'Income receivable').split(' — ')[0].trim() || 'Income receivable';
+        }
+
+        function isBeforeTrackerMonth(date) {
+            const [year, month] = String(appData.month || '').split('-').map(Number);
+            if (!Number.isFinite(year) || !Number.isFinite(month)) return false;
+            return date < new Date(year, month - 1, 1);
+        }
+
+        function actionSeverityScore(type) {
+            return { critical: 0, warn: 1, good: 2 }[type] ?? 3;
+        }
+
+        function buildActionQueue() {
+            const actions = [];
+            const today = currentMonthDay();
+            const overdueNow = Date.now();
+            const receivablesByClient = {};
+
+            (appData.income || []).forEach(p => {
+                const remaining = Number(p.remaining) || 0;
+                if (remaining <= 0) return;
+                const invDate = extractIncomeInvoiceDate(p);
+                if (!invDate) return;
+                const ageDays = Math.floor((overdueNow - invDate.getTime()) / (24 * 60 * 60 * 1000));
+                if (!isBeforeTrackerMonth(invDate) && ageDays <= 30) return;
+
+                const client = clientNameFromProject(p.projectName);
+                if (!receivablesByClient[client]) {
+                    receivablesByClient[client] = { title: client, amount: 0, count: 0, oldestDays: 0 };
+                }
+                receivablesByClient[client].amount += remaining;
+                receivablesByClient[client].count += 1;
+                receivablesByClient[client].oldestDays = Math.max(receivablesByClient[client].oldestDays, ageDays);
+            });
+
+            Object.values(receivablesByClient).forEach(group => {
+                actions.push({
+                    severity: group.oldestDays > 60 ? 'critical' : 'warn',
+                    title: group.title,
+                    meta: `${group.count} older invoice${group.count === 1 ? '' : 's'} · oldest ${group.oldestDays}d`,
+                    amount: group.amount
+                });
+            });
+
+            Object.entries(appData.expenses || {}).forEach(([category, items]) => {
+                if (category === 'TEAM PAYOUTS') return;
+                (Array.isArray(items) ? items : []).forEach(item => {
+                    const remaining = Number(item.remaining) || 0;
+                    if (remaining <= 0) return;
+                    const dueDays = parsePaydays(item.payday).filter(day => day <= today);
+                    if (dueDays.length === 0) return;
+                    const latestDue = Math.max(...dueDays);
+                    const daysLate = today - latestDue;
+                    actions.push({
+                        severity: daysLate >= 3 ? 'critical' : 'warn',
+                        title: item.description || category,
+                        meta: `${category} · due day ${latestDue}`,
+                        amount: remaining
+                    });
+                });
+            });
+
+            trackerMonthPayouts().forEach(p => {
+                if (p.status !== 'owed') return;
+                actions.push({
+                    severity: 'warn',
+                    title: p.projectName || 'Team payout',
+                    meta: `${p.person || 'Team'}${p.role ? ` · ${p.role}` : ''}`,
+                    amount: Number(p.amountOwed) || 0
+                });
+            });
+
+            actions.sort((a, b) =>
+                actionSeverityScore(a.severity) - actionSeverityScore(b.severity) ||
+                (Number(b.amount) || 0) - (Number(a.amount) || 0)
+            );
+            return actions.slice(0, 5);
+        }
+
+        function renderActionQueue() {
+            const el = document.getElementById('actionQueue');
+            if (!el) return;
+            const actions = buildActionQueue();
+            if (actions.length === 0) {
+                el.innerHTML = '<div class="empty-state">Nothing urgent right now.</div>';
+                return;
+            }
+            el.innerHTML = `
+                <div class="action-list">
+                    ${actions.map(a => `
+                        <div class="action-item ${a.severity}">
+                            <div>
+                                <div class="action-title">${escapeHtml(a.title)}</div>
+                                <div class="action-meta">${escapeHtml(a.meta)}</div>
+                            </div>
+                            <div class="action-amount">${fmt(a.amount)}</div>
+                        </div>
+                    `).join('')}
+                </div>
+            `;
+        }
+
+        function renderMonthTools() {
+            const el = document.getElementById('monthToolsSummary');
+            if (!el) return;
+            const nextMonth = nextMonthValue(appData.month);
+            const openIncome = (appData.income || []).filter(p => (Number(p.remaining) || 0) > 0);
+            const openPayouts = trackerMonthPayouts().filter(p => p.status === 'owed');
+            el.innerHTML = `
+                <div class="month-tool-value">${escapeHtml(monthLabel(nextMonth))}</div>
+                <div class="month-tool-sub">
+                    ${openIncome.length} open receivable${openIncome.length === 1 ? '' : 's'} and
+                    ${openPayouts.length} owed payout${openPayouts.length === 1 ? '' : 's'} would carry forward.
+                </div>
+            `;
         }
 
         // The "TEAM PAYOUTS" expense category is a virtual passthrough — its single
         // row is computed live from appData.payouts (not from stored expense items)
         // so it always stays in sync with what's on the Team Payouts tab.
         function synthTeamPayouts() {
-            const payouts = appData.payouts || [];
+            const payouts = trackerMonthPayouts();
             const expected = payouts.reduce((s, p) => s + (Number(p.amountOwed) || 0), 0);
             const paid = payouts.reduce((s, p) => s + (p.status === 'paid' ? (Number(p.amountOwed) || 0) : 0), 0);
             const remaining = Math.max(0, expected - paid);
@@ -1781,33 +2723,21 @@
             };
         }
 
-        // ── SNAPSHOT METRICS (top-of-dashboard hero strip) ────────────
-        function calcCashPosition() {
-            // This month's net: income earned − pure expenses paid − payouts paid.
-            // Excludes the TEAM PAYOUTS expense category to avoid double-counting payouts.
-            const incEarned = (appData.income || []).reduce((s, p) => s + (Number(p.earned) || 0), 0);
-            const expPaid = Object.entries(appData.expenses || {})
+        function calcPaymentBreakdown() {
+            const expenseItems = Object.entries(appData.expenses || {})
                 .filter(([cat]) => cat !== 'TEAM PAYOUTS')
-                .flatMap(([, items]) => items)
-                .reduce((s, i) => s + (Number(i.paid) || 0), 0);
-            const payPaid = (appData.payouts || [])
-                .filter(p => p.status === 'paid')
-                .reduce((s, p) => s + (Number(p.amountOwed) || 0), 0);
-            return incEarned - expPaid - payPaid;
-        }
-
-        function calcEomForecast() {
-            // Optimistic: every remaining income lands AND every remaining expense + owed payout gets paid.
-            const cash = calcCashPosition();
-            const incRemaining = (appData.income || []).reduce((s, p) => s + (Number(p.remaining) || 0), 0);
-            const expRemaining = Object.entries(appData.expenses || {})
-                .filter(([cat]) => cat !== 'TEAM PAYOUTS')
-                .flatMap(([, items]) => items)
-                .reduce((s, i) => s + (Number(i.remaining) || 0), 0);
-            const payOwed = (appData.payouts || [])
-                .filter(p => p.status !== 'paid')
-                .reduce((s, p) => s + (Number(p.amountOwed) || 0), 0);
-            return cash + incRemaining - expRemaining - payOwed;
+                .flatMap(([, items]) => Array.isArray(items) ? items : []);
+            const expensesPaid = expenseItems.reduce((s, i) => s + (Number(i.paid) || 0), 0);
+            const expensesLeft = expenseItems.reduce((s, i) => s + (Number(i.remaining) || 0), 0);
+            const payTot = calcPayoutTotals();
+            return {
+                expensesPaid,
+                expensesLeft,
+                teamPaid: payTot.paid,
+                teamOwed: payTot.owed,
+                paidOut: expensesPaid + payTot.paid,
+                leftToPay: expensesLeft + payTot.owed
+            };
         }
 
         function extractIncomeInvoiceDate(p) {
@@ -1854,32 +2784,34 @@
         function renderSnapshotStrip() {
             const strip = document.getElementById('snapshotStrip');
             if (!strip) return;
-            const cash = calcCashPosition();
-            const eom = calcEomForecast();
+            const incTot = calcIncomeTotals();
+            const payment = calcPaymentBreakdown();
             const overdue = calcOverdueReceivables(30);
-
-            const sign = n => n < 0 ? '−' : '';
-            const cashClass = cash >= 0 ? 'good' : 'bad';
-            const eomClass  = eom  >= 0 ? 'good' : 'bad';
-            const overdueClass = overdue.amount === 0 ? 'good' : (overdue.amount >= 5000 ? 'bad' : 'warn');
+            const openReceivables = (appData.income || []).filter(p => (Number(p.remaining) || 0) > 0).length;
+            const collectClass = incTot.percent >= 75 ? 'good' : 'info';
+            const receivableClass = overdue.amount > 0 ? (overdue.amount >= 5000 ? 'bad' : 'warn') : 'info';
+            const payClass = payment.leftToPay > 0 ? 'warn' : 'good';
 
             strip.innerHTML = `
-                <div class="snap-tile ${cashClass}">
-                    <div class="snap-tile-label">Cash Position</div>
-                    <div class="snap-tile-value">${sign(cash)}${fmt(Math.abs(cash))}</div>
-                    <div class="snap-tile-sub">this month · earned − paid</div>
+                <div class="snap-tile ${collectClass}">
+                    <div class="snap-tile-label">Collected</div>
+                    <div class="snap-tile-value">${fmt(incTot.earned)}</div>
+                    <div class="snap-tile-sub">${incTot.percent.toFixed(0)}% of ${fmt(incTot.expected)} expected</div>
                 </div>
-                <div class="snap-tile ${eomClass}">
-                    <div class="snap-tile-label">Forecast EOM</div>
-                    <div class="snap-tile-value">${sign(eom)}${fmt(Math.abs(eom))}</div>
-                    <div class="snap-tile-sub">if all pending lands</div>
+                <div class="snap-tile ${receivableClass}">
+                    <div class="snap-tile-label">Still to Collect</div>
+                    <div class="snap-tile-value">${fmt(incTot.remaining)}</div>
+                    <div class="snap-tile-sub">${openReceivables} open · ${fmt(overdue.amount)} overdue</div>
                 </div>
-                <div class="snap-tile ${overdueClass}">
-                    <div class="snap-tile-label">Overdue Receivables</div>
-                    <div class="snap-tile-value">${fmt(overdue.amount)}</div>
-                    <div class="snap-tile-sub">${overdue.count === 0
-                        ? 'nothing over 30 days'
-                        : `${overdue.count} invoice${overdue.count !== 1 ? 's' : ''} over 30 days${overdue.oldestDays > 30 ? ` · oldest ${overdue.oldestDays}d` : ''}`}</div>
+                <div class="snap-tile info">
+                    <div class="snap-tile-label">Paid Out</div>
+                    <div class="snap-tile-value">${fmt(payment.paidOut)}</div>
+                    <div class="snap-tile-sub">${fmt(payment.expensesPaid)} expenses · ${fmt(payment.teamPaid)} team</div>
+                </div>
+                <div class="snap-tile ${payClass}">
+                    <div class="snap-tile-label">Left to Pay</div>
+                    <div class="snap-tile-value">${fmt(payment.leftToPay)}</div>
+                    <div class="snap-tile-sub">${fmt(payment.expensesLeft)} expenses · ${fmt(payment.teamOwed)} team</div>
                 </div>
             `;
         }
@@ -1892,7 +2824,7 @@
                 if (cat === 'TEAM PAYOUTS') return;
                 items.forEach(i => { expected += i.expected || 0; paid += i.paid || 0; });
             });
-            (appData.payouts || []).forEach(p => {
+            trackerMonthPayouts().forEach(p => {
                 const amt = Number(p.amountOwed) || 0;
                 expected += amt;
                 if (p.status === 'paid') paid += amt;
@@ -1912,9 +2844,10 @@
 
         function calcPayoutTotals() {
             let owed = 0, paid = 0;
-            appData.payouts.forEach(p => {
-                if (p.status === 'paid') paid += p.amountOwed;
-                else owed += p.amountOwed;
+            trackerMonthPayouts().forEach(p => {
+                const amount = Number(p.amountOwed) || 0;
+                if (p.status === 'paid') paid += amount;
+                else owed += amount;
             });
             return { owed, paid, total: owed + paid };
         }
@@ -2041,7 +2974,11 @@
                     const row = document.createElement('div');
                     row.className = 'row';
                     row.innerHTML = `
-                        <div class="row-description">${item.description}</div>
+                        <div class="row-description">
+                            <span class="row-name">${escapeHtml(item.description)}</span>
+                            ${item.recurring === true ? '<span class="row-badge" title="Recurring each month">↻</span>' : ''}
+                            ${item.note ? `<span class="row-badge" title="${escapeHtml(item.note)}">📝</span>` : ''}
+                        </div>
                         <div class="row-cell expected">${fmt(item.expected)}</div>
                         <div class="row-cell paid">${fmt(item.paid)}</div>
                         <div class="row-cell remaining">${fmt(item.remaining)}</div>
@@ -2187,15 +3124,16 @@
             `;
 
             const list = document.getElementById('payoutsList');
+            const payoutPairs = trackerMonthPayoutPairs();
             list.innerHTML = '';
-            if (appData.payouts.length === 0) {
-                list.innerHTML = '<div class="empty-state">No team payouts yet. Add one below.</div>';
+            if (payoutPairs.length === 0) {
+                list.innerHTML = `<div class="empty-state">No team payouts for ${escapeHtml(monthLabel(appData.month))}. Add one below.</div>`;
                 return;
             }
 
             // Group payouts by person
             const byPerson = {};
-            appData.payouts.forEach((p, i) => {
+            payoutPairs.forEach(({ p, i }) => {
                 if (!byPerson[p.person]) byPerson[p.person] = [];
                 byPerson[p.person].push({ p, i });
             });
@@ -2273,111 +3211,93 @@
 
         function renderDashboard() {
             renderSnapshotStrip();
-            const expTot = calcExpenseTotals();
-            const incTot = calcIncomeTotals();
             const payTot = calcPayoutTotals();
-            // expTot.paid already rolls in payouts.paid, so don't subtract payTot.paid again.
-            const net = incTot.earned - expTot.paid;
+            document.getElementById('dashboardSummary').innerHTML = '';
 
-            // Determine status colors
-            const incomeStatus = incTot.percent >= 75 ? '#76d776' : (incTot.percent >= 50 ? '#ffc107' : '#f44336');
-            const expenseStatus = expTot.percent <= 75 ? '#76d776' : (expTot.percent <= 90 ? '#ffc107' : '#f44336');
-
-            document.getElementById('dashboardSummary').innerHTML = `
-                <div class="summary-bar">
-                    <div class="summary-stat">
-                        <div class="summary-stat-label">Income Earned</div>
-                        <div class="summary-stat-value" style="color: ${incomeStatus}">${fmt(incTot.earned)}</div>
-                        <div class="summary-stat-percent">${incTot.percent.toFixed(0)}% of ${fmt(incTot.expected)}</div>
-                        <div style="height: 6px; background: rgba(255,255,255,0.06); border-radius: 3px; margin-top: 8px; overflow: hidden;">
-                            <div style="height: 100%; background: ${incomeStatus}; width: ${Math.min(100, incTot.percent)}%; border-radius: 3px;"></div>
-                        </div>
+            const progressRow = (name, value, pct, color = '') => `
+                <div class="progress-item">
+                    <div class="progress-label">
+                        <span class="progress-label-name">${escapeHtml(name)}</span>
+                        <span class="progress-label-value" ${color ? `style="color: ${color}"` : ''}>${value}</span>
                     </div>
-                    <div class="summary-stat">
-                        <div class="summary-stat-label">Expenses Paid</div>
-                        <div class="summary-stat-value" style="color: ${expenseStatus}">${fmt(expTot.paid)}</div>
-                        <div class="summary-stat-percent">${expTot.percent.toFixed(0)}% of ${fmt(expTot.expected)}</div>
-                        <div style="height: 6px; background: rgba(255,255,255,0.06); border-radius: 3px; margin-top: 8px; overflow: hidden;">
-                            <div style="height: 100%; background: ${expenseStatus}; width: ${Math.min(100, expTot.percent)}%; border-radius: 3px;"></div>
-                        </div>
-                    </div>
-                    <div class="summary-stat">
-                        <div class="summary-stat-label">Net Balance</div>
-                        <div class="summary-stat-value" style="color: ${net >= 0 ? '#76d776' : '#f44336'}">${fmt(net)}</div>
-                        <div class="summary-stat-percent">${fmt(payTot.owed)} owed to team</div>
-                    </div>
+                    <div class="progress-bar"><div class="progress-fill" style="width: ${Math.max(0, Math.min(100, pct))}%"></div></div>
                 </div>
             `;
 
-            // Per-category
+            const addOtherRollup = (rows, limit, label) => {
+                const visible = rows.slice(0, limit);
+                const rest = rows.slice(limit);
+                if (rest.length === 0) return visible;
+                const other = rest.reduce((acc, row) => {
+                    acc.paid += Number(row.paid) || 0;
+                    acc.expected += Number(row.expected) || 0;
+                    acc.earned += Number(row.earned) || 0;
+                    acc.remaining += Number(row.remaining) || 0;
+                    return acc;
+                }, { name: label, paid: 0, expected: 0, earned: 0, remaining: 0 });
+                return [...visible, other];
+            };
+
             const exp = document.getElementById('expenseSummary');
-            exp.innerHTML = '';
-            Object.entries(appData.expenses).forEach(([cat, items]) => {
-                // TEAM PAYOUTS: synthesize from real payouts data so the bar matches reality.
+            const expenseRows = Object.entries(appData.expenses).map(([cat, items]) => {
                 const effItems = (cat === 'TEAM PAYOUTS') ? [synthTeamPayouts()] : items;
                 const paid = effItems.reduce((s, i) => s + i.paid, 0);
                 const expected = effItems.reduce((s, i) => s + i.expected, 0);
-                const pct = expected > 0 ? Math.min(100, (paid / expected) * 100) : 0;
-                exp.innerHTML += `
-                    <div class="progress-item">
-                        <div class="progress-label">
-                            <span class="progress-label-name">${cat}</span>
-                            <span class="progress-label-value">${fmt(paid)} / ${fmt(expected)} · ${pct.toFixed(0)}%</span>
-                        </div>
-                        <div class="progress-bar"><div class="progress-fill" style="width: ${pct}%"></div></div>
-                    </div>
-                `;
-            });
+                return { name: cat, paid, expected, remaining: Math.max(0, expected - paid) };
+            }).sort((a, b) => b.paid - a.paid);
+
+            exp.innerHTML = addOtherRollup(expenseRows, 5, 'Other spending').map(row => {
+                const pct = row.expected > 0 ? Math.min(100, (row.paid / row.expected) * 100) : 0;
+                return progressRow(row.name, `${fmt(row.paid)} / ${fmt(row.expected)}`, pct);
+            }).join('') + '<div class="dashboard-note">Largest spending groups first.</div>';
 
             const inc = document.getElementById('incomeSummary');
-            inc.innerHTML = '';
             if (appData.income.length === 0) {
                 inc.innerHTML = '<div class="empty-state">No projects yet</div>';
             } else {
-                // Group income by client name
                 const byClient = {};
                 appData.income.forEach(p => {
                     const clientName = p.projectName.split(' — ')[0];
                     if (!byClient[clientName]) {
-                        byClient[clientName] = { earned: 0, expected: 0 };
+                        byClient[clientName] = { name: clientName, earned: 0, expected: 0, remaining: 0 };
                     }
-                    byClient[clientName].earned += p.earned;
-                    byClient[clientName].expected += p.expected;
+                    byClient[clientName].earned += Number(p.earned) || 0;
+                    byClient[clientName].expected += Number(p.expected) || 0;
+                    byClient[clientName].remaining += Number(p.remaining) || 0;
                 });
 
-                // Display consolidated by client
-                Object.entries(byClient).forEach(([clientName, data]) => {
-                    const pct = data.expected > 0 ? Math.min(100, (data.earned / data.expected) * 100) : 0;
-                    inc.innerHTML += `
-                        <div class="progress-item">
-                            <div class="progress-label">
-                                <span class="progress-label-name">${clientName}</span>
-                                <span class="progress-label-value">${fmt(data.earned)} / ${fmt(data.expected)} · ${pct.toFixed(0)}%</span>
-                            </div>
-                            <div class="progress-bar"><div class="progress-fill" style="width: ${pct}%"></div></div>
-                        </div>
-                    `;
-                });
+                const incomeRows = Object.values(byClient)
+                    .filter(row => row.remaining > 0)
+                    .sort((a, b) => b.remaining - a.remaining || b.expected - a.expected);
+                if (incomeRows.length === 0) {
+                    inc.innerHTML = '<div class="empty-state">All listed income is collected.</div>';
+                } else {
+                    inc.innerHTML = addOtherRollup(incomeRows, 5, 'Other clients').map(row => {
+                        const pct = row.expected > 0 ? Math.min(100, (row.earned / row.expected) * 100) : 0;
+                        return progressRow(row.name, `${fmt(row.remaining)} pending`, pct, 'var(--finance-warn)');
+                    }).join('') + '<div class="dashboard-note">Sorted by money still to collect.</div>';
+                }
             }
 
             const payEl = document.getElementById('payoutsSummary');
-            const openCount = appData.payouts.filter(p => p.status === 'owed').length;
+            const openCount = trackerMonthPayouts().filter(p => p.status === 'owed').length;
             payEl.innerHTML = `
                 <div class="progress-item">
                     <div class="progress-label">
-                        <span class="progress-label-name">Owed</span>
-                        <span class="progress-label-value" style="color: #ffa726">${fmt(payTot.owed)} (${openCount} open)</span>
+                        <span class="progress-label-name">Still Owed</span>
+                        <span class="progress-label-value" style="color: var(--finance-warn)">${fmt(payTot.owed)} (${openCount} open)</span>
                     </div>
+                    <div class="progress-bar"><div class="progress-fill" style="width: ${payTot.total > 0 ? Math.min(100, (payTot.owed / payTot.total) * 100) : 0}%"></div></div>
                 </div>
                 <div class="progress-item">
                     <div class="progress-label">
-                        <span class="progress-label-name">Paid</span>
-                        <span class="progress-label-value" style="color: #76d776">${fmt(payTot.paid)}</span>
+                        <span class="progress-label-name">Already Paid</span>
+                        <span class="progress-label-value" style="color: var(--finance-good)">${fmt(payTot.paid)}</span>
                     </div>
+                    <div class="progress-bar"><div class="progress-fill" style="width: ${payTot.total > 0 ? Math.min(100, (payTot.paid / payTot.total) * 100) : 0}%"></div></div>
                 </div>
             `;
 
-            // Top 3 Expense Categories
             const catTotals = [];
             Object.entries(appData.expenses).forEach(([cat, items]) => {
                 const effItems = (cat === 'TEAM PAYOUTS') ? [synthTeamPayouts()] : items;
@@ -2385,56 +3305,51 @@
                 catTotals.push({ cat, paid });
             });
             catTotals.sort((a, b) => b.paid - a.paid);
-            const topCats = catTotals.slice(0, 3);
             const topCatsEl = document.getElementById('topCategoriesSummary');
-            topCatsEl.innerHTML = topCats.map(c => `
+            topCatsEl.innerHTML = catTotals.slice(0, 3).map(c => `
                 <div class="progress-item">
                     <div class="progress-label">
-                        <span class="progress-label-name">${c.cat}</span>
+                        <span class="progress-label-name">${escapeHtml(c.cat)}</span>
                         <span class="progress-label-value">${fmt(c.paid)}</span>
                     </div>
                 </div>
             `).join('');
 
-            // Pending vs Paid Summary — show expense-only and team-only separately here
-            // so the breakdown rows don't double-count what's already in the rollup above.
-            // Exclude the TEAM PAYOUTS category items (stale placeholders); team payouts
-            // are shown on their own rows below from appData.payouts.
             const realExpenseItems = Object.entries(appData.expenses)
                 .filter(([cat]) => cat !== 'TEAM PAYOUTS')
                 .flatMap(([, items]) => items);
             const expensePending = realExpenseItems.reduce((s, i) => s + (i.remaining || 0), 0);
             const expensePaid = realExpenseItems.reduce((s, i) => s + (i.paid || 0), 0);
-            const payoutOwed = payTot.owed;
-            const payoutPaid = payTot.paid;
             const pendingPaidEl = document.getElementById('pendingPaidSummary');
             pendingPaidEl.innerHTML = `
                 <div class="progress-item">
                     <div class="progress-label">
                         <span class="progress-label-name">Expenses Pending</span>
-                        <span class="progress-label-value" style="color: #ffc107">${fmt(expensePending)}</span>
+                        <span class="progress-label-value" style="color: var(--finance-accent)">${fmt(expensePending)}</span>
                     </div>
                 </div>
                 <div class="progress-item">
                     <div class="progress-label">
                         <span class="progress-label-name">Expenses Paid</span>
-                        <span class="progress-label-value" style="color: #76d776">${fmt(expensePaid)}</span>
+                        <span class="progress-label-value" style="color: var(--finance-good)">${fmt(expensePaid)}</span>
                     </div>
                 </div>
                 <div class="progress-item">
                     <div class="progress-label">
                         <span class="progress-label-name">Team Owed</span>
-                        <span class="progress-label-value" style="color: #ffa726">${fmt(payoutOwed)}</span>
+                        <span class="progress-label-value" style="color: var(--finance-warn)">${fmt(payTot.owed)}</span>
                     </div>
                 </div>
                 <div class="progress-item">
                     <div class="progress-label">
                         <span class="progress-label-name">Team Paid</span>
-                        <span class="progress-label-value" style="color: #76d776">${fmt(payoutPaid)}</span>
+                        <span class="progress-label-value" style="color: var(--finance-good)">${fmt(payTot.paid)}</span>
                     </div>
                 </div>
             `;
 
+            renderActionQueue();
+            renderMonthTools();
             renderTrendChart();
         }
 
@@ -2457,36 +3372,65 @@
 
             if (trendChart) trendChart.destroy();
             trendChart = new Chart(ctx, {
-                type: 'line',
+                type: 'bar',
                 data: {
                     labels: Array.from({ length: 31 }, (_, i) => i + 1),
                     datasets: [
                         {
-                            label: 'Cumulative Spend',
-                            data: cum,
-                            borderColor: '#76d776',
-                            backgroundColor: 'rgba(118, 215, 118, 0.1)',
-                            tension: 0.3,
-                            fill: true,
-                            pointRadius: 2
-                        },
-                        {
                             label: 'Daily Spend',
                             data: daily,
-                            borderColor: '#ffa726',
-                            backgroundColor: 'rgba(255, 167, 38, 0.05)',
-                            tension: 0.3,
-                            pointRadius: 2
+                            type: 'bar',
+                            yAxisID: 'yDaily',
+                            backgroundColor: 'rgba(157, 181, 211, 0.35)',
+                            borderColor: 'rgba(157, 181, 211, 0.7)',
+                            borderWidth: 1,
+                            borderRadius: 3,
+                            order: 2
+                        },
+                        {
+                            label: 'Cumulative Spend',
+                            data: cum,
+                            type: 'line',
+                            yAxisID: 'yCum',
+                            borderColor: '#c8a86a',
+                            backgroundColor: 'rgba(200, 168, 106, 0.08)',
+                            tension: 0.35,
+                            fill: true,
+                            pointRadius: 0,
+                            pointHoverRadius: 4,
+                            borderWidth: 2,
+                            order: 1
                         }
                     ]
                 },
                 options: {
                     responsive: true,
                     maintainAspectRatio: false,
-                    plugins: { legend: { labels: { color: '#888' } } },
+                    interaction: { mode: 'index', intersect: false },
+                    plugins: {
+                        legend: { labels: { color: '#888', boxWidth: 12 } },
+                        tooltip: {
+                            callbacks: {
+                                label: ctx => ` ${ctx.dataset.label}: ${Number(ctx.raw).toLocaleString('en', { maximumFractionDigits: 0 })}`
+                            }
+                        }
+                    },
                     scales: {
-                        y: { ticks: { color: '#888' }, grid: { color: 'rgba(255,255,255,0.04)' }, beginAtZero: true },
-                        x: { ticks: { color: '#888' }, grid: { color: 'rgba(255,255,255,0.04)' } }
+                        yCum: {
+                            position: 'left',
+                            beginAtZero: true,
+                            ticks: { color: '#c8a86a', font: { size: 11 } },
+                            grid: { color: 'rgba(234,234,234,0.055)' },
+                            title: { display: true, text: 'Cumulative', color: '#c8a86a', font: { size: 10 } }
+                        },
+                        yDaily: {
+                            position: 'right',
+                            beginAtZero: true,
+                            grid: { drawOnChartArea: false },
+                            ticks: { color: '#9db5d3', font: { size: 11 } },
+                            title: { display: true, text: 'Daily', color: '#9db5d3', font: { size: 10 } }
+                        },
+                        x: { ticks: { color: '#888', font: { size: 11 } }, grid: { color: 'rgba(234,234,234,0.04)' } }
                     }
                 }
             });
@@ -2512,6 +3456,14 @@
             document.getElementById('editDescription').value = name;
             document.getElementById('editExpected').value = item.expected || 0;
             document.getElementById('editPayday').value = item.payday == null ? '' : item.payday;
+            document.getElementById('editNote').value = item.note || '';
+            const recurringWrapper = document.getElementById('editRecurringWrapper');
+            if (ctx.type === 'expense') {
+                recurringWrapper.style.display = 'block';
+                document.getElementById('editRecurring').checked = item.recurring !== false;
+            } else {
+                recurringWrapper.style.display = 'none';
+            }
 
             renderRowEditStats();
             renderDayGrid();
@@ -2607,16 +3559,20 @@
             const desc = document.getElementById('editDescription').value.trim();
             const exp = parseFloat(document.getElementById('editExpected').value) || 0;
             const payday = document.getElementById('editPayday').value.trim() || null;
+            const note = document.getElementById('editNote').value.trim() || null;
             if (!desc) { toast('Description required'); return; }
             if (editingRow.type === 'expense') {
                 item.description = desc;
                 item.expected = exp;
                 item.payday = payday;
+                item.note = note;
+                item.recurring = document.getElementById('editRecurring').checked;
                 recalcItem(item);
             } else {
                 item.projectName = desc;
                 item.expected = exp;
                 item.payday = payday;
+                item.note = note;
                 recalcIncome(item);
             }
             saveData();
@@ -2648,6 +3604,8 @@
                 document.getElementById('expenseFields').style.display = 'block';
                 document.getElementById('incomeFields').style.display = 'none';
                 document.getElementById('newItemDescription').value = '';
+                document.getElementById('newItemRecurring').checked = true;
+                document.getElementById('newItemNote').value = '';
                 document.getElementById('newItemDescription').focus();
             } else {
                 document.getElementById('addItemTitle').textContent = 'Add Income Project';
@@ -2684,6 +3642,9 @@
                 const desc = document.getElementById('newItemDescription').value.trim();
                 if (!desc) { toast('Description required'); return; }
                 item.description = desc;
+                item.recurring = document.getElementById('newItemRecurring').checked;
+                const note = document.getElementById('newItemNote').value.trim();
+                if (note) item.note = note;
                 appData.expenses[addingTo.category].push(item);
             } else {
                 const client = document.getElementById('newItemClient').value.trim();
@@ -2748,17 +3709,17 @@
             indices.forEach(idx => {
                 const p = appData.income[idx];
                 const item = document.createElement('div');
-                item.style.cssText = 'background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); border-radius: 8px; padding: 12px; margin-bottom: 8px;';
+                item.style.cssText = 'background: rgba(234,234,234,0.035); border: 1px solid var(--finance-line); border-radius: 8px; padding: 12px; margin-bottom: 8px;';
                 item.innerHTML = `
                     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
-                        <div style="font-size: 13px; font-weight: 500; color: #fff; flex: 1;">${p.projectName}</div>
+                        <div style="font-size: 13px; font-weight: 500; color: var(--finance-text); flex: 1;">${p.projectName}</div>
                     </div>
                     <div style="display: flex; gap: 8px; margin-bottom: 8px;">
-                        <input type="number" value="${p.earned}" placeholder="Amount" step="0.01" style="flex: 1; padding: 6px 8px; background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.12); color: #fff; border-radius: 4px; font-family: inherit;" class="sub-earned" data-idx="${idx}">
-                        <button style="padding: 6px 12px; background: rgba(76, 175, 80, 0.15); color: #76d776; border: 1px solid rgba(76, 175, 80, 0.3); border-radius: 4px; cursor: pointer; font-family: inherit; font-size: 12px;" class="mark-paid" data-idx="${idx}">Mark Paid</button>
+                        <input type="number" value="${p.earned}" placeholder="Amount" step="0.01" style="flex: 1; padding: 6px 8px; background: rgba(234,234,234,0.055); border: 1px solid var(--finance-line); color: var(--finance-text); border-radius: 4px; font-family: inherit;" class="sub-earned" data-idx="${idx}">
+                        <button style="padding: 6px 12px; background: var(--finance-accent-soft); color: var(--finance-accent); border: 1px solid rgba(200,168,106,0.34); border-radius: 4px; cursor: pointer; font-family: inherit; font-size: 12px;" class="mark-paid" data-idx="${idx}">Mark Paid</button>
                     </div>
                     <div style="display: flex; gap: 8px;">
-                        <div style="flex: 1; font-size: 11px; color: #888;">Expected: ${fmt(p.expected)} | Earned: <span class="earned-display">${fmt(p.earned)}</span></div>
+                        <div style="flex: 1; font-size: 11px; color: var(--finance-muted);">Expected: ${fmt(p.expected)} | Earned: <span class="earned-display">${fmt(p.earned)}</span></div>
                     </div>
                 `;
 
@@ -2836,6 +3797,9 @@
 
         // ---- Pending Tracker Poll ----
         async function pollPendingTracker() {
+            if (Date.now() - lastLocalWriteAt < LOCAL_WRITE_SUPPRESSION_MS) {
+                return;
+            }
             try {
                 const r = await fetch(PENDING_TRACKER_API);
                 if (!r.ok) return;
