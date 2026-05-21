@@ -1,7 +1,10 @@
 <?php
 // Finance Tracker — JSON storage API
-// GET  /api.php          → returns the current data (JSON)
-// POST /api.php (JSON)   → replaces stored data; requires X-Auth header
+// GET  /api.php                    → current data
+// POST /api.php (JSON)             → save data; requires X-Auth
+// POST /api.php?action=subscribe   → save push subscription
+// POST /api.php?action=unsubscribe → remove push subscription
+// GET  /api.php?action=push        → send push to all subscriptions (admin only)
 
 declare(strict_types=1);
 
@@ -20,10 +23,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
 // Shared write token — change here AND in the HTML
 $TOKEN = 'xZwQp8mKL9cVf2nRoJ4tYsH6bGuA5dE';
 
-$DATA_FILE = __DIR__ . '/finance-data.json';
-$SEED_FILE = __DIR__ . '/data-seed.json';
-$BACKUP_DIR = __DIR__ . '/.backups';
+$DATA_FILE   = __DIR__ . '/finance-data.json';
+$SEED_FILE   = __DIR__ . '/data-seed.json';
+$BACKUP_DIR  = __DIR__ . '/.backups';
+$SUBS_FILE   = __DIR__ . '/.push-subscriptions.json';
 $MAX_BACKUPS = 50;
+
+// VAPID credentials — generated once, never change
+define('VAPID_PUBLIC',  'BBuMAdxjsZTzSuxJSSUCO0L72WzjbnMtOrvWMSErxfvXqb5wu9L_rfkBsY1-Hg3nmZXrLEoBKDFZ0NxH04LvS3M');
+define('VAPID_PRIVATE', 'AZoNMlBFW-fmHminqVqxcXtLrTutmSnJzJugbCwI_4k');
+define('VAPID_SUBJECT', 'mailto:pampozya@gmail.com');
 
 $method = $_SERVER['REQUEST_METHOD'] ?? 'GET';
 $action = $_GET['action'] ?? '';
@@ -103,6 +112,25 @@ function backupRevision(string $path): ?int {
     return is_numeric($revision) ? (int)$revision : null;
 }
 
+function loadSubscriptions(): array {
+    global $SUBS_FILE;
+    if (!file_exists($SUBS_FILE)) return [];
+    $raw = @file_get_contents($SUBS_FILE);
+    if (!is_string($raw) || $raw === '') return [];
+    $data = json_decode($raw, true);
+    return is_array($data) ? $data : [];
+}
+
+function saveSubscriptions(array $subs): void {
+    global $SUBS_FILE;
+    file_put_contents($SUBS_FILE, json_encode(array_values($subs), JSON_PRETTY_PRINT), LOCK_EX);
+    @chmod($SUBS_FILE, 0600);
+    $htaccess = dirname($SUBS_FILE) . '/.htaccess';
+    if (!file_exists($htaccess)) {
+        file_put_contents(dirname($SUBS_FILE) . '/.htaccess', "Require all denied\nDeny from all\n");
+    }
+}
+
 function listBackups(): array {
     global $BACKUP_DIR;
     if (!is_dir($BACKUP_DIR)) return [];
@@ -119,6 +147,11 @@ function listBackups(): array {
 }
 
 if ($method === 'GET') {
+    if ($action === 'vapid-public-key') {
+        echo json_encode(['key' => VAPID_PUBLIC]);
+        exit;
+    }
+
     if ($action === 'backups') {
         echo json_encode(['backups' => listBackups()]);
         exit;
@@ -162,6 +195,35 @@ if ($method === 'POST') {
 
     // Reject absurdly large payloads (5 MB)
     if (strlen($raw) > 5 * 1024 * 1024) fail(413, 'payload too large');
+
+    if ($action === 'subscribe') {
+        $endpoint  = $decoded['endpoint'] ?? '';
+        $p256dh    = $decoded['keys']['p256dh'] ?? '';
+        $auth      = $decoded['keys']['auth'] ?? '';
+        if (!$endpoint || !$p256dh || !$auth) fail(400, 'invalid subscription');
+
+        $subs = loadSubscriptions();
+        // Replace existing sub with same endpoint, or append
+        $found = false;
+        foreach ($subs as &$s) {
+            if ($s['endpoint'] === $endpoint) { $s = $decoded; $found = true; break; }
+        }
+        unset($s);
+        if (!$found) $subs[] = $decoded;
+        saveSubscriptions($subs);
+        echo json_encode(['ok' => true, 'total' => count($subs)]);
+        exit;
+    }
+
+    if ($action === 'unsubscribe') {
+        $endpoint = $decoded['endpoint'] ?? '';
+        if (!$endpoint) fail(400, 'missing endpoint');
+        $subs = loadSubscriptions();
+        $subs = array_filter($subs, fn($s) => $s['endpoint'] !== $endpoint);
+        saveSubscriptions($subs);
+        echo json_encode(['ok' => true]);
+        exit;
+    }
 
     if ($action === 'restore') {
         $file = $decoded['file'] ?? '';
@@ -211,6 +273,75 @@ if ($method === 'POST') {
 
     $revision = $decoded['_meta']['revision'] ?? null;
     echo json_encode(['ok' => true, 'savedAt' => date('c'), 'revision' => $revision]);
+    exit;
+}
+
+// POST ?action=push — send a push to all stored subscriptions
+if ($method === 'POST' && $action === 'push') {
+    $sent = $_SERVER['HTTP_X_AUTH'] ?? '';
+    if (!is_string($sent) || !hash_equals($TOKEN, $sent)) fail(401, 'unauthorized');
+
+    $raw = file_get_contents('php://input');
+    $payload = json_decode($raw ?: '{}', true);
+    $title   = $payload['title']   ?? 'Finance Alert';
+    $body    = $payload['body']    ?? '';
+    $url     = $payload['url']     ?? '/finance/';
+
+    $subs = loadSubscriptions();
+    if (count($subs) === 0) {
+        echo json_encode(['ok' => true, 'sent' => 0, 'note' => 'no subscriptions']);
+        exit;
+    }
+
+    $autoload = __DIR__ . '/vendor/autoload.php';
+    if (!file_exists($autoload)) fail(500, 'web-push library not installed');
+    require_once $autoload;
+
+    use Minishlink\WebPush\WebPush;
+    use Minishlink\WebPush\Subscription;
+
+    $webPush = new WebPush([
+        'VAPID' => [
+            'subject'    => VAPID_SUBJECT,
+            'publicKey'  => VAPID_PUBLIC,
+            'privateKey' => VAPID_PRIVATE,
+        ]
+    ]);
+
+    $pushPayload = json_encode(['title' => $title, 'body' => $body, 'url' => $url]);
+    $sent = 0;
+    $staleEndpoints = [];
+
+    foreach ($subs as $sub) {
+        $subscription = Subscription::create([
+            'endpoint'        => $sub['endpoint'],
+            'keys'            => [
+                'p256dh' => $sub['keys']['p256dh'],
+                'auth'   => $sub['keys']['auth'],
+            ]
+        ]);
+        $webPush->queueNotification($subscription, $pushPayload);
+    }
+
+    foreach ($webPush->flush() as $report) {
+        if ($report->isSuccess()) {
+            $sent++;
+        } else {
+            // 404/410 means subscription is gone — remove it
+            $code = $report->getResponse()?->getStatusCode();
+            if ($code === 404 || $code === 410) {
+                $staleEndpoints[] = $report->getRequest()->getUri()->__toString();
+            }
+        }
+    }
+
+    if (!empty($staleEndpoints)) {
+        $subs = loadSubscriptions();
+        $subs = array_filter($subs, fn($s) => !in_array($s['endpoint'], $staleEndpoints, true));
+        saveSubscriptions($subs);
+    }
+
+    echo json_encode(['ok' => true, 'sent' => $sent, 'staleRemoved' => count($staleEndpoints)]);
     exit;
 }
 

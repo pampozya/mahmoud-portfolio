@@ -1,4 +1,4 @@
-const VERSION = 'v0.5.8';
+const VERSION = 'v0.5.9';
 const CACHE_NAME = `finance-${VERSION}`;
 const URLS_TO_CACHE = [
     '/finance/',
@@ -75,6 +75,21 @@ self.addEventListener('fetch', (event) => {
         );
         return;
     }
+
+self.addEventListener('push', (event) => {
+    let data = { title: 'Finance Alert', body: '', url: '/finance/' };
+    try { data = { ...data, ...event.data.json() }; } catch {}
+    event.waitUntil(
+        self.registration.showNotification(data.title, {
+            body: data.body,
+            icon: '/finance/icon-192.png',
+            badge: '/finance/icon-192.png',
+            tag: 'finance-alert',
+            renotify: true,
+            data: { url: data.url }
+        })
+    );
+});
 
 self.addEventListener('notificationclick', (event) => {
     event.notification.close();
