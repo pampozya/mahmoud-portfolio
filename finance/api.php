@@ -245,6 +245,14 @@ if ($method === 'POST') {
     // Reject absurdly large payloads (5 MB)
     if (strlen($raw) > 5 * 1024 * 1024) fail(413, 'payload too large');
 
+    if ($action === 'push') {
+        $title = $decoded['title'] ?? 'Finance Alert';
+        $body  = $decoded['body']  ?? '';
+        $result = sendPushToAll($title, $body);
+        echo json_encode(['ok' => true] + $result);
+        exit;
+    }
+
     if ($action === 'subscribe') {
         $endpoint  = $decoded['endpoint'] ?? '';
         $p256dh    = $decoded['keys']['p256dh'] ?? '';
@@ -331,21 +339,6 @@ if ($method === 'POST') {
     } catch (\Throwable $e) { /* never block save on push failure */ }
 
     echo json_encode(['ok' => true, 'savedAt' => date('c'), 'revision' => $revision]);
-    exit;
-}
-
-// POST ?action=push — manual push trigger (admin / debugging)
-if ($method === 'POST' && $action === 'push') {
-    $sent = $_SERVER['HTTP_X_AUTH'] ?? '';
-    if (!is_string($sent) || !hash_equals($TOKEN, $sent)) fail(401, 'unauthorized');
-
-    $raw = file_get_contents('php://input');
-    $payload = json_decode($raw ?: '{}', true);
-    $title   = $payload['title'] ?? 'Finance Alert';
-    $body    = $payload['body']  ?? '';
-
-    $result = sendPushToAll($title, $body);
-    echo json_encode(['ok' => true] + $result);
     exit;
 }
 
