@@ -297,10 +297,7 @@ if ($method === 'POST' && $action === 'push') {
     if (!file_exists($autoload)) fail(500, 'web-push library not installed');
     require_once $autoload;
 
-    use Minishlink\WebPush\WebPush;
-    use Minishlink\WebPush\Subscription;
-
-    $webPush = new WebPush([
+    $webPush = new \Minishlink\WebPush\WebPush([
         'VAPID' => [
             'subject'    => VAPID_SUBJECT,
             'publicKey'  => VAPID_PUBLIC,
@@ -313,7 +310,7 @@ if ($method === 'POST' && $action === 'push') {
     $staleEndpoints = [];
 
     foreach ($subs as $sub) {
-        $subscription = Subscription::create([
+        $subscription = \Minishlink\WebPush\Subscription::create([
             'endpoint'        => $sub['endpoint'],
             'keys'            => [
                 'p256dh' => $sub['keys']['p256dh'],
