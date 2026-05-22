@@ -1270,6 +1270,24 @@ function PublicSite({ onAdminClick }) {
     };
   }, []);
 
+  // Mobile card video scroll-play
+  const isMobileDevice = useRef(window.matchMedia('(hover: none) and (pointer: coarse)').matches).current;
+  useEffect(() => {
+    if (!isMobileDevice) return;
+    const obs = new IntersectionObserver(entries => {
+      entries.forEach(e => {
+        const v = e.target;
+        if (e.isIntersecting) { v.play().catch(() => {}); }
+        else { v.pause(); v.currentTime = 0; }
+      });
+    }, { threshold: 0.5 });
+    const attach = () => {
+      document.querySelectorAll('.card-mobile-video').forEach(v => obs.observe(v));
+    };
+    attach();
+    return () => obs.disconnect();
+  }, [isMobileDevice, portfolio, sort, activeCategory]);
+
   // Card stagger — animates immediately on load, cards are ready before user scrolls there
   useEffect(() => {
     if (!portfolio.length) return;
@@ -1548,7 +1566,15 @@ function PublicSite({ onAdminClick }) {
                     onMouseLeave={() => setHoveredVideo(null)}
                   >
                     <div className="card-thumb" style={{ aspectRatio: (item.aspect_ratio || '16:9').replace(':', '/'), width: '100%', position: 'relative', overflow: 'hidden' }}>
-                      {isDirect && isHovered ? (
+                      {isDirect && isMobileDevice ? (
+                        <video
+                          src={resolveUrl(item.video_url, 'video')}
+                          poster={thumb || undefined}
+                          muted loop playsInline preload="none"
+                          className="card-mobile-video"
+                          style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }}
+                        />
+                      ) : isDirect && isHovered ? (
                         <video src={resolveUrl(item.video_url, 'video')} autoPlay muted playsInline style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }} />
                       ) : thumb ? (
                         <img src={thumb} alt={item.title} loading="lazy" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
