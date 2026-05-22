@@ -851,6 +851,7 @@ body::after {
   z-index: 0;
 }
 .spotlight-frame:hover .spotlight-frame-inner { transform: scale(1.05); }
+.spotlight-frame-video { width: 100%; height: 100%; object-fit: cover; display: block; }
 .spotlight-frame-shade {
   position: absolute;
   inset: 0;
@@ -2039,6 +2040,7 @@ a.contact-item:hover { color: var(--color-accent); }
   z-index: 0;
 }
 .featured-image:hover .featured-image-inner { transform: scale(1.04); }
+.featured-image-video { width: 100%; height: 100%; object-fit: cover; display: block; }
 .featured-image-shade {
   position: absolute;
   inset: 0;

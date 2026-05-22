@@ -434,6 +434,7 @@ function ReactionPicker({ itemId, userReaction, onReact }) {
 function FeaturedCarousel({ items, onSelect, lang }) {
   const [idx, setIdx] = useState(0);
   const sectionRef = useRef(null);
+  const videoRef = useRef(null);
   const total = items.length;
   const isAr = lang === 'ar';
 
@@ -470,6 +471,20 @@ function FeaturedCarousel({ items, onSelect, lang }) {
   const featuredSummary = (item.description || '').split(/\n{2,}|\n/)[0].trim();
   const prev = () => setIdx(i => (i - 1 + total) % total);
   const next = () => setIdx(i => (i + 1) % total);
+  const isDirectVideo = item.video_type === 'direct' && item.video_url;
+  const videoUrl = isDirectVideo ? resolveUrl(item.video_url, 'video') : null;
+
+  // Auto-play featured video muted when in view, pause when out
+  useEffect(() => {
+    if (!videoRef.current || !isDirectVideo) return;
+    const v = videoRef.current;
+    const obs = new IntersectionObserver(([e]) => {
+      if (e.isIntersecting) v.play().catch(() => {});
+      else v.pause();
+    }, { threshold: 0.3 });
+    obs.observe(v);
+    return () => obs.disconnect();
+  }, [isDirectVideo, videoUrl]);
 
   return (
     <section className="featured-section" ref={sectionRef} aria-label="Selected work">
@@ -490,10 +505,25 @@ function FeaturedCarousel({ items, onSelect, lang }) {
           onClick={() => onSelect(item)}
           aria-label={`Open ${item.title}`}
         >
-          <div
-            className="featured-image-inner"
-            style={thumb ? { backgroundImage: `url(${thumb})`, backgroundPosition: `${fx}% ${fy}%` } : {}}
-          />
+          {isDirectVideo ? (
+            <video
+              ref={videoRef}
+              key={videoUrl}
+              src={videoUrl}
+              poster={thumb || undefined}
+              muted
+              loop
+              playsInline
+              preload="metadata"
+              className="featured-image-inner featured-image-video"
+              style={{ objectPosition: `${fx}% ${fy}%` }}
+            />
+          ) : (
+            <div
+              className="featured-image-inner"
+              style={thumb ? { backgroundImage: `url(${thumb})`, backgroundPosition: `${fx}% ${fy}%` } : {}}
+            />
+          )}
           <span className="featured-image-shade" aria-hidden="true" />
           <span className="featured-watch">
             <span className="featured-watch-icon" aria-hidden="true">▶</span>
@@ -765,6 +795,7 @@ function CinematicBrief({ portfolio, settings, siteDesc, isAr }) {
 
 function SpotlightSection({ item, categories, onOpen, isAr }) {
   const sectionRef = useRef(null);
+  const videoRef = useRef(null);
   const rawCat = categories.find(c => c.id === item.category_id);
   const cat = rawCat && ['cinematic-interviews', 'cinematic-videos'].includes(rawCat.slug)
     ? { ...rawCat, name: 'Cinematic Videos' }
@@ -772,6 +803,20 @@ function SpotlightSection({ item, categories, onOpen, isAr }) {
   const thumb = getThumbnail(item);
   const year = item.created_at ? new Date(item.created_at).getFullYear() : null;
   const spotlightSummary = (item.description || '').split(/\n{2,}|\n/)[0].trim();
+  const isDirectVideo = item.video_type === 'direct' && item.video_url;
+  const videoUrl = isDirectVideo ? resolveUrl(item.video_url, 'video') : null;
+
+  // Auto-play featured video muted when in view
+  useEffect(() => {
+    if (!videoRef.current || !isDirectVideo) return;
+    const v = videoRef.current;
+    const obs = new IntersectionObserver(([e]) => {
+      if (e.isIntersecting) v.play().catch(() => {});
+      else v.pause();
+    }, { threshold: 0.3 });
+    obs.observe(v);
+    return () => obs.disconnect();
+  }, [isDirectVideo, videoUrl]);
 
   useEffect(() => {
     if (!sectionRef.current) return;
@@ -808,10 +853,24 @@ function SpotlightSection({ item, categories, onOpen, isAr }) {
         onClick={() => onOpen(item)}
         aria-label={`Play ${item.title}`}
       >
-        <div
-          className="spotlight-frame-inner"
-          style={thumb ? { backgroundImage: `url(${thumb})` } : {}}
-        />
+        {isDirectVideo ? (
+          <video
+            ref={videoRef}
+            key={videoUrl}
+            src={videoUrl}
+            poster={thumb || undefined}
+            muted
+            loop
+            playsInline
+            preload="metadata"
+            className="spotlight-frame-inner spotlight-frame-video"
+          />
+        ) : (
+          <div
+            className="spotlight-frame-inner"
+            style={thumb ? { backgroundImage: `url(${thumb})` } : {}}
+          />
+        )}
         <span className="spotlight-frame-shade" aria-hidden="true" />
         <span className="spotlight-play-icon" aria-hidden="true">
           <span className="spotlight-play-glyph">▶</span>
@@ -1206,6 +1265,12 @@ function PublicSite({ onAdminClick }) {
     ids.forEach(id => { const el = document.getElementById(id); if (el) obs.observe(el); });
     return () => obs.disconnect();
   }, [portfolio, settings?.about_text, testimonials.length]);
+
+  // Auto-apply dir="auto" to all text elements so Arabic content flows RTL
+  useEffect(() => {
+    const sel = '.public-site h1, .public-site h2, .public-site h3, .public-site h4, .public-site h5, .public-site h6, .public-site p, .public-site li, .public-site label, .public-site blockquote, .public-site figcaption';
+    document.querySelectorAll(sel).forEach(el => { if (!el.hasAttribute('dir')) el.setAttribute('dir', 'auto'); });
+  }, [portfolio, testimonials, settings, selectedItem]);
 
   const sortedPortfolio = [...portfolio].sort((a, b) => {
     if (sort === 'featured') return (b.featured ? 1 : 0) - (a.featured ? 1 : 0);
