@@ -1,10 +1,10 @@
 <?php
 // Finance Tracker — JSON storage API
-// GET  /api.php                    → current data
-// POST /api.php (JSON)             → save data; requires X-Auth
-// POST /api.php?action=subscribe   → save push subscription
-// POST /api.php?action=unsubscribe → remove push subscription
-// GET  /api.php?action=push        → send push to all subscriptions (admin only)
+// GET  /api.php                 → current data
+// GET  /api.php?action=backups  → list server backups
+// GET  /api.php?action=backup&file=... → fetch a specific backup
+// POST /api.php (JSON)          → save data; requires X-Auth
+// POST /api.php?action=restore  → restore a backup; requires X-Auth
 
 declare(strict_types=1);
 
@@ -26,13 +26,7 @@ $TOKEN = 'xZwQp8mKL9cVf2nRoJ4tYsH6bGuA5dE';
 $DATA_FILE   = __DIR__ . '/finance-data.json';
 $SEED_FILE   = __DIR__ . '/data-seed.json';
 $BACKUP_DIR  = __DIR__ . '/.backups';
-$SUBS_FILE   = __DIR__ . '/.backups/.push-subscriptions.json';
 $MAX_BACKUPS = 50;
-
-// VAPID credentials — generated once, never change
-define('VAPID_PUBLIC',  'BBuMAdxjsZTzSuxJSSUCO0L72WzjbnMtOrvWMSErxfvXqb5wu9L_rfkBsY1-Hg3nmZXrLEoBKDFZ0NxH04LvS3M');
-define('VAPID_PRIVATE', 'AZoNMlBFW-fmHminqVqxcXtLrTutmSnJzJugbCwI_4k');
-define('VAPID_SUBJECT', 'mailto:pampozya@gmail.com');
 
 $method = $_SERVER['REQUEST_METHOD'] ?? 'GET';
 $action = $_GET['action'] ?? '';
@@ -112,74 +106,6 @@ function backupRevision(string $path): ?int {
     return is_numeric($revision) ? (int)$revision : null;
 }
 
-function loadSubscriptions(): array {
-    global $SUBS_FILE;
-    if (!file_exists($SUBS_FILE)) return [];
-    $raw = @file_get_contents($SUBS_FILE);
-    if (!is_string($raw) || $raw === '') return [];
-    $data = json_decode($raw, true);
-    return is_array($data) ? $data : [];
-}
-
-function saveSubscriptions(array $subs): void {
-    global $SUBS_FILE;
-    ensureBackupDir(); // guarantees .backups/ exists with its own .htaccess
-    file_put_contents($SUBS_FILE, json_encode(array_values($subs), JSON_PRETTY_PRINT), LOCK_EX);
-    @chmod($SUBS_FILE, 0600);
-}
-
-function sendPushToAll(string $title, string $body, ?string $excludeEndpoint = null): array {
-    $subs = loadSubscriptions();
-    if (count($subs) === 0) return ['sent' => 0, 'staleRemoved' => 0];
-
-    $autoload = __DIR__ . '/vendor/autoload.php';
-    if (!file_exists($autoload)) return ['sent' => 0, 'error' => 'web-push not installed'];
-    require_once $autoload;
-
-    $webPush = new \Minishlink\WebPush\WebPush([
-        'VAPID' => [
-            'subject'    => VAPID_SUBJECT,
-            'publicKey'  => VAPID_PUBLIC,
-            'privateKey' => VAPID_PRIVATE,
-        ]
-    ]);
-
-    $pushPayload = json_encode(['title' => $title, 'body' => $body, 'url' => '/finance/']);
-    $stale = [];
-    $sent  = 0;
-
-    foreach ($subs as $sub) {
-        if ($excludeEndpoint && $sub['endpoint'] === $excludeEndpoint) continue;
-        $subscription = \Minishlink\WebPush\Subscription::create([
-            'endpoint' => $sub['endpoint'],
-            'keys'     => [
-                'p256dh' => $sub['keys']['p256dh'],
-                'auth'   => $sub['keys']['auth'],
-            ]
-        ]);
-        $webPush->queueNotification($subscription, $pushPayload);
-    }
-
-    foreach ($webPush->flush() as $report) {
-        if ($report->isSuccess()) {
-            $sent++;
-        } else {
-            $code = $report->getResponse()?->getStatusCode();
-            if ($code === 404 || $code === 410) {
-                $stale[] = $report->getRequest()->getUri()->__toString();
-            }
-        }
-    }
-
-    if (!empty($stale)) {
-        $subs = loadSubscriptions();
-        $subs = array_filter($subs, fn($s) => !in_array($s['endpoint'], $stale, true));
-        saveSubscriptions($subs);
-    }
-
-    return ['sent' => $sent, 'staleRemoved' => count($stale)];
-}
-
 function listBackups(): array {
     global $BACKUP_DIR;
     if (!is_dir($BACKUP_DIR)) return [];
@@ -196,11 +122,6 @@ function listBackups(): array {
 }
 
 if ($method === 'GET') {
-    if ($action === 'vapid-public-key') {
-        echo json_encode(['key' => VAPID_PUBLIC]);
-        exit;
-    }
-
     if ($action === 'backups') {
         echo json_encode(['backups' => listBackups()]);
         exit;
@@ -245,43 +166,6 @@ if ($method === 'POST') {
     // Reject absurdly large payloads (5 MB)
     if (strlen($raw) > 5 * 1024 * 1024) fail(413, 'payload too large');
 
-    if ($action === 'push') {
-        $title = $decoded['title'] ?? 'Finance Alert';
-        $body  = $decoded['body']  ?? '';
-        $result = sendPushToAll($title, $body);
-        echo json_encode(['ok' => true] + $result);
-        exit;
-    }
-
-    if ($action === 'subscribe') {
-        $endpoint  = $decoded['endpoint'] ?? '';
-        $p256dh    = $decoded['keys']['p256dh'] ?? '';
-        $auth      = $decoded['keys']['auth'] ?? '';
-        if (!$endpoint || !$p256dh || !$auth) fail(400, 'invalid subscription');
-
-        $subs = loadSubscriptions();
-        // Replace existing sub with same endpoint, or append
-        $found = false;
-        foreach ($subs as &$s) {
-            if ($s['endpoint'] === $endpoint) { $s = $decoded; $found = true; break; }
-        }
-        unset($s);
-        if (!$found) $subs[] = $decoded;
-        saveSubscriptions($subs);
-        echo json_encode(['ok' => true, 'total' => count($subs)]);
-        exit;
-    }
-
-    if ($action === 'unsubscribe') {
-        $endpoint = $decoded['endpoint'] ?? '';
-        if (!$endpoint) fail(400, 'missing endpoint');
-        $subs = loadSubscriptions();
-        $subs = array_filter($subs, fn($s) => $s['endpoint'] !== $endpoint);
-        saveSubscriptions($subs);
-        echo json_encode(['ok' => true]);
-        exit;
-    }
-
     if ($action === 'restore') {
         $file = $decoded['file'] ?? '';
         if (!is_string($file) || $file === '') fail(400, 'missing backup file');
@@ -310,6 +194,18 @@ if ($method === 'POST') {
         exit;
     }
 
+    // Safety: only allow saves when action is empty. Any unknown action that
+    // reaches this point would otherwise be silently treated as data and
+    // could overwrite the data file (this exact bug corrupted data once).
+    if ($action !== '') fail(400, 'unknown action: ' . $action);
+
+    // Safety: body must look like the finance data schema (have expenses and
+    // income keys). Without this, a stray request with arbitrary JSON would
+    // be persisted as the new data.
+    if (!array_key_exists('expenses', $decoded) || !array_key_exists('income', $decoded)) {
+        fail(400, 'invalid data shape — missing expenses/income');
+    }
+
     ensureDataFile();
     $fp = @fopen($DATA_FILE, 'c+b');
     if ($fp === false) fail(500, 'cannot open data file for write');
@@ -329,15 +225,6 @@ if ($method === 'POST') {
     fclose($fp);
 
     $revision = $decoded['_meta']['revision'] ?? null;
-
-    // Push notification to OTHER devices that data was updated.
-    // The saving device sends its subscription endpoint in X-Device-Id so it
-    // doesn't notify itself. Failures here never block the save response.
-    $excludeEndpoint = $_SERVER['HTTP_X_DEVICE_ID'] ?? null;
-    try {
-        sendPushToAll('Finance updated', 'Sync to see latest changes', $excludeEndpoint);
-    } catch (\Throwable $e) { /* never block save on push failure */ }
-
     echo json_encode(['ok' => true, 'savedAt' => date('c'), 'revision' => $revision]);
     exit;
 }

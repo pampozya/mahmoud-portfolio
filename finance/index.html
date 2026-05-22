@@ -1496,7 +1496,6 @@
                 <div style="display: flex; gap: 8px; align-items: center;">
                     <button class="install-btn" id="installBtn">Install App</button>
                     <button class="backup-btn" id="backupBtn" title="Export JSON backup">Backup</button>
-                    <button class="refresh-btn" id="notifBtn" title="Enable notifications">🔔</button>
                     <button class="refresh-btn" id="refreshBtn" title="Hard refresh—bypass cache">↻</button>
                 </div>
             </div>
@@ -1832,7 +1831,7 @@
     <div class="toast" id="toast">Saved</div>
 
     <script>
-        const VERSION = 'v0.6.0';
+        const VERSION = 'v0.6.1';
         const DEPLOY_DATE = '2026-05-21';
         const CURRENT_SCHEMA_VERSION = 1;
         const LOCAL_WRITE_SUPPRESSION_MS = 5000;
@@ -1865,7 +1864,6 @@
             populateDayDropdown();
             await loadData();
             renderAll();
-            initNotifications();
             pollPendingTracker();
             pollTimer = setInterval(pollPendingTracker, 10000);
             // Sync data from other devices every 15 seconds (silent, only if changed)
@@ -1877,83 +1875,6 @@
         });
 
         let installPrompt = null;
-
-        const VAPID_PUBLIC_KEY = 'BBuMAdxjsZTzSuxJSSUCO0L72WzjbnMtOrvWMSErxfvXqb5wu9L_rfkBsY1-Hg3nmZXrLEoBKDFZ0NxH04LvS3M';
-
-        function urlBase64ToUint8Array(base64String) {
-            const padding = '='.repeat((4 - base64String.length % 4) % 4);
-            const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
-            return Uint8Array.from(atob(base64), c => c.charCodeAt(0));
-        }
-
-        async function initNotifications() {
-            if (!('serviceWorker' in navigator) || !('PushManager' in window)) return;
-            updateNotifBtn();
-            try {
-                const reg = await navigator.serviceWorker.ready;
-                const sub = await reg.pushManager.getSubscription();
-                if (sub) localStorage.setItem('pushEndpoint', sub.endpoint);
-                else localStorage.removeItem('pushEndpoint');
-            } catch {}
-        }
-
-        function updateNotifBtn() {
-            const btn = document.getElementById('notifBtn');
-            if (!btn) return;
-            if (!('Notification' in window) || !('PushManager' in window)) {
-                btn.style.display = 'none'; return;
-            }
-            if (Notification.permission === 'denied') {
-                btn.textContent = '🔕'; btn.title = 'Notifications blocked in browser settings'; return;
-            }
-            if (Notification.permission === 'granted') {
-                btn.textContent = '🔔'; btn.title = 'Notifications on — tap to manage';
-            } else {
-                btn.textContent = '🔔'; btn.title = 'Enable notifications';
-            }
-        }
-
-        async function handleNotifBtn() {
-            if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
-                toast('Push notifications not supported on this browser', 'info'); return;
-            }
-            if (Notification.permission === 'denied') {
-                toast('Notifications are blocked — enable them in browser settings', 'info'); return;
-            }
-            try {
-                const reg = await navigator.serviceWorker.ready;
-                const existing = await reg.pushManager.getSubscription();
-                if (existing) {
-                    if (confirm('Notifications are on. Turn them off?')) {
-                        await existing.unsubscribe();
-                        await fetch('api.php?action=unsubscribe', {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json', 'X-Auth': AUTH_TOKEN },
-                            body: JSON.stringify({ endpoint: existing.endpoint })
-                        });
-                        localStorage.removeItem('pushEndpoint');
-                        toast('Notifications turned off', 'info');
-                    }
-                } else {
-                    const permission = await Notification.requestPermission();
-                    if (permission !== 'granted') { toast('Permission not granted', 'info'); return; }
-                    const sub = await reg.pushManager.subscribe({
-                        userVisibleOnly: true,
-                        applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY)
-                    });
-                    await fetch('api.php?action=subscribe', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json', 'X-Auth': AUTH_TOKEN },
-                        body: JSON.stringify(sub.toJSON())
-                    });
-                    localStorage.setItem('pushEndpoint', sub.endpoint);
-                    toast('Notifications enabled ✓', 'success');
-                }
-                updateNotifBtn();
-            } catch (err) {
-                toast('Notification setup failed: ' + err.message, 'error');
-            }
-        }
 
         async function registerSW() {
             if (!('serviceWorker' in navigator)) return;
@@ -2088,7 +2009,6 @@
 
             document.getElementById('installBtn').addEventListener('click', promptInstall);
             document.getElementById('backupBtn').addEventListener('click', exportBackup);
-            document.getElementById('notifBtn').addEventListener('click', handleNotifBtn);
             document.getElementById('refreshBtn').addEventListener('click', hardRefresh);
             document.getElementById('refreshActionsBtn').addEventListener('click', renderActionQueue);
             document.getElementById('backupRefreshBtn').addEventListener('click', loadBackupHistory);
@@ -2288,15 +2208,9 @@
             renderDataSafety();
             updateSync('syncing');
             try {
-                const headers = { 'X-Auth': AUTH_TOKEN, 'Content-Type': 'application/json' };
-                // Tell the server which device is saving so it skips sending a
-                // self-push back. Endpoint is cached in localStorage when the
-                // bell button subscribes to push.
-                const selfEndpoint = localStorage.getItem('pushEndpoint');
-                if (selfEndpoint) headers['X-Device-Id'] = selfEndpoint;
                 const r = await fetch(API_URL, {
                     method: 'POST',
-                    headers,
+                    headers: { 'X-Auth': AUTH_TOKEN, 'Content-Type': 'application/json' },
                     body: JSON.stringify(appData)
                 });
                 if (r.ok) {
