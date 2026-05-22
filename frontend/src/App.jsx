@@ -1301,7 +1301,7 @@ function PublicSite({ onAdminClick }) {
   );
 
   return (
-    <div id="top" className="public-site" dir="ltr">
+    <div id="top" className="public-site" dir="auto">
       <div className="scroll-progress" aria-hidden="true" />
       <header className="public-header">
         <div className="header-inner">
