@@ -867,8 +867,56 @@
 
         .chart-container {
             position: relative;
-            height: 280px;
+            height: 250px;
             margin-top: 12px;
+        }
+
+        .trend-explainer {
+            display: grid;
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+            gap: 10px;
+            margin-bottom: 12px;
+        }
+
+        .trend-stat {
+            background: rgba(234, 234, 234, 0.035);
+            border: 1px solid var(--finance-line);
+            border-radius: 8px;
+            padding: 10px 12px;
+            min-width: 0;
+        }
+
+        .trend-stat-label {
+            color: var(--finance-muted);
+            font-size: 10px;
+            font-weight: 650;
+            letter-spacing: 0.5px;
+            text-transform: uppercase;
+            margin-bottom: 5px;
+        }
+
+        .trend-stat-value {
+            color: var(--finance-text);
+            font-size: 17px;
+            font-weight: 650;
+            font-variant-numeric: tabular-nums;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .trend-stat-sub {
+            color: var(--finance-muted);
+            font-size: 11px;
+            margin-top: 3px;
+            line-height: 1.3;
+        }
+
+        .trend-note {
+            color: var(--finance-muted);
+            font-size: 12px;
+            line-height: 1.45;
+            margin-top: 10px;
         }
 
         .expenses-header {
@@ -1476,6 +1524,7 @@
             .refresh-btn { width: 40px; height: 40px; }
             .backup-btn { height: 40px; }
             .dashboard-focus-grid { grid-template-columns: 1fr; }
+            .trend-explainer { grid-template-columns: repeat(2, minmax(0, 1fr)); }
             .action-item,
             .backup-row,
             .rollover-row { grid-template-columns: 1fr; }
@@ -1495,6 +1544,7 @@
                 </div>
                 <div style="display: flex; gap: 8px; align-items: center;">
                     <button class="install-btn" id="installBtn">Install App</button>
+                    <button class="backup-btn" id="notifyBtn" title="Enable browser notifications">Alerts</button>
                     <button class="backup-btn" id="backupBtn" title="Export JSON backup">Backup</button>
                     <button class="refresh-btn" id="refreshBtn" title="Hard refresh—bypass cache">↻</button>
                 </div>
@@ -1544,9 +1594,11 @@
             </div>
             <div class="card">
                 <div class="card-title">Daily Spend Trend</div>
+                <div id="trendExplainer" class="trend-explainer"></div>
                 <div class="chart-container">
                     <canvas id="trendChart"></canvas>
                 </div>
+                <div class="trend-note">Gold bars are what you paid on each day. The accent line is the running month total.</div>
             </div>
             <div class="dashboard-grid">
                 <div class="card">
@@ -1827,12 +1879,12 @@
         </div>
     </div>
 
-    <div class="version-badge" id="versionBadge">v0.5.6 · 2026-05-21</div>
+    <div class="version-badge" id="versionBadge">v0.6.2 · 2026-05-22</div>
     <div class="toast" id="toast">Saved</div>
 
     <script>
-        const VERSION = 'v0.6.1';
-        const DEPLOY_DATE = '2026-05-21';
+        const VERSION = 'v0.6.2';
+        const DEPLOY_DATE = '2026-05-22';
         const CURRENT_SCHEMA_VERSION = 1;
         const LOCAL_WRITE_SUPPRESSION_MS = 5000;
         const API_URL = 'api.php';
@@ -1854,6 +1906,7 @@
         let backupHistory = [];
         let selectedBackupFile = null;
         let rolloverDraft = null;
+        let lastRemoteNotificationKey = '';
 
         // ---- Init ----
         document.addEventListener('DOMContentLoaded', async () => {
@@ -1861,16 +1914,15 @@
             document.getElementById('versionBadge').textContent = `${VERSION} · ${DEPLOY_DATE}`;
             setupTabs();
             setupListeners();
+            updateNotificationButton();
             populateDayDropdown();
             await loadData();
             renderAll();
             pollPendingTracker();
             pollTimer = setInterval(pollPendingTracker, 10000);
-            // Sync data from other devices every 15 seconds (silent, only if changed)
+            // Sync data from other devices every 15 seconds (silent unless remote data changed)
             syncTimer = setInterval(() => {
-                if (document.visibilityState === 'visible') {
-                    loadData(false);
-                }
+                loadData(false);
             }, 15000);
         });
 
@@ -2008,6 +2060,7 @@
             document.getElementById('payoutEditCancel').addEventListener('click', () => closeModal('payoutEditModal'));
 
             document.getElementById('installBtn').addEventListener('click', promptInstall);
+            document.getElementById('notifyBtn').addEventListener('click', requestNotificationAccess);
             document.getElementById('backupBtn').addEventListener('click', exportBackup);
             document.getElementById('refreshBtn').addEventListener('click', hardRefresh);
             document.getElementById('refreshActionsBtn').addEventListener('click', renderActionQueue);
@@ -2053,6 +2106,40 @@
             }
         }
 
+        function updateNotificationButton() {
+            const btn = document.getElementById('notifyBtn');
+            if (!btn) return;
+            if (!('Notification' in window)) {
+                btn.textContent = 'No Alerts';
+                btn.disabled = true;
+                return;
+            }
+            btn.textContent = Notification.permission === 'granted' ? 'Alerts On' : 'Alerts';
+            btn.title = Notification.permission === 'granted'
+                ? 'Browser notifications are enabled'
+                : 'Enable browser notifications for edits from other devices';
+        }
+
+        async function requestNotificationAccess() {
+            if (!('Notification' in window)) {
+                showToast('Notifications not supported here', 'info');
+                return;
+            }
+            if (Notification.permission === 'granted') {
+                showToast('Alerts already enabled', 'success');
+                updateNotificationButton();
+                return;
+            }
+            if (Notification.permission === 'denied') {
+                showToast('Enable alerts in browser settings', 'info');
+                updateNotificationButton();
+                return;
+            }
+            const permission = await Notification.requestPermission();
+            updateNotificationButton();
+            showToast(permission === 'granted' ? 'Alerts enabled' : 'Alerts not enabled', permission === 'granted' ? 'success' : 'info');
+        }
+
         function openModal(id) {
             lastModalOpenedAt = Date.now();
             // Defer activation 1 frame to let click event finish bubbling (iOS ghost-click fix)
@@ -2087,18 +2174,50 @@
             return Number.isFinite(ms) ? ms : 0;
         }
 
+        function compareDataFreshness(a, b) {
+            const revisionDiff = dataRevision(a) - dataRevision(b);
+            if (revisionDiff !== 0) return revisionDiff;
+            return dataUpdatedAtMs(a) - dataUpdatedAtMs(b);
+        }
+
         function chooseNewestData(remoteData, cachedData) {
             if (!cachedData) return remoteData;
             if (!remoteData) return cachedData;
 
-            const remoteRevision = dataRevision(remoteData);
-            const cachedRevision = dataRevision(cachedData);
-            if (cachedRevision > remoteRevision) return cachedData;
-            if (remoteRevision > cachedRevision) return remoteData;
+            return compareDataFreshness(cachedData, remoteData) > 0 ? cachedData : remoteData;
+        }
 
-            const remoteUpdated = dataUpdatedAtMs(remoteData);
-            const cachedUpdated = dataUpdatedAtMs(cachedData);
-            return cachedUpdated > remoteUpdated ? cachedData : remoteData;
+        function notifyRemoteChange(remoteData) {
+            const revision = dataRevision(remoteData);
+            const updatedAt = dataUpdatedAtMs(remoteData);
+            const key = `${revision}:${updatedAt}`;
+            if (key === lastRemoteNotificationKey) return;
+            lastRemoteNotificationKey = key;
+
+            const when = updatedAt
+                ? new Date(updatedAt).toLocaleTimeString('en', { hour: 'numeric', minute: '2-digit' })
+                : 'now';
+            showToast(`Synced edit from another device · ${when}`, 'info');
+
+            if ('Notification' in window && Notification.permission === 'granted') {
+                const options = {
+                    body: `Another device saved changes at ${when}. The dashboard is now synced.`,
+                    tag: 'finance-remote-update',
+                    icon: 'icon-192.png',
+                    badge: 'icon-192.png'
+                };
+                if ('serviceWorker' in navigator) {
+                    navigator.serviceWorker.ready
+                        .then(reg => reg.showNotification('Finance tracker updated', options))
+                        .catch(() => new Notification('Finance tracker updated', options));
+                } else {
+                    try {
+                        new Notification('Finance tracker updated', options);
+                    } catch (e) {
+                        console.log('Notification failed:', e);
+                    }
+                }
+            }
         }
 
         async function loadData(showStatus = true) {
@@ -2111,6 +2230,9 @@
                 if (!r.ok) throw new Error('load failed');
                 const newData = normalizeData(await r.json());
                 const cachedData = readCachedData();
+                const shouldNotifyRemote = !showStatus
+                    && compareDataFreshness(newData, appData) > 0
+                    && Date.now() - lastLocalWriteAt >= LOCAL_WRITE_SUPPRESSION_MS;
                 const nextData = chooseNewestData(newData, cachedData);
                 // Check if data changed before re-rendering
                 const dataChanged = JSON.stringify(appData) !== JSON.stringify(nextData);
@@ -2119,6 +2241,9 @@
                 localStorage.setItem('financeData', JSON.stringify(appData));
                 if (dataChanged) {
                     renderAll();
+                }
+                if (shouldNotifyRemote && nextData === newData) {
+                    notifyRemoteChange(newData);
                 }
                 if (showStatus) updateSync('synced');
             } catch (e) {
@@ -3354,49 +3479,116 @@
         }
 
         let trendChart = null;
+        function trackerMonthDate(day) {
+            const [year, month] = String(appData.month || '').split('-').map(Number);
+            const base = Number.isFinite(year) && Number.isFinite(month)
+                ? new Date(year, month - 1, day)
+                : new Date();
+            return base.toLocaleDateString('en', { month: 'short', day: 'numeric' });
+        }
+
+        function buildDailySpendSeries() {
+            const daysToShow = Math.max(1, Math.min(31, currentMonthDay()));
+            const daily = [];
+            const cumulative = [];
+            let runningTotal = 0;
+
+            for (let d = 0; d < daysToShow; d++) {
+                let dayTotal = 0;
+                Object.entries(appData.expenses || {}).forEach(([category, items]) => {
+                    if (category === 'TEAM PAYOUTS') return;
+                    (Array.isArray(items) ? items : []).forEach(item => {
+                        dayTotal += Number(item.days?.[d]) || 0;
+                    });
+                });
+                daily.push(dayTotal);
+                runningTotal += dayTotal;
+                cumulative.push(runningTotal);
+            }
+
+            return {
+                daily,
+                cumulative,
+                labels: Array.from({ length: daysToShow }, (_, i) => i + 1)
+            };
+        }
+
+        function renderTrendExplainer(series) {
+            const el = document.getElementById('trendExplainer');
+            if (!el) return;
+
+            const total = series.cumulative[series.cumulative.length - 1] || 0;
+            const daysWithSpend = series.daily.filter(v => v > 0).length;
+            let biggestDay = 0;
+            let biggestAmount = 0;
+            let lastSpendDay = 0;
+
+            series.daily.forEach((amount, idx) => {
+                if (amount > biggestAmount) {
+                    biggestAmount = amount;
+                    biggestDay = idx + 1;
+                }
+                if (amount > 0) lastSpendDay = idx + 1;
+            });
+
+            const averageActiveDay = daysWithSpend ? total / daysWithSpend : 0;
+            el.innerHTML = `
+                <div class="trend-stat">
+                    <div class="trend-stat-label">Spent So Far</div>
+                    <div class="trend-stat-value">${fmt(total)}</div>
+                    <div class="trend-stat-sub">Expenses only</div>
+                </div>
+                <div class="trend-stat">
+                    <div class="trend-stat-label">Biggest Day</div>
+                    <div class="trend-stat-value">${biggestDay ? trackerMonthDate(biggestDay) : '-'}</div>
+                    <div class="trend-stat-sub">${biggestDay ? fmt(biggestAmount) : 'No spend yet'}</div>
+                </div>
+                <div class="trend-stat">
+                    <div class="trend-stat-label">Last Spend</div>
+                    <div class="trend-stat-value">${lastSpendDay ? trackerMonthDate(lastSpendDay) : '-'}</div>
+                    <div class="trend-stat-sub">${daysWithSpend} active day${daysWithSpend === 1 ? '' : 's'}</div>
+                </div>
+                <div class="trend-stat">
+                    <div class="trend-stat-label">Avg Active Day</div>
+                    <div class="trend-stat-value">${fmt(averageActiveDay)}</div>
+                    <div class="trend-stat-sub">Only days with spend</div>
+                </div>
+            `;
+        }
+
         function renderTrendChart() {
             const ctx = document.getElementById('trendChart');
             if (!ctx) return;
-            const daily = [];
-            const cum = [];
-            let acc = 0;
-            for (let d = 0; d < 31; d++) {
-                let dayTotal = 0;
-                Object.values(appData.expenses).forEach(items => {
-                    items.forEach(i => { dayTotal += i.days[d] || 0; });
-                });
-                daily.push(dayTotal);
-                acc += dayTotal;
-                cum.push(acc);
-            }
+            const series = buildDailySpendSeries();
+            renderTrendExplainer(series);
 
             if (trendChart) trendChart.destroy();
             trendChart = new Chart(ctx, {
                 type: 'bar',
                 data: {
-                    labels: Array.from({ length: 31 }, (_, i) => i + 1),
+                    labels: series.labels,
                     datasets: [
                         {
-                            label: 'Daily Spend',
-                            data: daily,
+                            label: 'Paid Each Day',
+                            data: series.daily,
                             type: 'bar',
                             yAxisID: 'yDaily',
-                            backgroundColor: 'rgba(157, 181, 211, 0.35)',
-                            borderColor: 'rgba(157, 181, 211, 0.7)',
+                            backgroundColor: 'rgba(157, 181, 211, 0.42)',
+                            borderColor: 'rgba(157, 181, 211, 0.85)',
                             borderWidth: 1,
                             borderRadius: 3,
                             order: 2
                         },
                         {
-                            label: 'Cumulative Spend',
-                            data: cum,
+                            label: 'Running Month Total',
+                            data: series.cumulative,
                             type: 'line',
                             yAxisID: 'yCum',
                             borderColor: '#c8a86a',
-                            backgroundColor: 'rgba(200, 168, 106, 0.08)',
+                            backgroundColor: 'rgba(200, 168, 106, 0.10)',
                             tension: 0.35,
                             fill: true,
-                            pointRadius: 0,
+                            pointRadius: 2,
                             pointHoverRadius: 4,
                             borderWidth: 2,
                             order: 1
@@ -3421,14 +3613,14 @@
                             beginAtZero: true,
                             ticks: { color: '#c8a86a', font: { size: 11 } },
                             grid: { color: 'rgba(234,234,234,0.055)' },
-                            title: { display: true, text: 'Cumulative', color: '#c8a86a', font: { size: 10 } }
+                            title: { display: true, text: 'Running total', color: '#c8a86a', font: { size: 10 } }
                         },
                         yDaily: {
                             position: 'right',
                             beginAtZero: true,
                             grid: { drawOnChartArea: false },
                             ticks: { color: '#9db5d3', font: { size: 11 } },
-                            title: { display: true, text: 'Daily', color: '#9db5d3', font: { size: 10 } }
+                            title: { display: true, text: 'Paid each day', color: '#9db5d3', font: { size: 10 } }
                         },
                         x: { ticks: { color: '#888', font: { size: 11 } }, grid: { color: 'rgba(234,234,234,0.04)' } }
                     }

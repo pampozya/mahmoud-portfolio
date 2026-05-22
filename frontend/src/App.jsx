@@ -342,12 +342,12 @@ function getEmbedUrl(item) {
   const type = item.video_type || detectPlatform(url);
   if (!url && type !== 'embed') return null;
   switch (type) {
-    case 'youtube': { const id = getYouTubeId(url); return id ? `https://www.youtube.com/embed/${id}?autoplay=1` : null; }
-    case 'vimeo': { const id = getVimeoId(url); return id ? `https://player.vimeo.com/video/${id}?autoplay=1` : null; }
+    case 'youtube': { const id = getYouTubeId(url); return id ? `https://www.youtube.com/embed/${id}` : null; }
+    case 'vimeo': { const id = getVimeoId(url); return id ? `https://player.vimeo.com/video/${id}` : null; }
     case 'tiktok': { const id = getTikTokId(url); return id ? `https://www.tiktok.com/embed/v2/${id}` : null; }
     case 'instagram': { const ig = getInstagramCode(url); return ig ? `https://www.instagram.com/${ig.type}/${ig.code}/embed/` : null; }
-    case 'facebook': return `https://www.facebook.com/plugins/video.php?href=${encodeURIComponent(url)}&autoplay=true&width=800`;
-    case 'dailymotion': { const id = getDailymotionId(url); return id ? `https://www.dailymotion.com/embed/video/${id}?autoplay=1` : null; }
+    case 'facebook': return `https://www.facebook.com/plugins/video.php?href=${encodeURIComponent(url)}&width=800`;
+    case 'dailymotion': { const id = getDailymotionId(url); return id ? `https://www.dailymotion.com/embed/video/${id}` : null; }
     default: return null;
   }
 }
@@ -851,7 +851,6 @@ function VideoPlayer({ url }) {
     <video
       key={url}
       controls
-      autoPlay
       playsInline
       style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', background: '#000' }}
       onError={() => setError(true)}
@@ -1075,7 +1074,7 @@ function PublicSite({ onAdminClick }) {
   const [qrItem, setQrItem] = useState(null);
   const [hoveredVideo, setHoveredVideo] = useState(null);
   const [clientLogos, setClientLogos] = useState([]);
-
+  const [activeSection, setActiveSection] = useState('');
 
   useEffect(() => {
     api.trackVisit();
@@ -1152,7 +1151,7 @@ function PublicSite({ onAdminClick }) {
       });
     });
     return () => obs.disconnect();
-  }, [portfolio]);
+  }, [portfolio, settings?.about_text, testimonials.length]);
 
   // Lenis smooth scroll + GSAP ScrollTrigger sync (cinematic weighted scroll)
   useEffect(() => {
@@ -1174,29 +1173,45 @@ function PublicSite({ onAdminClick }) {
     };
   }, []);
 
-  // GSAP per-card scroll-reveal (slide up + fade, staggered)
+  // Card stagger — fires when spotlight section is visible (or already past it)
   useEffect(() => {
     if (!portfolio.length) return;
     if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
     const cards = document.querySelectorAll('.portfolio-masonry .video-card');
     if (!cards.length) return;
+    gsap.set(cards, { opacity: 0, y: 22 });
+    const animate = () => gsap.to(cards, { opacity: 1, y: 0, duration: 0.55, ease: 'power3.out', stagger: 0.06 });
+    const spotlight = document.querySelector('.spotlight-section');
+    if (!spotlight || spotlight.getBoundingClientRect().top < window.innerHeight) {
+      animate();
+      return;
+    }
+    const obs = new IntersectionObserver(([e]) => { if (e.isIntersecting) { animate(); obs.disconnect(); } }, { rootMargin: '0px 0px 900px 0px', threshold: 0 });
+    obs.observe(spotlight);
+    return () => obs.disconnect();
+  }, [portfolio, sort, activeCategory]);
+
+  // Scroll progress bar — GSAP scrub
+  useEffect(() => {
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
     const ctx = gsap.context(() => {
-      cards.forEach((card) => {
-        gsap.fromTo(
-          card,
-          { opacity: 0, y: 30 },
-          {
-            opacity: 1,
-            y: 0,
-            duration: 0.9,
-            ease: 'power3.out',
-            scrollTrigger: { trigger: card, start: 'top 88%', toggleActions: 'play none none none' },
-          }
-        );
-      });
+      gsap.fromTo('.scroll-progress',
+        { scaleX: 0 },
+        { scaleX: 1, ease: 'none', scrollTrigger: { trigger: '.public-site', start: 'top top', end: 'bottom bottom', scrub: true } }
+      );
     });
     return () => ctx.revert();
-  }, [portfolio, sort, activeCategory]);
+  }, []);
+
+  // Section nav highlight
+  useEffect(() => {
+    const ids = ['portfolio', 'about', 'testimonials', 'contact'];
+    const obs = new IntersectionObserver(entries => {
+      entries.forEach(e => { if (e.isIntersecting) setActiveSection(e.target.id); });
+    }, { threshold: 0.25 });
+    ids.forEach(id => { const el = document.getElementById(id); if (el) obs.observe(el); });
+    return () => obs.disconnect();
+  }, [portfolio, settings?.about_text, testimonials.length]);
 
   const sortedPortfolio = [...portfolio].sort((a, b) => {
     if (sort === 'featured') return (b.featured ? 1 : 0) - (a.featured ? 1 : 0);
@@ -1293,6 +1308,7 @@ function PublicSite({ onAdminClick }) {
 
   return (
     <div id="top" className="public-site" dir="ltr">
+      <div className="scroll-progress" aria-hidden="true" />
       <header className="public-header">
         <div className="header-inner">
           <a href="#top" className="site-logo">
@@ -1300,10 +1316,10 @@ function PublicSite({ onAdminClick }) {
             <span style={{ display: 'none' }}>{siteTitle}</span>
           </a>
           <nav className="header-nav">
-            <a href="#portfolio">Work</a>
-            {settings?.about_text && <a href="#about">About</a>}
-            {testimonials.length > 0 && <a href="#testimonials">Reviews</a>}
-            <a href="#contact">Contact</a>
+            <a href="#portfolio" className={activeSection === 'portfolio' ? 'nav-active' : ''}>Work</a>
+            {settings?.about_text && <a href="#about" className={activeSection === 'about' ? 'nav-active' : ''}>About</a>}
+            {testimonials.length > 0 && <a href="#testimonials" className={activeSection === 'testimonials' ? 'nav-active' : ''}>Reviews</a>}
+            <a href="#contact" className={activeSection === 'contact' ? 'nav-active' : ''}>Contact</a>
             <button className="admin-link" onClick={onAdminClick}>Admin</button>
           </nav>
         </div>
@@ -1423,6 +1439,7 @@ function PublicSite({ onAdminClick }) {
                 const cat = publicCategoryById[item.category_id] || categories.find(c => c.id === item.category_id);
                 const cleanDescription = (item.description || '').trim();
                 const showDescription = cleanDescription && !/^cinematic social media reel\.?$/i.test(cleanDescription);
+                const cardYear = item.created_at ? new Date(item.created_at).getFullYear() : null;
                 return (
                   <div key={item.id} className={`video-card${item.featured ? ' video-card--featured' : ''}`}
                     onClick={() => openItem(item)}
@@ -1441,6 +1458,7 @@ function PublicSite({ onAdminClick }) {
                         </div>
                       )}
                       <div className="play-overlay" style={{ position: 'absolute', inset: 0 }}><span>▶</span></div>
+                      {cardYear && <span className="card-year-badge" aria-hidden="true">{cardYear}</span>}
                       <div className="card-thumb-meta">
                         {cat && <span>{cat.name}</span>}
                         {item.featured && <span>{isAr ? 'مميز' : 'Featured'}</span>}
@@ -1565,9 +1583,42 @@ function PublicSite({ onAdminClick }) {
         </div>
       </section>
 
+      <div className="availability-ribbon" aria-label={isAr ? 'حالة التوفر' : 'Availability status'}>
+        <span className="avail-dot" aria-hidden="true" />
+        <span>{isAr ? 'متاح للمشاريع الجديدة' : 'Available for new projects'}</span>
+        <span className="avail-divider" aria-hidden="true">·</span>
+        <span>{settings?.location ? settings.location.split(',')[0] : 'Dubai'} &amp; Remote</span>
+        <span className="avail-divider" aria-hidden="true">·</span>
+        <a href="#contact">{isAr ? 'احجز جلسة' : 'Book a session'}</a>
+      </div>
+
       <footer className="public-footer">
-        <p>© {new Date().getFullYear()} {siteTitle}. {isAr ? 'جميع الحقوق محفوظة' : 'All rights reserved.'}</p>
-        <button className="footer-admin-link" onClick={onAdminClick}>Admin</button>
+        <div className="footer-inner">
+          <div className="footer-brand">
+            <img src="/logo-white.svg" alt={siteTitle} className="footer-logo" onError={e => { e.target.style.display='none'; e.target.nextSibling.style.display='block'; }} />
+            <span style={{ display: 'none' }}>{siteTitle}</span>
+            <p className="footer-tagline">{siteDesc}</p>
+          </div>
+          <nav className="footer-nav" aria-label={isAr ? 'روابط التنقل' : 'Site navigation'}>
+            <a href="#portfolio">{isAr ? 'الأعمال' : 'Work'}</a>
+            {settings?.about_text && <a href="#about">{isAr ? 'عني' : 'About'}</a>}
+            {testimonials.length > 0 && <a href="#testimonials">{isAr ? 'آراء العملاء' : 'Reviews'}</a>}
+            <a href="#contact">{isAr ? 'تواصل' : 'Contact'}</a>
+          </nav>
+          <div className="footer-right">
+            {settings?.location && <span className="footer-location">📍 {settings.location}</span>}
+            <div className="footer-socials">
+              {settings?.instagram && <a href={settings.instagram} target="_blank" rel="noreferrer">IG</a>}
+              {settings?.youtube && <a href={settings.youtube} target="_blank" rel="noreferrer">YT</a>}
+              {settings?.tiktok && <a href={settings.tiktok} target="_blank" rel="noreferrer">TT</a>}
+              {settings?.linkedin && <a href={settings.linkedin} target="_blank" rel="noreferrer">LI</a>}
+            </div>
+          </div>
+        </div>
+        <div className="footer-strip">
+          <span>© {new Date().getFullYear()} {siteTitle}. {isAr ? 'جميع الحقوق محفوظة' : 'All rights reserved.'}</span>
+          <button className="footer-admin-link" onClick={onAdminClick}>Admin</button>
+        </div>
       </footer>
 
       {settings?.whatsapp && (
