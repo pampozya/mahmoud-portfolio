@@ -1331,6 +1331,8 @@ function PublicSite({ onAdminClick }) {
     return counts;
   }, {});
   const publicCategoryGroupsWithThumbs = publicCategoryGroups.map(group => {
+    const catData = categories.find(c => group.ids.includes(c.id));
+    if (catData?.thumbnail_url) return { ...group, thumb: catData.thumbnail_url };
     const groupItems = portfolio.filter(item => group.ids.includes(item.category_id));
     const heroItem = groupItems.find(item => item.featured && getThumbnail(item)) || groupItems.find(item => getThumbnail(item));
     return { ...group, thumb: heroItem ? getThumbnail(heroItem) : null };
@@ -1515,9 +1517,16 @@ function PublicSite({ onAdminClick }) {
           )}
 
           {loading ? (
-            <div className="state-panel">
-              <span>{isAr ? 'جاري تجهيز الأعمال' : 'Preparing the selection'}</span>
-              <p>{isAr ? 'لحظات قليلة.' : 'A few frames are getting into place.'}</p>
+            <div className="portfolio-masonry">
+              {['16/9','9/16','16/9','4/3','16/9','9/16'].map((ratio, i) => (
+                <div key={i} className="video-card">
+                  <div className="card-thumb skeleton-block" style={{ aspectRatio: ratio, width: '100%', borderRadius: '3px' }} />
+                  <div className="card-body">
+                    <div className="skeleton-line" style={{ width: `${55 + (i % 3) * 15}%`, height: '1rem', marginBottom: '0.4rem' }} />
+                    <div className="skeleton-line" style={{ width: `${35 + (i % 2) * 10}%`, height: '0.75rem' }} />
+                  </div>
+                </div>
+              ))}
             </div>
           ) : filteredItems.length === 0 ? (
             <div className="state-panel">
@@ -1552,7 +1561,7 @@ function PublicSite({ onAdminClick }) {
                           style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }}
                         />
                       ) : isDirect && isHovered ? (
-                        <video src={resolveUrl(item.video_url, 'video')} autoPlay muted playsInline style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }} />
+                        <video src={resolveUrl(item.video_url, 'video')} autoPlay muted playsInline className="card-hover-video" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }} />
                       ) : thumb ? (
                         <img src={thumb} alt={item.title} loading="lazy" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
                       ) : (
@@ -2546,6 +2555,7 @@ function CategoriesManager({ categories, token, onUpdate }) {
   const [editId, setEditId] = useState(null);
   const [editName, setEditName] = useState('');
   const [editSlug, setEditSlug] = useState('');
+  const [editThumb, setEditThumb] = useState('');
   const [saved, setSaved] = useState(null);
   const [addMsg, setAddMsg] = useState('');
   const [adding, setAdding] = useState(false);
@@ -2572,11 +2582,11 @@ function CategoriesManager({ categories, token, onUpdate }) {
   };
 
   const startEdit = (cat) => {
-    setEditId(cat.id); setEditName(cat.name); setEditSlug(cat.slug);
+    setEditId(cat.id); setEditName(cat.name); setEditSlug(cat.slug); setEditThumb(cat.thumbnail_url || '');
   };
 
   const saveEdit = async (id) => {
-    await api.updateCategory(token, id, { name: editName, slug: editSlug });
+    await api.updateCategory(token, id, { name: editName, slug: editSlug, thumbnail_url: editThumb || null });
     setSaved(id); setTimeout(() => setSaved(null), 2000);
     setEditId(null); onUpdate();
   };
@@ -2631,6 +2641,7 @@ function CategoriesManager({ categories, token, onUpdate }) {
                 <input value={editName} onChange={e => { setEditName(e.target.value); setEditSlug(e.target.value.toLowerCase().replace(/\s+/g, '-')); }}
                   placeholder="Name" autoFocus />
                 <input value={editSlug} onChange={e => setEditSlug(e.target.value)} placeholder="slug" />
+                <input value={editThumb} onChange={e => setEditThumb(e.target.value)} placeholder="Thumbnail URL (optional — overrides auto-pick)" style={{ fontSize: '0.8rem' }} />
                 <div className="cat-edit-btns">
                   <button className="btn-primary btn-sm" onClick={() => saveEdit(cat.id)}>💾 Save</button>
                   <button className="btn-secondary btn-sm" onClick={() => setEditId(null)}>Cancel</button>

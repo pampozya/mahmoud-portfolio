@@ -325,6 +325,7 @@ def _run_migrations():
         ("portfolios", "featured_focal_x", "FLOAT"),
         ("portfolios", "featured_focal_y", "FLOAT"),
         ("testimonials", "approved", "BOOLEAN"),
+        ("categories", "thumbnail_url", "VARCHAR"),
     ]
     with engine.connect() as conn:
         for table, col, col_type in migrations:
@@ -393,6 +394,7 @@ class CategoryCreate(BaseModel):
     name: str = Field(min_length=1, max_length=80)
     slug: str = Field(min_length=1, max_length=100)
     description: Optional[str] = Field(default=None, max_length=500)
+    thumbnail_url: Optional[str] = Field(default=None, max_length=2000)
 
 class CategoryResponse(BaseModel):
     id: int
@@ -400,7 +402,8 @@ class CategoryResponse(BaseModel):
     slug: str
     description: Optional[str]
     order: int
-    
+    thumbnail_url: Optional[str] = None
+
     class Config:
         from_attributes = True
 
@@ -670,7 +673,8 @@ def create_category(
     db_category = Category(
         name=category.name,
         slug=category.slug,
-        description=category.description
+        description=category.description,
+        thumbnail_url=category.thumbnail_url
     )
     db.add(db_category)
     db.commit()
@@ -684,6 +688,7 @@ def update_category(cat_id: int, category: CategoryCreate, email: str = Depends(
     cat.name = category.name
     cat.slug = category.slug
     cat.description = category.description
+    cat.thumbnail_url = category.thumbnail_url
     db.commit(); db.refresh(cat)
     return cat
 
