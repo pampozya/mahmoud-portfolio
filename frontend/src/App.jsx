@@ -444,7 +444,7 @@ function FeaturedCarousel({ items, onSelect, lang }) {
     if (!sectionRef.current) return;
     if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
     const ctx = gsap.context(() => {
-      gsap.from('.featured-image-inner', {
+      gsap.from('.featured-image', {
         scale: 1.08,
         opacity: 0,
         duration: 1.4,
@@ -471,12 +471,14 @@ function FeaturedCarousel({ items, onSelect, lang }) {
   useEffect(() => {
     if (!videoRef.current || !isDirectVideo) return;
     const v = videoRef.current;
+    const tryPlay = () => { v.play().catch(() => {}); };
     const obs = new IntersectionObserver(([e]) => {
-      if (e.isIntersecting) v.play().catch(() => {});
+      if (e.isIntersecting) tryPlay();
       else v.pause();
-    }, { threshold: 0.3 });
+    }, { threshold: 0 });
     obs.observe(v);
-    return () => obs.disconnect();
+    v.addEventListener('canplay', tryPlay);
+    return () => { obs.disconnect(); v.removeEventListener('canplay', tryPlay); };
   }, [isDirectVideo, videoUrl]);
 
   if (!total) return null;
@@ -527,7 +529,8 @@ function FeaturedCarousel({ items, onSelect, lang }) {
                 muted
                 loop
                 playsInline
-                preload="metadata"
+                autoPlay
+                preload="auto"
                 className="featured-image-inner featured-image-video"
                 style={{ objectPosition: `${fx}% ${fy}%` }}
               />
@@ -562,7 +565,7 @@ function FeaturedCarousel({ items, onSelect, lang }) {
             </>
           )}
         </div>
-        <div className="featured-meta">
+        <div className="featured-meta" dir="auto" key={`meta-${item.id}`}>
           <span className="featured-meta-label">{isAr ? 'مشروع' : 'Project'}</span>
           <h2 className="featured-title">{item.title}</h2>
           {featuredSummary && <p className="featured-desc">{featuredSummary}</p>}

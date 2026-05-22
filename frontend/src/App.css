@@ -2169,7 +2169,8 @@ a.contact-item:hover { color: var(--color-accent); }
   display: inline-block;
 }
 .featured-cta:hover .featured-cta-arrow { transform: translateX(8px); }
-.featured-image-wrap { position: relative; }
+.featured-image-wrap { position: relative; display: flex; }
+.featured-image-wrap > .featured-image { flex: 1; min-width: 0; }
 .featured-arrow {
   position: absolute;
   top: 50%;
