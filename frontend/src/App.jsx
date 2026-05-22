@@ -439,24 +439,18 @@ function FeaturedCarousel({ items, onSelect, lang }) {
   const total = items.length;
   const isAr = lang === 'ar';
 
-  // GSAP scroll-reveal — image scale-in + meta stagger-rise
+  // GSAP scroll-reveal — frame scale-in + info stagger-rise
   useEffect(() => {
     if (!sectionRef.current) return;
     if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
     const ctx = gsap.context(() => {
-      gsap.from('.featured-image', {
-        scale: 1.08,
-        duration: 1.4,
-        ease: 'expo.out',
-        scrollTrigger: { trigger: sectionRef.current, start: 'top 80%', toggleActions: 'play none none reverse' },
+      gsap.from('.fc-frame', {
+        opacity: 0, y: 16, duration: 1.2, ease: 'expo.out',
+        scrollTrigger: { trigger: sectionRef.current, start: 'top 88%', toggleActions: 'play none none none' },
       });
-      gsap.from('.featured-meta > *', {
-        y: 30,
-        opacity: 0,
-        duration: 0.9,
-        stagger: 0.08,
-        ease: 'expo.out',
-        scrollTrigger: { trigger: sectionRef.current, start: 'top 78%', toggleActions: 'play none none reverse' },
+      gsap.from('.fc-info > *', {
+        y: 22, opacity: 0, duration: 0.75, stagger: 0.07, ease: 'expo.out',
+        scrollTrigger: { trigger: sectionRef.current, start: 'top 82%', toggleActions: 'play none none none' },
       });
     }, sectionRef);
     return () => ctx.revert();
@@ -491,19 +485,9 @@ function FeaturedCarousel({ items, onSelect, lang }) {
   const next = () => setIdx(i => (i + 1) % total);
 
   return (
-    <section className="featured-section" ref={sectionRef} aria-label="Selected work">
-      <div className="featured-header">
-        <span className="featured-chapter">02 — {isAr ? 'أعمال مختارة' : 'Selected Work'}</span>
-        {total > 1 && (
-          <span className="featured-count">
-            <span className="featured-count-current">{String(idx + 1).padStart(2, '0')}</span>
-            <span className="featured-count-divider"> · </span>
-            <span className="featured-count-total">{String(total).padStart(2, '0')}</span>
-          </span>
-        )}
-      </div>
+    <section className="featured-section" ref={sectionRef} aria-label={isAr ? 'أعمال مختارة' : 'Selected work'}>
       <div
-        className="featured-spread"
+        className="fc-frame"
         onTouchStart={e => { if (total > 1) touchStartX.current = e.touches[0].clientX; }}
         onTouchEnd={e => {
           if (total <= 1 || touchStartX.current == null) return;
@@ -512,86 +496,78 @@ function FeaturedCarousel({ items, onSelect, lang }) {
           touchStartX.current = null;
         }}
       >
-        <div className="featured-image-wrap">
-          <button
-            type="button"
-            className="featured-image"
-            onClick={() => onSelect(item)}
-            aria-label={`Open ${item.title}`}
-          >
-            {isDirectVideo ? (
-              <video
-                ref={videoRef}
-                key={videoUrl}
-                src={videoUrl}
-                poster={thumb || undefined}
-                muted
-                loop
-                playsInline
-                autoPlay
-                preload="auto"
-                className="featured-image-inner featured-image-video"
-                style={{ objectPosition: `${fx}% ${fy}%` }}
-              />
-            ) : (
-              <div
-                className="featured-image-inner"
-                style={thumb ? { backgroundImage: `url(${thumb})`, backgroundPosition: `${fx}% ${fy}%` } : {}}
-              />
-            )}
-            <span className="featured-image-shade" aria-hidden="true" />
-            <span className="featured-watch">
-              <span className="featured-watch-icon" aria-hidden="true">▶</span>
-              <span>{isAr ? 'مشاهدة' : 'Play Reel'}</span>
-            </span>
-          </button>
+        {/* Media */}
+        <button type="button" className="fc-media-btn" onClick={() => onSelect(item)} aria-label={`${isAr ? 'مشاهدة' : 'Watch'} ${item.title}`}>
+          {isDirectVideo ? (
+            <video ref={videoRef} key={videoUrl} src={videoUrl} poster={thumb || undefined}
+              muted loop playsInline autoPlay preload="auto"
+              className="fc-media" style={{ objectPosition: `${fx}% ${fy}%` }}
+            />
+          ) : (
+            <div className="fc-media fc-media-thumb"
+              style={thumb ? { backgroundImage: `url(${thumb})`, backgroundPosition: `${fx}% ${fy}%` } : {}}
+            />
+          )}
+          <div className="fc-overlay" aria-hidden="true" />
+        </button>
+
+        {/* Top bar */}
+        <div className="fc-top" aria-hidden="true">
+          <span className="fc-chapter">02 — {isAr ? 'أعمال مختارة' : 'Selected Work'}</span>
           {total > 1 && (
-            <>
-              <button type="button" className="featured-arrow featured-arrow-prev" onClick={prev} aria-label="Previous featured project">‹</button>
-              <button type="button" className="featured-arrow featured-arrow-next" onClick={next} aria-label="Next featured project">›</button>
-              <div className="featured-dots" role="tablist" aria-label="Featured projects">
+            <span className="fc-counter">
+              <span className="fc-counter-current">{String(idx + 1).padStart(2, '0')}</span>
+              <span className="fc-counter-sep"> / </span>
+              <span className="fc-counter-total">{String(total).padStart(2, '0')}</span>
+            </span>
+          )}
+        </div>
+
+        {/* Bottom info */}
+        <div className="fc-bottom" dir="auto" key={`fc-info-${item.id}`}>
+          <div className="fc-info">
+            {collabs.length > 0 && (
+              <div className="fc-credits">
+                {collabs.slice(0, 3).map((c, i) => {
+                  const clean = (c.handle || c).replace('@', '');
+                  return (
+                    <a key={i} href={collabLinkHref(c)} target="_blank" rel="noreferrer" className="fc-credit-pill">
+                      @{clean}{c.role && <span className="fc-credit-role"> · {c.role}</span>}
+                      {c.url && !/instagram\.com/i.test(c.url) && <span className="fc-credit-role"> · {collabPlatformLabel(c)}</span>}
+                    </a>
+                  );
+                })}
+              </div>
+            )}
+            <span className="fc-label">{isAr ? 'مشروع' : 'Project'}</span>
+            <h2 className="fc-title">{item.title}</h2>
+            {featuredSummary && <p className="fc-desc">{featuredSummary}</p>}
+          </div>
+          <div className="fc-actions">
+            {total > 1 && (
+              <div className="fc-dots">
                 {items.map((_, i) => (
-                  <button
-                    key={i}
-                    type="button"
-                    className={i === idx ? 'featured-dot active' : 'featured-dot'}
+                  <button key={i} type="button"
+                    className={i === idx ? 'fc-dot active' : 'fc-dot'}
                     onClick={() => setIdx(i)}
-                    aria-label={`Go to featured ${i + 1}`}
-                    aria-selected={i === idx}
+                    aria-label={`Featured ${i + 1}`}
                   />
                 ))}
               </div>
-            </>
-          )}
-        </div>
-        <div className="featured-meta" dir="auto" key={`meta-${item.id}`}>
-          <span className="featured-meta-label">{isAr ? 'مشروع' : 'Project'}</span>
-          <h2 className="featured-title">{item.title}</h2>
-          {featuredSummary && <p className="featured-desc">{featuredSummary}</p>}
-          <div className="featured-tags">
-            {year && <span className="featured-tag">{year}</span>}
-            <span className="featured-tag">SONY FX3</span>
-            <span className="featured-tag">S-LOG3</span>
+            )}
+            <button type="button" className="fc-cta" onClick={() => onSelect(item)}>
+              {isAr ? 'مشاهدة المشروع' : 'View Project'}<span aria-hidden="true"> →</span>
+            </button>
           </div>
-          <div className="featured-credits">
-            <span className="featured-credits-label">{isAr ? 'الفريق' : 'Credits'}</span>
-            <div className="featured-credits-list">
-              {collabs.length > 0 ? collabs.map((c, i) => {
-                const clean = (c.handle || c).replace('@', '');
-                return (
-                  <a key={i} href={`https://instagram.com/${clean}`} target="_blank" rel="noreferrer" className="featured-credit-chip">
-                    <span className="featured-credit-handle">@{clean}</span>
-                    {c.role && <span className="featured-credit-role">{c.role}</span>}
-                  </a>
-                );
-              }) : <span className="featured-credits-empty">{isAr ? 'أضف الفريق من لوحة التحكم' : 'Add credits in admin'}</span>}
-            </div>
-          </div>
-          <button type="button" className="featured-cta" onClick={() => onSelect(item)}>
-            <span>{isAr ? 'مشاهدة المشروع' : 'View Project'}</span>
-            <span className="featured-cta-arrow" aria-hidden="true">→</span>
-          </button>
         </div>
+
+        {/* Side arrows */}
+        {total > 1 && (
+          <>
+            <button type="button" className="fc-arrow fc-arrow-prev" onClick={prev} aria-label="Previous">‹</button>
+            <button type="button" className="fc-arrow fc-arrow-next" onClick={next} aria-label="Next">›</button>
+          </>
+        )}
       </div>
     </section>
   );
@@ -774,7 +750,7 @@ function HeroMasthead({ settings, heroImg, siteTitle, featuredItem, isAr }) {
                 {heroCollaborators.map((c, i) => {
                   const clean = (c.handle || c).replace('@', '');
                   return (
-                    <a key={i} href={`https://instagram.com/${clean}`} target="_blank" rel="noreferrer">
+                    <a key={i} href={collabLinkHref(c)} target="_blank" rel="noreferrer">
                       @{clean}{c.role && <span>{c.role}</span>}
                     </a>
                   );
@@ -1047,9 +1023,10 @@ function VideoModal({ item, onClose, lang }) {
               {collabs.map((c, i) => {
                 const clean = (c.handle || c).replace('@', '');
                 return (
-                  <a key={i} href={`https://instagram.com/${clean}`} target="_blank" rel="noreferrer" className="modal-collab-chip">
+                  <a key={i} href={collabLinkHref(c)} target="_blank" rel="noreferrer" className="modal-collab-chip">
                     <span className="modal-collab-handle">@{clean}</span>
                     {c.role && <span className="modal-collab-role">{c.role}</span>}
+                    {c.url && !/instagram\.com/i.test(c.url) && <span className="modal-collab-role">{collabPlatformLabel(c)}</span>}
                   </a>
                 );
               })}
@@ -1601,7 +1578,7 @@ function PublicSite({ onAdminClick }) {
                           {parseCollaborators(item.collaborators).map((c, i) => {
                             const clean = (c.handle || c).replace('@', '');
                             return (
-                              <a key={i} href={`https://instagram.com/${clean}`} target="_blank" rel="noreferrer" className="collab-tag" onClick={e => e.stopPropagation()}>
+                              <a key={i} href={collabLinkHref(c)} target="_blank" rel="noreferrer" className="collab-tag" onClick={e => e.stopPropagation()}>
                                 @{clean}{c.role && <span className="collab-tag-role"> · {c.role}</span>}
                               </a>
                             );
@@ -2034,18 +2011,33 @@ function parseCollaborators(raw) {
   return raw.split(',').map(h => ({ handle: h.trim(), role: '' })).filter(c => c.handle);
 }
 
+function collabLinkHref(c) {
+  if (c.url) return c.url;
+  const clean = (c.handle || '').replace('@', '');
+  return clean ? `https://instagram.com/${clean}` : '#';
+}
+
+function collabPlatformLabel(c) {
+  if (!c.url) return 'IG';
+  if (/vimeo\.com/i.test(c.url)) return 'Vimeo';
+  if (/instagram\.com/i.test(c.url)) return 'IG';
+  if (/youtube\.com|youtu\.be/i.test(c.url)) return 'YT';
+  return '↗';
+}
+
 function CollaboratorEditor({ value, onChange }) {
   const list = parseCollaborators(value);
   const [handle, setHandle] = useState('');
   const [role, setRole] = useState('');
+  const [url, setUrl] = useState('');
 
   const update = (newList) => onChange(JSON.stringify(newList));
 
   const add = () => {
     if (!handle.trim()) return;
     const h = handle.trim().startsWith('@') ? handle.trim() : `@${handle.trim()}`;
-    update([...list, { handle: h, role: role.trim() }]);
-    setHandle(''); setRole('');
+    update([...list, { handle: h, role: role.trim(), url: url.trim() }]);
+    setHandle(''); setRole(''); setUrl('');
   };
 
   const remove = (i) => update(list.filter((_, j) => j !== i));
@@ -2056,17 +2048,18 @@ function CollaboratorEditor({ value, onChange }) {
         <div key={i} className="collab-row">
           <span className="collab-handle">{c.handle}</span>
           {c.role && <span className="collab-role-tag">{c.role}</span>}
+          {c.url && <span className="collab-role-tag" style={{ color: 'var(--color-accent)', fontSize: '0.7rem' }}>{collabPlatformLabel(c)}</span>}
           <button type="button" className="collab-remove" onClick={() => remove(i)}>✕</button>
         </div>
       ))}
-      <div className="collab-add-row">
+      <div className="collab-add-row" style={{ flexWrap: 'wrap', gap: '0.5rem' }}>
         <input
           type="text"
-          placeholder="@instagram"
+          placeholder="@handle"
           value={handle}
           onChange={e => setHandle(e.target.value)}
           onKeyDown={e => e.key === 'Enter' && (e.preventDefault(), add())}
-          style={{ flex: 1 }}
+          style={{ flex: '1 1 100px' }}
         />
         <input
           type="text"
@@ -2074,7 +2067,15 @@ function CollaboratorEditor({ value, onChange }) {
           value={role}
           onChange={e => setRole(e.target.value)}
           onKeyDown={e => e.key === 'Enter' && (e.preventDefault(), add())}
-          style={{ flex: 2 }}
+          style={{ flex: '2 1 160px' }}
+        />
+        <input
+          type="url"
+          placeholder="Link (Instagram, Vimeo, etc.)"
+          value={url}
+          onChange={e => setUrl(e.target.value)}
+          onKeyDown={e => e.key === 'Enter' && (e.preventDefault(), add())}
+          style={{ flex: '2 1 180px' }}
         />
         <button type="button" className="btn-secondary btn-sm" onClick={add}>+ Add</button>
       </div>
