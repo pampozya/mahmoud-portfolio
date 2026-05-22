@@ -446,7 +446,6 @@ function FeaturedCarousel({ items, onSelect, lang }) {
     const ctx = gsap.context(() => {
       gsap.from('.featured-image', {
         scale: 1.08,
-        opacity: 0,
         duration: 1.4,
         ease: 'expo.out',
         scrollTrigger: { trigger: sectionRef.current, start: 'top 80%', toggleActions: 'play none none reverse' },
