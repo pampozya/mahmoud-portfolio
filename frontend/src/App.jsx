@@ -1173,22 +1173,13 @@ function PublicSite({ onAdminClick }) {
     };
   }, []);
 
-  // Card stagger — fires when spotlight section is visible (or already past it)
+  // Card stagger — animates immediately on load, cards are ready before user scrolls there
   useEffect(() => {
     if (!portfolio.length) return;
     if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
     const cards = document.querySelectorAll('.portfolio-masonry .video-card');
     if (!cards.length) return;
-    gsap.set(cards, { opacity: 0, y: 22 });
-    const animate = () => gsap.to(cards, { opacity: 1, y: 0, duration: 0.55, ease: 'power3.out', stagger: 0.06 });
-    const spotlight = document.querySelector('.spotlight-section');
-    if (!spotlight || spotlight.getBoundingClientRect().top < window.innerHeight) {
-      animate();
-      return;
-    }
-    const obs = new IntersectionObserver(([e]) => { if (e.isIntersecting) { animate(); obs.disconnect(); } }, { rootMargin: '0px 0px 900px 0px', threshold: 0 });
-    obs.observe(spotlight);
-    return () => obs.disconnect();
+    gsap.fromTo(cards, { opacity: 0, y: 22 }, { opacity: 1, y: 0, duration: 0.55, ease: 'power3.out', stagger: 0.06 });
   }, [portfolio, sort, activeCategory]);
 
   // Scroll progress bar — GSAP scrub
