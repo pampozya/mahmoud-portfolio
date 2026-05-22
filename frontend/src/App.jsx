@@ -1182,16 +1182,19 @@ function PublicSite({ onAdminClick }) {
     gsap.fromTo(cards, { opacity: 0, y: 22 }, { opacity: 1, y: 0, duration: 0.55, ease: 'power3.out', stagger: 0.06 });
   }, [portfolio, sort, activeCategory]);
 
-  // Scroll progress bar — GSAP scrub
+  // Scroll progress bar — direct scroll listener
   useEffect(() => {
     if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
-    const ctx = gsap.context(() => {
-      gsap.fromTo('.scroll-progress',
-        { scaleX: 0 },
-        { scaleX: 1, ease: 'none', scrollTrigger: { trigger: '.public-site', start: 'top top', end: 'bottom bottom', scrub: true } }
-      );
-    });
-    return () => ctx.revert();
+    const bar = document.querySelector('.scroll-progress');
+    if (!bar) return;
+    const update = () => {
+      const max = document.documentElement.scrollHeight - window.innerHeight;
+      const pct = max > 0 ? window.scrollY / max : 0;
+      bar.style.transform = `scaleX(${pct})`;
+    };
+    window.addEventListener('scroll', update, { passive: true });
+    update();
+    return () => window.removeEventListener('scroll', update);
   }, []);
 
   // Section nav highlight
