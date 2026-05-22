@@ -462,16 +462,8 @@ function FeaturedCarousel({ items, onSelect, lang }) {
     return () => ctx.revert();
   }, [idx]);
 
-  if (!total) return null;
-  const item = items[idx];
-  const thumb = getThumbnail(item);
-  const fx = item.featured_focal_x ?? 50;
-  const fy = item.featured_focal_y ?? 50;
-  const year = item.created_at ? new Date(item.created_at).getFullYear() : null;
-  const featuredSummary = (item.description || '').split(/\n{2,}|\n/)[0].trim();
-  const prev = () => setIdx(i => (i - 1 + total) % total);
-  const next = () => setIdx(i => (i + 1) % total);
-  const isDirectVideo = item.video_type === 'direct' && item.video_url;
+  const item = total ? items[idx] : null;
+  const isDirectVideo = item && item.video_type === 'direct' && item.video_url;
   const videoUrl = isDirectVideo ? resolveUrl(item.video_url, 'video') : null;
 
   // Auto-play featured video muted when in view, pause when out
@@ -485,6 +477,15 @@ function FeaturedCarousel({ items, onSelect, lang }) {
     obs.observe(v);
     return () => obs.disconnect();
   }, [isDirectVideo, videoUrl]);
+
+  if (!total) return null;
+  const thumb = getThumbnail(item);
+  const fx = item.featured_focal_x ?? 50;
+  const fy = item.featured_focal_y ?? 50;
+  const year = item.created_at ? new Date(item.created_at).getFullYear() : null;
+  const featuredSummary = (item.description || '').split(/\n{2,}|\n/)[0].trim();
+  const prev = () => setIdx(i => (i - 1 + total) % total);
+  const next = () => setIdx(i => (i + 1) % total);
 
   return (
     <section className="featured-section" ref={sectionRef} aria-label="Selected work">
