@@ -1041,6 +1041,48 @@
         .payout-btn.edit { background: rgba(200, 168, 106, 0.14); color: var(--finance-accent); }
         .payout-btn.danger { background: rgba(239, 130, 122, 0.12); color: var(--finance-bad); }
 
+        .income-view-toggle {
+            display: flex;
+            gap: 6px;
+            margin: 10px 0 14px;
+        }
+
+        .income-view-btn {
+            padding: 6px 14px;
+            border-radius: 20px;
+            border: 1px solid var(--finance-line);
+            background: transparent;
+            color: var(--finance-muted);
+            font-family: inherit;
+            font-size: 12px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.15s;
+        }
+
+        .income-view-btn.active {
+            background: var(--finance-accent-soft);
+            border-color: rgba(200, 168, 106, 0.35);
+            color: var(--finance-accent);
+        }
+
+        .pending-month-group { margin-bottom: 20px; }
+
+        .pending-month-label {
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: var(--finance-muted);
+            margin-bottom: 8px;
+            padding: 0 2px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .pending-month-total { color: var(--finance-warn); font-variant-numeric: tabular-nums; }
+
         .income-cards-grid {
             display: grid;
             grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
@@ -1629,6 +1671,10 @@
         <!-- Income -->
         <div id="income" class="tab-content">
             <div class="summary-bar" id="incomeSummaryBar"></div>
+            <div class="income-view-toggle">
+                <button class="income-view-btn active" data-view="all">All Projects</button>
+                <button class="income-view-btn" data-view="pending">Pending by Month</button>
+            </div>
             <div class="data-list" id="incomeList"></div>
             <button class="add-item-btn" id="addIncomeBtn" style="margin-top: 12px;">+ Add Income Project</button>
         </div>
@@ -1902,6 +1948,7 @@
         let lastLocalWriteAt = 0;
         let showPendingOnly = false;  // expenses filter
         let expenseSearch = '';        // expenses search query (lowercased)
+        let incomeView = 'all';        // 'all' | 'pending'
         let importedIds = new Set();
         let backupHistory = [];
         let selectedBackupFile = null;
@@ -2041,6 +2088,13 @@
             document.getElementById('consolidatedIncomeClose').addEventListener('click', () => closeModal('consolidatedIncomeModal'));
 
             document.getElementById('addIncomeBtn').addEventListener('click', () => openAddItemModal({ type: 'income' }));
+            document.querySelectorAll('.income-view-btn').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    incomeView = btn.dataset.view;
+                    document.querySelectorAll('.income-view-btn').forEach(b => b.classList.toggle('active', b === btn));
+                    renderIncome();
+                });
+            });
             document.getElementById('addPayoutBtn').addEventListener('click', openPayoutModal);
 
             document.getElementById('filterPendingBtn').addEventListener('click', () => {
@@ -3147,6 +3201,90 @@
             }
         }
 
+        function renderPendingByMonth() {
+            const list = document.getElementById('incomeList');
+            list.innerHTML = '';
+
+            const pending = appData.income.filter(p => (Number(p.remaining) || 0) > 0);
+            if (pending.length === 0) {
+                list.innerHTML = '<div class="empty-state">No pending income — all collected!</div>';
+                return;
+            }
+
+            // Group by invoice month (YYYY-MM), fallback to 'undated'
+            const byMonth = {};
+            pending.forEach((p, _) => {
+                const d = extractIncomeInvoiceDate(p);
+                const key = d ? `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}` : 'undated';
+                if (!byMonth[key]) byMonth[key] = [];
+                byMonth[key].push(p);
+            });
+
+            // Sort months newest-first, undated last
+            const sortedKeys = Object.keys(byMonth).sort((a, b) => {
+                if (a === 'undated') return 1;
+                if (b === 'undated') return -1;
+                return b.localeCompare(a);
+            });
+
+            sortedKeys.forEach(key => {
+                const items = byMonth[key];
+                const monthTotal = items.reduce((s, p) => s + (Number(p.remaining) || 0), 0);
+                const label = key === 'undated' ? 'Undated' : (() => {
+                    const [y, m] = key.split('-');
+                    return new Date(Number(y), Number(m) - 1, 1).toLocaleDateString('en', { month: 'long', year: 'numeric' });
+                })();
+
+                const group = document.createElement('div');
+                group.className = 'pending-month-group';
+                group.innerHTML = `
+                    <div class="pending-month-label">
+                        <span>${escapeHtml(label)}</span>
+                        <span class="pending-month-total">${fmt(monthTotal)} pending</span>
+                    </div>
+                `;
+
+                const grid = document.createElement('div');
+                grid.className = 'income-cards-grid';
+
+                items.forEach(p => {
+                    const idx = appData.income.indexOf(p);
+                    const pct = p.expected > 0 ? Math.min(100, (p.earned / p.expected) * 100) : 0;
+                    const card = document.createElement('div');
+                    card.className = 'income-card';
+                    card.innerHTML = `
+                        <div class="income-card-header">
+                            <div class="income-project-name">${escapeHtml(p.projectName)}</div>
+                            <button class="edit-btn">✏️</button>
+                        </div>
+                        <div class="income-card-stats">
+                            <div class="income-stat">
+                                <div class="stat-label">Expected</div>
+                                <div class="stat-value">${fmt(p.expected)}</div>
+                            </div>
+                            <div class="income-stat">
+                                <div class="stat-label">Earned</div>
+                                <div class="stat-value earned">${fmt(p.earned)}</div>
+                            </div>
+                            <div class="income-stat">
+                                <div class="stat-label">Pending</div>
+                                <div class="stat-value pending">${fmt(p.remaining)}</div>
+                            </div>
+                        </div>
+                        <div class="income-progress-bar">
+                            <div class="progress-fill" style="width: ${pct}%"></div>
+                        </div>
+                        <div class="income-percent">${pct.toFixed(0)}% collected</div>
+                    `;
+                    card.querySelector('.edit-btn').addEventListener('click', () => openRowEditModal({ type: 'income', itemIdx: idx }));
+                    grid.appendChild(card);
+                });
+
+                group.appendChild(grid);
+                list.appendChild(group);
+            });
+        }
+
         function renderIncome() {
             const tot = calcIncomeTotals();
             document.getElementById('incomeSummaryBar').innerHTML = `
@@ -3165,6 +3303,8 @@
                     <div class="summary-stat-percent">${(100 - tot.percent).toFixed(1)}% to collect</div>
                 </div>
             `;
+
+            if (incomeView === 'pending') { renderPendingByMonth(); return; }
 
             const list = document.getElementById('incomeList');
             list.innerHTML = '';
