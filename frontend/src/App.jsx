@@ -1254,7 +1254,7 @@ function PublicSite({ onAdminClick }) {
     const obs = new IntersectionObserver(entries => {
       entries.forEach(e => {
         const v = e.target;
-        if (e.isIntersecting) { v.play().catch(() => {}); }
+        if (e.isIntersecting) { v.playbackRate = 1.5; v.play().catch(() => {}); }
         else { v.pause(); v.currentTime = 0; }
       });
     }, { threshold: 0.5 });
@@ -1561,7 +1561,7 @@ function PublicSite({ onAdminClick }) {
                           style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }}
                         />
                       ) : isDirect && isHovered ? (
-                        <video src={resolveUrl(item.video_url, 'video')} autoPlay muted playsInline className="card-hover-video" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }} />
+                        <video src={resolveUrl(item.video_url, 'video')} autoPlay muted loop playsInline preload="metadata" className="card-hover-video" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }} onLoadedData={e => { e.target.playbackRate = 1.5; }} />
                       ) : thumb ? (
                         <img src={thumb} alt={item.title} loading="lazy" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
                       ) : (
