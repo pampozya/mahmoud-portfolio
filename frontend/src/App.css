@@ -2102,23 +2102,23 @@ a.contact-item:hover { color: var(--color-accent); }
 }
 .featured-title {
   font-family: 'Manrope', sans-serif;
-  font-size: var(--fs-display);
+  font-size: clamp(1.3rem, 2.6vw, 2.2rem);
   font-weight: 300;
-  line-height: 1.05;
-  letter-spacing: -0.025em;
+  line-height: 1.12;
+  letter-spacing: -0.02em;
   color: var(--color-peach);
   margin: 0;
 }
 .featured-desc {
   font-size: var(--fs-body);
-  line-height: 1.55;
+  line-height: 1.6;
   color: var(--color-text-muted);
-  max-width: 42ch;
+  max-width: 44ch;
   margin: 0;
   font-weight: 300;
   display: -webkit-box;
-  -webkit-line-clamp: 2;
-  line-clamp: 2;
+  -webkit-line-clamp: 3;
+  line-clamp: 3;
   -webkit-box-orient: vertical;
   overflow: hidden;
 }
@@ -2246,6 +2246,7 @@ a.contact-item:hover { color: var(--color-accent); }
 .featured-credit-chip:hover { border-color: var(--color-accent); color: var(--color-accent); }
 .featured-credit-handle { font-weight: 500; }
 .featured-credit-role { color: var(--color-text-muted); font-size: 0.72rem; }
+.featured-credits-empty { font-size: 0.75rem; color: var(--color-text-muted); opacity: 0.5; font-style: italic; }
 .featured-nav {
   display: flex;
   gap: 0.5rem;

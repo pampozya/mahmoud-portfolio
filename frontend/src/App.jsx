@@ -574,22 +574,20 @@ function FeaturedCarousel({ items, onSelect, lang }) {
             <span className="featured-tag">SONY FX3</span>
             <span className="featured-tag">S-LOG3</span>
           </div>
-          {collabs.length > 0 && (
-            <div className="featured-credits">
-              <span className="featured-credits-label">{isAr ? 'الفريق' : 'Credits'}</span>
-              <div className="featured-credits-list">
-                {collabs.map((c, i) => {
-                  const clean = (c.handle || c).replace('@', '');
-                  return (
-                    <a key={i} href={`https://instagram.com/${clean}`} target="_blank" rel="noreferrer" className="featured-credit-chip">
-                      <span className="featured-credit-handle">@{clean}</span>
-                      {c.role && <span className="featured-credit-role">{c.role}</span>}
-                    </a>
-                  );
-                })}
-              </div>
+          <div className="featured-credits">
+            <span className="featured-credits-label">{isAr ? 'الفريق' : 'Credits'}</span>
+            <div className="featured-credits-list">
+              {collabs.length > 0 ? collabs.map((c, i) => {
+                const clean = (c.handle || c).replace('@', '');
+                return (
+                  <a key={i} href={`https://instagram.com/${clean}`} target="_blank" rel="noreferrer" className="featured-credit-chip">
+                    <span className="featured-credit-handle">@{clean}</span>
+                    {c.role && <span className="featured-credit-role">{c.role}</span>}
+                  </a>
+                );
+              }) : <span className="featured-credits-empty">{isAr ? 'أضف الفريق من لوحة التحكم' : 'Add credits in admin'}</span>}
             </div>
-          )}
+          </div>
           <button type="button" className="featured-cta" onClick={() => onSelect(item)}>
             <span>{isAr ? 'مشاهدة المشروع' : 'View Project'}</span>
             <span className="featured-cta-arrow" aria-hidden="true">→</span>
