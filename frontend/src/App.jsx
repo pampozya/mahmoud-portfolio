@@ -435,6 +435,7 @@ function FeaturedCarousel({ items, onSelect, lang }) {
   const [idx, setIdx] = useState(0);
   const sectionRef = useRef(null);
   const videoRef = useRef(null);
+  const touchStartX = useRef(null);
   const total = items.length;
   const isAr = lang === 'ar';
 
@@ -484,6 +485,7 @@ function FeaturedCarousel({ items, onSelect, lang }) {
   const fy = item.featured_focal_y ?? 50;
   const year = item.created_at ? new Date(item.created_at).getFullYear() : null;
   const featuredSummary = (item.description || '').split(/\n{2,}|\n/)[0].trim();
+  const collabs = parseCollaborators(item.collaborators);
   const prev = () => setIdx(i => (i - 1 + total) % total);
   const next = () => setIdx(i => (i + 1) % total);
 
@@ -499,38 +501,67 @@ function FeaturedCarousel({ items, onSelect, lang }) {
           </span>
         )}
       </div>
-      <div className="featured-spread">
-        <button
-          type="button"
-          className="featured-image"
-          onClick={() => onSelect(item)}
-          aria-label={`Open ${item.title}`}
-        >
-          {isDirectVideo ? (
-            <video
-              ref={videoRef}
-              key={videoUrl}
-              src={videoUrl}
-              poster={thumb || undefined}
-              muted
-              loop
-              playsInline
-              preload="metadata"
-              className="featured-image-inner featured-image-video"
-              style={{ objectPosition: `${fx}% ${fy}%` }}
-            />
-          ) : (
-            <div
-              className="featured-image-inner"
-              style={thumb ? { backgroundImage: `url(${thumb})`, backgroundPosition: `${fx}% ${fy}%` } : {}}
-            />
+      <div
+        className="featured-spread"
+        onTouchStart={e => { if (total > 1) touchStartX.current = e.touches[0].clientX; }}
+        onTouchEnd={e => {
+          if (total <= 1 || touchStartX.current == null) return;
+          const dx = e.changedTouches[0].clientX - touchStartX.current;
+          if (Math.abs(dx) > 40) (dx < 0 ? next : prev)();
+          touchStartX.current = null;
+        }}
+      >
+        <div className="featured-image-wrap">
+          <button
+            type="button"
+            className="featured-image"
+            onClick={() => onSelect(item)}
+            aria-label={`Open ${item.title}`}
+          >
+            {isDirectVideo ? (
+              <video
+                ref={videoRef}
+                key={videoUrl}
+                src={videoUrl}
+                poster={thumb || undefined}
+                muted
+                loop
+                playsInline
+                preload="metadata"
+                className="featured-image-inner featured-image-video"
+                style={{ objectPosition: `${fx}% ${fy}%` }}
+              />
+            ) : (
+              <div
+                className="featured-image-inner"
+                style={thumb ? { backgroundImage: `url(${thumb})`, backgroundPosition: `${fx}% ${fy}%` } : {}}
+              />
+            )}
+            <span className="featured-image-shade" aria-hidden="true" />
+            <span className="featured-watch">
+              <span className="featured-watch-icon" aria-hidden="true">▶</span>
+              <span>{isAr ? 'مشاهدة' : 'Play Reel'}</span>
+            </span>
+          </button>
+          {total > 1 && (
+            <>
+              <button type="button" className="featured-arrow featured-arrow-prev" onClick={prev} aria-label="Previous featured project">‹</button>
+              <button type="button" className="featured-arrow featured-arrow-next" onClick={next} aria-label="Next featured project">›</button>
+              <div className="featured-dots" role="tablist" aria-label="Featured projects">
+                {items.map((_, i) => (
+                  <button
+                    key={i}
+                    type="button"
+                    className={i === idx ? 'featured-dot active' : 'featured-dot'}
+                    onClick={() => setIdx(i)}
+                    aria-label={`Go to featured ${i + 1}`}
+                    aria-selected={i === idx}
+                  />
+                ))}
+              </div>
+            </>
           )}
-          <span className="featured-image-shade" aria-hidden="true" />
-          <span className="featured-watch">
-            <span className="featured-watch-icon" aria-hidden="true">▶</span>
-            <span>{isAr ? 'مشاهدة' : 'Play Reel'}</span>
-          </span>
-        </button>
+        </div>
         <div className="featured-meta">
           <span className="featured-meta-label">{isAr ? 'مشروع' : 'Project'}</span>
           <h2 className="featured-title">{item.title}</h2>
@@ -540,22 +571,28 @@ function FeaturedCarousel({ items, onSelect, lang }) {
             <span className="featured-tag">SONY FX3</span>
             <span className="featured-tag">S-LOG3</span>
           </div>
+          {collabs.length > 0 && (
+            <div className="featured-credits">
+              <span className="featured-credits-label">{isAr ? 'الفريق' : 'Credits'}</span>
+              <div className="featured-credits-list">
+                {collabs.map((c, i) => {
+                  const clean = (c.handle || c).replace('@', '');
+                  return (
+                    <a key={i} href={`https://instagram.com/${clean}`} target="_blank" rel="noreferrer" className="featured-credit-chip">
+                      <span className="featured-credit-handle">@{clean}</span>
+                      {c.role && <span className="featured-credit-role">{c.role}</span>}
+                    </a>
+                  );
+                })}
+              </div>
+            </div>
+          )}
           <button type="button" className="featured-cta" onClick={() => onSelect(item)}>
             <span>{isAr ? 'مشاهدة المشروع' : 'View Project'}</span>
             <span className="featured-cta-arrow" aria-hidden="true">→</span>
           </button>
         </div>
       </div>
-      {total > 1 && (
-        <div className="featured-nav">
-          <button type="button" onClick={prev} className="featured-nav-btn" aria-label="Previous featured project">
-            <span aria-hidden="true">←</span>
-          </button>
-          <button type="button" onClick={next} className="featured-nav-btn" aria-label="Next featured project">
-            <span aria-hidden="true">→</span>
-          </button>
-        </div>
-      )}
     </section>
   );
 }
@@ -1417,7 +1454,11 @@ function PublicSite({ onAdminClick }) {
       )}
 
       {portfolio.filter(p => p.featured).length > 0 && (
-        <FeaturedCarousel items={portfolio.filter(p => p.featured).slice(0, 5)} onSelect={openItem} lang={lang} />
+        <FeaturedCarousel
+          items={[...portfolio].filter(p => p.featured).sort((a, b) => new Date(b.created_at) - new Date(a.created_at)).slice(0, 5)}
+          onSelect={openItem}
+          lang={lang}
+        />
       )}
 
       {reelOfMonth && (
