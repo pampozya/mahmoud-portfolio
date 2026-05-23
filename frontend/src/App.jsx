@@ -1339,7 +1339,7 @@ function LeaveReviewForm({ lang, isAr }) {
 
 // ==================== PUBLIC SITE ====================
 
-function PublicSite({ onAdminClick }) {
+function PublicSite() {
   const lang = 'en';
   const isAr = false;
   const [categories, setCategories] = useState([]);
@@ -1639,7 +1639,6 @@ function PublicSite({ onAdminClick }) {
       <div>
         <h1 style={{ fontSize: '2rem', marginBottom: '1rem' }}>{isAr ? 'الموقع تحت الصيانة' : 'Under Maintenance'}</h1>
         <p style={{ color: 'var(--color-text-muted)' }}>{isAr ? 'نعود قريباً' : 'We\'ll be back soon'}</p>
-        <button className="admin-link" style={{ marginTop: '2rem' }} onClick={onAdminClick}>Admin</button>
       </div>
     </div>
   );
@@ -1658,7 +1657,6 @@ function PublicSite({ onAdminClick }) {
             {settings?.about_text && <a href="#about" className={activeSection === 'about' ? 'nav-active' : ''}>About</a>}
             {testimonials.length > 0 && <a href="#testimonials" className={activeSection === 'testimonials' ? 'nav-active' : ''}>Reviews</a>}
             <a href="#contact" className={activeSection === 'contact' ? 'nav-active' : ''}>Contact</a>
-            <button className="admin-link" onClick={onAdminClick}>Admin</button>
           </nav>
         </div>
       </header>
@@ -1992,7 +1990,6 @@ function PublicSite({ onAdminClick }) {
         </div>
         <div className="footer-strip">
           <span>© {new Date().getFullYear()} {siteTitle}. {isAr ? 'جميع الحقوق محفوظة' : 'All rights reserved.'}</span>
-          <button className="footer-admin-link" onClick={onAdminClick}>Admin</button>
         </div>
       </footer>
 
@@ -4661,20 +4658,24 @@ function ReviewQRPage() {
 
 function App() {
   const [token, setToken] = useState(localStorage.getItem('token'));
-  const [page, setPage] = useState('public');
   const params = new URLSearchParams(window.location.search);
   const reviewToken = params.get('review');
   const deliveryToken = params.get('delivery');
   const qrMode = params.get('qr');
-  const handleLogin = (t) => { setToken(t); setPage('admin'); };
-  const handleLogout = () => { localStorage.removeItem('token'); setToken(null); setPage('public'); };
-  const handleAdminClick = () => setPage(token ? 'admin' : 'login');
+  const normalizedPath = window.location.pathname.replace(/\/+$/, '') || '/';
+  const isAdminRoute = normalizedPath === '/admin';
+  const goHome = () => { window.location.href = '/'; };
+  const handleLogin = (t) => {
+    setToken(t);
+    if (!isAdminRoute) window.history.replaceState(null, '', '/admin');
+  };
+  const handleLogout = () => { localStorage.removeItem('token'); setToken(null); };
   if (qrMode === 'review') return <ReviewQRPage />;
   if (deliveryToken) return <DeliveryPage deliveryToken={deliveryToken} />;
   if (reviewToken) return <ReviewPortal reviewToken={reviewToken} />;
-  if (page === 'login') return <LoginPage onLogin={handleLogin} onBack={() => setPage('public')} />;
-  if (page === 'admin' && token) return <AdminDashboard token={token} onLogout={handleLogout} onBack={() => setPage('public')} />;
-  return <PublicSite onAdminClick={handleAdminClick} />;
+  if (isAdminRoute && !token) return <LoginPage onLogin={handleLogin} onBack={goHome} />;
+  if (isAdminRoute && token) return <AdminDashboard token={token} onLogout={handleLogout} onBack={goHome} />;
+  return <PublicSite />;
 }
 
 export default App;
