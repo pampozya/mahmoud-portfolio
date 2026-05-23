@@ -122,6 +122,8 @@ class Category(Base):
     slug = Column(String, unique=True, index=True)
     description = Column(Text, nullable=True)
     order = Column(Integer, default=0)
+    thumbnail_url = Column(String, nullable=True)
+    cover_portfolio_id = Column(Integer, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
 
 class Portfolio(Base):
@@ -326,6 +328,7 @@ def _run_migrations():
         ("portfolios", "featured_focal_y", "FLOAT"),
         ("testimonials", "approved", "BOOLEAN"),
         ("categories", "thumbnail_url", "VARCHAR"),
+        ("categories", "cover_portfolio_id", "INTEGER"),
     ]
     with engine.connect() as conn:
         for table, col, col_type in migrations:
@@ -395,6 +398,7 @@ class CategoryCreate(BaseModel):
     slug: str = Field(min_length=1, max_length=100)
     description: Optional[str] = Field(default=None, max_length=500)
     thumbnail_url: Optional[str] = Field(default=None, max_length=2000)
+    cover_portfolio_id: Optional[int] = None
 
 class CategoryResponse(BaseModel):
     id: int
@@ -403,6 +407,7 @@ class CategoryResponse(BaseModel):
     description: Optional[str]
     order: int
     thumbnail_url: Optional[str] = None
+    cover_portfolio_id: Optional[int] = None
 
     class Config:
         from_attributes = True
@@ -625,6 +630,15 @@ def _ensure_category_exists(category_id: int, db: Session):
     if not exists:
         raise HTTPException(status_code=400, detail="Category does not exist")
 
+def _validate_category_cover(cover_portfolio_id: Optional[int], category_id: int, db: Session):
+    if cover_portfolio_id is None:
+        return
+    item = db.query(Portfolio).filter(Portfolio.id == cover_portfolio_id).first()
+    if not item:
+        raise HTTPException(status_code=400, detail="Cover video does not exist")
+    if item.category_id != category_id:
+        raise HTTPException(status_code=400, detail="Cover video must belong to this category")
+
 # ==================== AUTHENTICATION ROUTES ====================
 
 @app.post("/api/auth/login", response_model=TokenResponse)
@@ -670,11 +684,16 @@ def create_category(
     db: Session = Depends(get_db)
 ):
     """Create new portfolio category (admin only)"""
+    if category.cover_portfolio_id is not None:
+        raise HTTPException(status_code=400, detail="Create the category before assigning a cover video")
+    max_order = db.query(func.max(Category.order)).scalar()
     db_category = Category(
         name=category.name,
         slug=category.slug,
         description=category.description,
-        thumbnail_url=category.thumbnail_url
+        order=(max_order + 1) if max_order is not None else 0,
+        thumbnail_url=category.thumbnail_url,
+        cover_portfolio_id=None
     )
     db.add(db_category)
     db.commit()
@@ -685,10 +704,12 @@ def create_category(
 def update_category(cat_id: int, category: CategoryCreate, email: str = Depends(verify_token), db: Session = Depends(get_db)):
     cat = db.query(Category).filter(Category.id == cat_id).first()
     if not cat: raise HTTPException(404, "Not found")
+    _validate_category_cover(category.cover_portfolio_id, cat_id, db)
     cat.name = category.name
     cat.slug = category.slug
     cat.description = category.description
     cat.thumbnail_url = category.thumbnail_url
+    cat.cover_portfolio_id = category.cover_portfolio_id
     db.commit(); db.refresh(cat)
     return cat
 
@@ -768,10 +789,16 @@ def update_portfolio_item(
         raise HTTPException(status_code=404, detail="Portfolio item not found")
     
     update_data = portfolio.model_dump(exclude_unset=True)
+    old_category_id = db_item.category_id
     if "category_id" in update_data and update_data["category_id"] is not None:
         _ensure_category_exists(update_data["category_id"], db)
     for field, value in update_data.items():
         setattr(db_item, field, value)
+    if "category_id" in update_data and update_data["category_id"] != old_category_id:
+        db.query(Category).filter(
+            Category.cover_portfolio_id == item_id,
+            Category.id != db_item.category_id
+        ).update({Category.cover_portfolio_id: None}, synchronize_session=False)
     
     db_item.updated_at = datetime.utcnow()
     db.commit()
@@ -789,6 +816,10 @@ def delete_portfolio_item(
     if not db_item:
         raise HTTPException(status_code=404, detail="Portfolio item not found")
     
+    db.query(Category).filter(Category.cover_portfolio_id == item_id).update(
+        {Category.cover_portfolio_id: None},
+        synchronize_session=False
+    )
     db.delete(db_item)
     db.commit()
     return {"message": "Portfolio item deleted"}

@@ -1405,11 +1405,7 @@ function PublicSite({ onAdminClick }) {
     }
     groups.push({ id: cat.id, ids: [cat.id], name: cat.name, slug: cat.slug });
     return groups;
-  }, []).sort((a, b) => {
-    if (a.slug === NARRATIVES_CATEGORY_SLUG) return -1;
-    if (b.slug === NARRATIVES_CATEGORY_SLUG) return 1;
-    return 0;
-  });
+  }, []);
   const activeGroup = publicCategoryGroups.find(group => isActivePublicCategory(group, activeCategory));
   const filteredItems = !activeGroup ? sortedPortfolio
     : sortedPortfolio.filter(item => activeGroup.ids.includes(item.category_id));
@@ -1418,11 +1414,24 @@ function PublicSite({ onAdminClick }) {
     return counts;
   }, {});
   const publicCategoryGroupsWithThumbs = publicCategoryGroups.map(group => {
-    const catData = categories.find(c => group.ids.includes(c.id));
-    if (catData?.thumbnail_url) return { ...group, thumb: catData.thumbnail_url };
+    const groupCategories = categories.filter(c => group.ids.includes(c.id));
+    const selectedCoverItem = groupCategories
+      .map(cat => portfolio.find(item => item.id === Number(cat.cover_portfolio_id) && group.ids.includes(item.category_id)))
+      .find(Boolean);
+    if (selectedCoverItem) {
+      return {
+        ...group,
+        thumb: getThumbnail(selectedCoverItem),
+        coverVideoUrl: selectedCoverItem.video_type === 'direct' && selectedCoverItem.video_url
+          ? resolveUrl(selectedCoverItem.video_url, 'video')
+          : null,
+      };
+    }
+    const catData = groupCategories.find(c => c.thumbnail_url);
+    if (catData?.thumbnail_url) return { ...group, thumb: catData.thumbnail_url, coverVideoUrl: null };
     const groupItems = portfolio.filter(item => group.ids.includes(item.category_id));
     const heroItem = groupItems.find(item => item.featured && getThumbnail(item)) || groupItems.find(item => getThumbnail(item));
-    return { ...group, thumb: heroItem ? getThumbnail(heroItem) : null };
+    return { ...group, thumb: heroItem ? getThumbnail(heroItem) : null, coverVideoUrl: null };
   });
   const publicCategoryById = publicCategoryGroupsWithThumbs.reduce((map, group) => {
     group.ids.forEach(id => { map[id] = group; });
@@ -1590,10 +1599,22 @@ function PublicSite({ onAdminClick }) {
                   return (
                   <button
                     key={cat.id}
-                    className={isActivePublicCategory(cat, activeCategory) ? 'category-preview-card active' : 'category-preview-card'}
+                    className={`${isActivePublicCategory(cat, activeCategory) ? 'category-preview-card active' : 'category-preview-card'}${cat.coverVideoUrl ? ' has-video' : ''}`}
                     onClick={() => setActiveCategory(cat.slug)}
                     style={cat.thumb ? { '--category-thumb': `url(${cat.thumb})` } : undefined}
                   >
+                    {cat.coverVideoUrl && (
+                      <video
+                        className="category-preview-video"
+                        src={cat.coverVideoUrl}
+                        poster={cat.thumb || undefined}
+                        autoPlay
+                        muted
+                        loop
+                        playsInline
+                        preload="metadata"
+                      />
+                    )}
                     <span className="category-preview-index">{String(index + 1).padStart(2, '0')}</span>
                     <strong>{cat.name}</strong>
                     <span>
@@ -1915,7 +1936,7 @@ function AdminDashboard({ token, onLogout, onBack }) {
       <main className="admin-content">
         {loading && <p>Loading…</p>}
         {activeTab === 'portfolio' && <PortfolioManager portfolio={portfolio} categories={categories} token={token} onUpdate={loadData} settings={settings} />}
-        {activeTab === 'categories' && <CategoriesManager categories={categories} token={token} onUpdate={loadData} />}
+        {activeTab === 'categories' && <CategoriesManager categories={categories} portfolio={portfolio} token={token} onUpdate={loadData} />}
         {activeTab === 'testimonials' && <TestimonialsManager token={token} />}
         {activeTab === 'logos' && <ClientLogosManager token={token} />}
         {activeTab === 'deliveries' && <DeliveriesManager token={token} />}
@@ -2898,7 +2919,7 @@ function PortfolioManager({ portfolio, categories, token, onUpdate, settings }) 
 
 // ==================== CATEGORIES MANAGER ====================
 
-function CategoriesManager({ categories, token, onUpdate }) {
+function CategoriesManager({ categories, portfolio = [], token, onUpdate }) {
   const [name, setName] = useState('');
   const [slug, setSlug] = useState('');
   const [dragIdx, setDragIdx] = useState(null);
@@ -2906,12 +2927,34 @@ function CategoriesManager({ categories, token, onUpdate }) {
   const [editId, setEditId] = useState(null);
   const [editName, setEditName] = useState('');
   const [editSlug, setEditSlug] = useState('');
+  const [editDescription, setEditDescription] = useState('');
   const [editThumb, setEditThumb] = useState('');
+  const [editCoverId, setEditCoverId] = useState('');
   const [saved, setSaved] = useState(null);
   const [addMsg, setAddMsg] = useState('');
   const [adding, setAdding] = useState(false);
+  const [orderMsg, setOrderMsg] = useState('');
 
   useEffect(() => setList(categories), [categories]);
+
+  const categoryItems = (catId) => portfolio
+    .filter(item => item.category_id === catId)
+    .sort((a, b) => (a.order ?? 0) - (b.order ?? 0) || String(a.title).localeCompare(String(b.title)));
+
+  const coverItemFor = (cat) => portfolio.find(item => item.id === Number(cat.cover_portfolio_id));
+
+  const persistOrder = async (nextList) => {
+    setList(nextList);
+    setOrderMsg('Saving order…');
+    const res = await api.reorderCategories(token, nextList.map(c => c.id));
+    if (res?.ok) {
+      setOrderMsg('✅ Category order saved');
+      setTimeout(() => setOrderMsg(''), 2200);
+    } else {
+      setOrderMsg(`❌ ${res?.detail || 'Could not save order'}`);
+    }
+    onUpdate();
+  };
 
   const handleAdd = async (e) => {
     e.preventDefault();
@@ -2933,13 +2976,28 @@ function CategoriesManager({ categories, token, onUpdate }) {
   };
 
   const startEdit = (cat) => {
-    setEditId(cat.id); setEditName(cat.name); setEditSlug(cat.slug); setEditThumb(cat.thumbnail_url || '');
+    setEditId(cat.id);
+    setEditName(cat.name);
+    setEditSlug(cat.slug);
+    setEditDescription(cat.description || '');
+    setEditThumb(cat.thumbnail_url || '');
+    setEditCoverId(cat.cover_portfolio_id ? String(cat.cover_portfolio_id) : '');
   };
 
   const saveEdit = async (id) => {
-    await api.updateCategory(token, id, { name: editName, slug: editSlug, thumbnail_url: editThumb || null });
-    setSaved(id); setTimeout(() => setSaved(null), 2000);
-    setEditId(null); onUpdate();
+    const res = await api.updateCategory(token, id, {
+      name: editName.trim(),
+      slug: editSlug.trim(),
+      description: editDescription.trim() || null,
+      thumbnail_url: editThumb.trim() || null,
+      cover_portfolio_id: editCoverId ? Number(editCoverId) : null,
+    });
+    if (res?.id) {
+      setSaved(id); setTimeout(() => setSaved(null), 2000);
+      setEditId(null); onUpdate();
+    } else {
+      alert(res?.detail || 'Could not save category');
+    }
   };
 
   const handleDelete = async (id) => {
@@ -2957,9 +3015,18 @@ function CategoriesManager({ categories, token, onUpdate }) {
     setList(newList); setDragIdx(i);
   };
   const onDragEnd = async () => {
+    if (dragIdx === null) return;
     setDragIdx(null);
-    await api.reorderCategories(token, list.map(c => c.id));
-    onUpdate();
+    await persistOrder(list);
+  };
+
+  const moveCategory = async (index, direction) => {
+    const target = index + direction;
+    if (target < 0 || target >= list.length) return;
+    const next = [...list];
+    const [moved] = next.splice(index, 1);
+    next.splice(target, 0, moved);
+    await persistOrder(next);
   };
 
   return (
@@ -2978,13 +3045,21 @@ function CategoriesManager({ categories, token, onUpdate }) {
       </form>
 
       <p style={{ color: 'var(--color-text-muted)', fontSize: '0.85rem', marginBottom: '1rem' }}>
-        Drag ⠿ to reorder · click ✏️ to rename
+        Drag ⠿ or use ↑ ↓ to reorder the public category rail · click ✏️ to rename and choose a cover video.
       </p>
+      {orderMsg && <p className={`upload-status ${orderMsg.startsWith('✅') ? 'upload-ok' : orderMsg.startsWith('❌') ? 'upload-err' : ''}`}>{orderMsg}</p>}
 
       <div className="categories-list">
-        {list.map((cat, i) => (
+        {list.map((cat, i) => {
+          const items = categoryItems(cat.id);
+          const currentCover = coverItemFor(cat);
+          const previewItem = editId === cat.id
+            ? portfolio.find(item => item.id === Number(editCoverId))
+            : currentCover;
+          const previewThumb = previewItem ? getThumbnail(previewItem) : cat.thumbnail_url;
+          return (
           <div key={cat.id} className="category-item draggable"
-            draggable onDragStart={() => onDragStart(i)} onDragOver={e => onDragOver(e, i)} onDragEnd={onDragEnd}>
+            draggable={editId !== cat.id} onDragStart={() => onDragStart(i)} onDragOver={e => onDragOver(e, i)} onDragEnd={onDragEnd}>
             <span className="drag-handle">⠿</span>
 
             {editId === cat.id ? (
@@ -2992,27 +3067,45 @@ function CategoriesManager({ categories, token, onUpdate }) {
                 <input value={editName} onChange={e => { setEditName(e.target.value); setEditSlug(e.target.value.toLowerCase().replace(/\s+/g, '-')); }}
                   placeholder="Name" autoFocus />
                 <input value={editSlug} onChange={e => setEditSlug(e.target.value)} placeholder="slug" />
-                <input value={editThumb} onChange={e => setEditThumb(e.target.value)} placeholder="Thumbnail URL (optional — overrides auto-pick)" style={{ fontSize: '0.8rem' }} />
+                <textarea value={editDescription} onChange={e => setEditDescription(e.target.value)} placeholder="Description (optional)" rows={2} />
+                <label className="field-label">Category cover video</label>
+                <select value={editCoverId} onChange={e => setEditCoverId(e.target.value)}>
+                  <option value="">Auto-pick from category</option>
+                  {items.map(item => (
+                    <option key={item.id} value={item.id}>{item.title}</option>
+                  ))}
+                </select>
+                <input value={editThumb} onChange={e => setEditThumb(e.target.value)} placeholder="Manual cover thumbnail URL (optional fallback)" style={{ fontSize: '0.8rem' }} />
+                {previewThumb && (
+                  <div className="category-cover-preview">
+                    <img src={previewThumb} alt="" />
+                    <span>{previewItem ? `Cover: ${previewItem.title}` : 'Manual cover image'}</span>
+                  </div>
+                )}
                 <div className="cat-edit-btns">
-                  <button className="btn-primary btn-sm" onClick={() => saveEdit(cat.id)}>💾 Save</button>
-                  <button className="btn-secondary btn-sm" onClick={() => setEditId(null)}>Cancel</button>
+                  <button type="button" className="btn-primary btn-sm" onClick={() => saveEdit(cat.id)}>💾 Save</button>
+                  <button type="button" className="btn-secondary btn-sm" onClick={() => setEditId(null)}>Cancel</button>
                 </div>
               </div>
             ) : (
               <div style={{ flex: 1 }}>
                 <h3>{cat.name} {saved === cat.id && <span style={{ color: '#86efac', fontSize: '0.8rem' }}>✅ Saved</span>}</h3>
                 <p>/{cat.slug}</p>
+                <p>{currentCover ? `Cover: ${currentCover.title}` : cat.thumbnail_url ? 'Manual cover image' : 'Cover: auto-picked'}</p>
               </div>
             )}
 
             {editId !== cat.id && (
               <div className="card-actions">
-                <button className="btn-secondary btn-sm" onClick={() => startEdit(cat)}>✏️ Edit</button>
-                <button className="btn-danger btn-sm" onClick={() => handleDelete(cat.id)}>🗑</button>
+                <button type="button" className="btn-secondary btn-sm" onClick={() => moveCategory(i, -1)} disabled={i === 0}>↑</button>
+                <button type="button" className="btn-secondary btn-sm" onClick={() => moveCategory(i, 1)} disabled={i === list.length - 1}>↓</button>
+                <button type="button" className="btn-secondary btn-sm" onClick={() => startEdit(cat)}>✏️ Edit</button>
+                <button type="button" className="btn-danger btn-sm" onClick={() => handleDelete(cat.id)}>🗑</button>
               </div>
             )}
           </div>
-        ))}
+          );
+        })}
       </div>
     </div>
   );

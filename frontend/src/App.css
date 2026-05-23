@@ -161,6 +161,7 @@ body::after {
 .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
 .btn-secondary { background: rgba(255,255,255,0.08); color: var(--color-peach); border: 1px solid var(--color-peach); }
 .btn-secondary:hover { background: rgba(255,255,255,0.12); }
+.btn-secondary:disabled { opacity: 0.35; cursor: not-allowed; }
 .btn-danger { background: rgba(220,38,38,0.1); color: #fca5a5; border: 1px solid rgba(220,38,38,0.3); }
 .btn-danger:hover { background: rgba(220,38,38,0.2); }
 .btn-sm { padding: 0.35rem 0.8rem !important; font-size: 0.8rem !important; }
@@ -1183,6 +1184,19 @@ body::after {
   filter: grayscale(0.55) contrast(1.05);
   transform: scale(1.02);
   transition: transform 0.8s var(--ease-cinematic), filter 0.8s var(--ease-cinematic);
+}
+.category-preview-card.has-video::before {
+  background: linear-gradient(135deg, rgba(10,10,10,0.3), rgba(10,10,10,0.86));
+}
+.category-preview-video {
+  position: absolute;
+  inset: 0;
+  z-index: -3;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  filter: grayscale(0.35) contrast(1.05);
+  transform: scale(1.02);
 }
 .category-preview-card::after {
   content: '';
@@ -2323,9 +2337,43 @@ a.contact-item:hover { color: var(--color-accent); }
 
 /* ==================== CATEGORY INLINE EDIT ==================== */
 .cat-edit-inline { flex: 1; display: flex; flex-direction: column; gap: 0.5rem; }
-.cat-edit-inline input { padding: 0.5rem 0.75rem; background: rgba(255,255,255,0.07); border: 1px solid rgba(255,255,255,0.18); color: var(--color-peach); border-radius: 4px; font-size: 0.9rem; font-family: inherit; }
-.cat-edit-inline input:focus { outline: none; border-color: var(--color-peach); background: rgba(255,255,255,0.08); }
+.cat-edit-inline input,
+.cat-edit-inline select,
+.cat-edit-inline textarea {
+  padding: 0.5rem 0.75rem;
+  background: rgba(255,255,255,0.07);
+  border: 1px solid rgba(255,255,255,0.18);
+  color: var(--color-peach);
+  border-radius: 4px;
+  font-size: 0.9rem;
+  font-family: inherit;
+}
+.cat-edit-inline textarea { resize: vertical; min-height: 70px; }
+.cat-edit-inline input:focus,
+.cat-edit-inline select:focus,
+.cat-edit-inline textarea:focus { outline: none; border-color: var(--color-peach); background: rgba(255,255,255,0.08); }
 .cat-edit-btns { display: flex; gap: 0.5rem; }
+.category-cover-preview {
+  display: grid;
+  grid-template-columns: 96px 1fr;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.65rem;
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 6px;
+}
+.category-cover-preview img {
+  width: 96px;
+  aspect-ratio: 16 / 9;
+  object-fit: cover;
+  border-radius: 4px;
+}
+.category-cover-preview span {
+  color: var(--color-text-muted);
+  font-size: 0.82rem;
+  line-height: 1.35;
+}
 
 /* ==================== CLAUDE ASSISTANT ==================== */
 .claude-fab {
