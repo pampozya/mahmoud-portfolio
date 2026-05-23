@@ -109,6 +109,24 @@ const WORKED_WITH_LOGOS = [
     link_url: 'https://mediaoffice.ae/',
   },
   {
+    id: 'worked-with-sharjah-municipality',
+    name: 'Sharjah Municipality',
+    image_url: `${PUBLIC_ASSET_URL}/client-sharjah-municipality.png?v=${LOGO_ASSET_VERSION}`,
+    link_url: 'https://www.shjmun.gov.ae/',
+  },
+  {
+    id: 'worked-with-gitex-global',
+    name: 'GITEX Global',
+    image_url: `${PUBLIC_ASSET_URL}/client-gitex-global.png?v=${LOGO_ASSET_VERSION}`,
+    link_url: 'https://www.gitex.com/',
+  },
+  {
+    id: 'worked-with-raising-canes',
+    name: "Raising Cane's",
+    image_url: `${PUBLIC_ASSET_URL}/client-raising-canes.svg?v=${LOGO_ASSET_VERSION}`,
+    link_url: 'https://www.raisingcanes.com/',
+  },
+  {
     id: 'worked-with-moonlight-clinic',
     name: 'Moonlight Clinic',
   },
@@ -2358,6 +2376,7 @@ function CollaboratorEditor({ value, onChange, savedCollaborators = [], onRememb
 // ==================== PORTFOLIO MANAGER ====================
 
 const EMPTY_FORM = { category_id: '', title: '', description: 'Cinematic social media reel', video_url: '', video_type: 'youtube', embed_code: '', thumbnail_url: '', featured: false, use_in_hero: false, featured_focal_x: 50, featured_focal_y: 50, order: 0, aspect_ratio: '16:9', collaborators: '', bts_photos: '[]', seo_title: '', seo_description: '' };
+const EMPTY_UPLOAD_CLIENT_LOGO = { name: '', image_url: '', link_url: '' };
 
 async function ensureVideoMetadata(video) {
   if (Number.isFinite(video.duration) && video.duration > 0 && video.videoWidth) return;
@@ -2491,6 +2510,7 @@ function PortfolioManager({ portfolio, categories, token, onUpdate, settings }) 
   const [form, setForm] = useState(EMPTY_FORM);
   const [editId, setEditId] = useState(null);
   const [savedCollaborators, setSavedCollaborators] = useState(readSavedCollaborators);
+  const [clientLogoForm, setClientLogoForm] = useState(EMPTY_UPLOAD_CLIENT_LOGO);
   const [adminSort, setAdminSort] = useState('order');
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(null);
@@ -2546,6 +2566,22 @@ function PortfolioManager({ portfolio, categories, token, onUpdate, settings }) 
     } finally { setUploading(false); }
   };
 
+  const handleClientLogoUpload = async (e) => {
+    const file = e.target.files[0]; if (!file) return;
+    setUploading(true); setUploadStatus('');
+    setUploadFilename(file.name); setUploadProgress(0);
+    try {
+      const res = await api.uploadFile(token, file, p => setUploadProgress(Math.max(1, p)));
+      if (res.url) {
+        setClientLogoForm(prev => ({ ...prev, image_url: res.url }));
+        setUploadProgress(100); setUploadStatus('done');
+      } else setUploadStatus('error');
+    } catch (err) {
+      console.error('Client logo upload failed:', err);
+      setUploadStatus('error');
+    } finally { setUploading(false); }
+  };
+
   const handleBtsUpload = async (e) => {
     const files = Array.from(e.target.files); if (!files.length) return;
     setUploading(true); setUploadStatus('uploading');
@@ -2596,6 +2632,15 @@ function PortfolioManager({ portfolio, categories, token, onUpdate, settings }) 
       }
       if (editId) await api.updatePortfolio(token, editId, payload);
       else await api.createPortfolio(token, payload);
+      if (clientLogoForm.name.trim() && clientLogoForm.image_url) {
+        await api.createClientLogo(token, {
+          name: clientLogoForm.name.trim(),
+          image_url: clientLogoForm.image_url,
+          link_url: clientLogoForm.link_url.trim() || null,
+          order: 999,
+          active: true,
+        });
+      }
       cancelForm(); onUpdate();
     } catch (err) { console.error(err); }
   };
@@ -2604,10 +2649,11 @@ function PortfolioManager({ portfolio, categories, token, onUpdate, settings }) 
     const bts = item.bts_photos ? JSON.parse(item.bts_photos) : [];
     setBtsPhotos(bts);
     setForm({ category_id: item.category_id, title: item.title, description: item.description || '', video_url: item.video_url || '', video_type: item.video_type || 'youtube', embed_code: item.embed_code || '', thumbnail_url: item.thumbnail_url || '', featured: item.featured, use_in_hero: isHeroPortfolioItem(item), featured_focal_x: item.featured_focal_x ?? 50, featured_focal_y: item.featured_focal_y ?? 50, order: item.order || 0, aspect_ratio: item.aspect_ratio || '16:9', collaborators: item.collaborators || '', bts_photos: item.bts_photos || '[]', seo_title: item.seo_title || '', seo_description: item.seo_description || '' });
+    setClientLogoForm(EMPTY_UPLOAD_CLIENT_LOGO);
     setEditId(item.id); setShowForm(true); setUploadStatus('');
   };
 
-  const cancelForm = () => { setShowForm(false); setEditId(null); setForm(EMPTY_FORM); setBtsPhotos([]); setAutoFrames([]); setUploadStatus(''); setThumbOptions([]); };
+  const cancelForm = () => { setShowForm(false); setEditId(null); setForm(EMPTY_FORM); setClientLogoForm(EMPTY_UPLOAD_CLIENT_LOGO); setBtsPhotos([]); setAutoFrames([]); setUploadStatus(''); setThumbOptions([]); };
 
   const handleDelete = async (id) => {
     if (window.confirm('Delete this item?')) { await api.deletePortfolio(token, id); onUpdate(); }
@@ -2632,7 +2678,7 @@ function PortfolioManager({ portfolio, categories, token, onUpdate, settings }) 
             <option value="newest">Sort: Newest</option>
           </select>
           <PDFExportButton portfolio={portfolio} settings={settings} />
-          {!showForm && <button className="btn-primary" onClick={() => { setShowForm(true); setEditId(null); setForm(EMPTY_FORM); setBtsPhotos([]); }}>➕ Add New Item</button>}
+          {!showForm && <button className="btn-primary" onClick={() => { setShowForm(true); setEditId(null); setForm(EMPTY_FORM); setClientLogoForm(EMPTY_UPLOAD_CLIENT_LOGO); setBtsPhotos([]); }}>➕ Add New Item</button>}
         </div>
       </div>
 
@@ -2893,6 +2939,38 @@ function PortfolioManager({ portfolio, categories, token, onUpdate, settings }) 
             savedCollaborators={collaboratorOptions}
             onRemember={rememberCollaborator}
           />
+
+          <div className="inline-client-logo-panel">
+            <div>
+              <label className="field-label">Worked With client logo (optional)</label>
+              <p className="hero-featured-hint">
+                Add a client/brand logo while uploading this video. It will appear in the Worked With strip after saving.
+              </p>
+            </div>
+            <input
+              type="text"
+              placeholder="Client / brand name"
+              value={clientLogoForm.name}
+              onChange={e => setClientLogoForm(prev => ({ ...prev, name: e.target.value }))}
+            />
+            <input
+              type="url"
+              placeholder="Client website (optional)"
+              value={clientLogoForm.link_url}
+              onChange={e => setClientLogoForm(prev => ({ ...prev, link_url: e.target.value }))}
+            />
+            <div className="upload-area">
+              <label className="upload-label">
+                <input type="file" accept="image/png,image/svg+xml,image/jpeg,image/webp" onChange={handleClientLogoUpload} disabled={uploading} />
+                <span>{clientLogoForm.image_url ? 'Replace client logo…' : 'Upload client logo…'}</span>
+              </label>
+              {clientLogoForm.image_url && (
+                <div className="client-logo-inline-preview">
+                  <img src={resolveUrl(clientLogoForm.image_url)} alt="Client logo preview" />
+                </div>
+              )}
+            </div>
+          </div>
 
           <label className="field-label">SEO Title (for Google)</label>
           <input type="text" placeholder="Optimized title for search engines" value={form.seo_title} onChange={e => set({ seo_title: e.target.value })} />
