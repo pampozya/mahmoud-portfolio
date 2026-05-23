@@ -2681,9 +2681,34 @@ a.contact-item:hover { color: var(--color-accent); }
   border: 1px solid rgba(234,234,234,0.12);
   z-index: 2;
 }
-.card-collaborators { display: flex; flex-wrap: wrap; gap: 0.35rem; margin-bottom: 0.5rem; }
-.collab-tag { padding: 0.15rem 0.5rem; background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.15); border-radius: 999px; font-size: 0.72rem; color: var(--color-peach); text-decoration: none; transition: var(--transition); }
-.collab-tag:hover { background: rgba(255,255,255,0.12); }
+.card-collaborators { display: flex; flex-wrap: wrap; align-items: center; gap: 0.35rem; margin: 0.1rem 0 0.4rem; }
+.card-collaborators-label {
+  color: var(--color-accent);
+  font-size: 0.58rem;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  line-height: 1;
+  text-transform: uppercase;
+}
+.collab-tag {
+  display: inline-flex;
+  align-items: center;
+  max-width: 100%;
+  padding: 0.22rem 0.55rem;
+  background: rgba(200,168,106,0.10);
+  border: 1px solid rgba(200,168,106,0.30);
+  border-radius: 999px;
+  color: var(--color-peach);
+  font-size: 0.72rem;
+  font-weight: 650;
+  line-height: 1.2;
+  overflow: hidden;
+  text-decoration: none;
+  text-overflow: ellipsis;
+  transition: var(--transition);
+  white-space: nowrap;
+}
+.collab-tag:hover { background: var(--color-accent-soft); border-color: var(--color-accent); color: var(--color-accent); }
 
 /* ==================== LEAVE REVIEW ==================== */
 .leave-review-wrap { margin-top: 2.5rem; text-align: center; }

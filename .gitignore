@@ -21,6 +21,9 @@ finance/finance-data.json
 finance/backups/
 finance/.backups/
 
+# Local one-off tools
+drive-uploader/
+
 # OS
 .DS_Store
 Thumbs.db

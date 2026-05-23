@@ -1804,6 +1804,7 @@ function PublicSite({ onAdminClick }) {
                 const cleanDescription = (item.description || '').trim();
                 const showDescription = cleanDescription && !/^cinematic social media reel\.?$/i.test(cleanDescription);
                 const cardYear = item.created_at ? new Date(item.created_at).getFullYear() : null;
+                const cardCollaborators = parseCollaborators(item.collaborators);
                 return (
                   <div key={item.id} className={`video-card${item.featured ? ' video-card--featured' : ''}`}
                     onClick={() => openItem(item)}
@@ -1840,11 +1841,10 @@ function PublicSite({ onAdminClick }) {
                     <div className="card-body">
                       <h3>{item.title}</h3>
                       <TranslateToggle text={item.title} />
-                      {showDescription && <p>{cleanDescription}</p>}
-                      {showDescription && <TranslateToggle text={cleanDescription} />}
-                      {item.collaborators && parseCollaborators(item.collaborators).length > 0 && (
-                        <div className="card-collaborators">
-                          {parseCollaborators(item.collaborators).map((c, i) => {
+                      {cardCollaborators.length > 0 && (
+                        <div className="card-collaborators" aria-label="Project credits">
+                          <span className="card-collaborators-label">Credits</span>
+                          {cardCollaborators.map((c, i) => {
                             const clean = (c.handle || c).replace('@', '');
                             return (
                               <a key={i} href={collabLinkHref(c)} target="_blank" rel="noreferrer" className="collab-tag" onClick={e => e.stopPropagation()}>
@@ -1854,6 +1854,8 @@ function PublicSite({ onAdminClick }) {
                           })}
                         </div>
                       )}
+                      {showDescription && <p>{cleanDescription}</p>}
+                      {showDescription && <TranslateToggle text={cleanDescription} />}
                       <div className="card-actions-row">
                         <button type="button" className="card-watch-link" onClick={() => openItem(item)}>
                           {isAr ? 'مشاهدة العمل' : 'Watch project'} <span aria-hidden="true">→</span>
