@@ -15,6 +15,7 @@ const LOGO_ASSET_VERSION = '20260523-real';
 const HERO_PORTFOLIO_ORDER = -10000;
 const NARRATIVES_CATEGORY_SLUG = 'narratives';
 const NARRATIVES_CATEGORY_ALIASES = ['cinematic-videos', 'cinematic-interviews'];
+const CATEGORY_META_PREFIX = '__lensmania_category_meta__:';
 
 const isNarrativesCategory = (catOrSlug) => {
   const slug = typeof catOrSlug === 'string' ? catOrSlug : catOrSlug?.slug;
@@ -25,6 +26,44 @@ const isActivePublicCategory = (group, activeCategory) =>
   group.slug === activeCategory || (group.aliases || []).includes(activeCategory);
 
 const isHeroPortfolioItem = (item) => Number(item?.order) === HERO_PORTFOLIO_ORDER;
+
+const parseCategoryMeta = (cat) => {
+  const rawDescription = cat?.description || '';
+  const lines = rawDescription.split('\n');
+  let meta = {};
+  let description = rawDescription;
+  if (lines[0]?.startsWith(CATEGORY_META_PREFIX)) {
+    try {
+      meta = JSON.parse(lines[0].slice(CATEGORY_META_PREFIX.length));
+      description = lines.slice(1).join('\n').trim();
+    } catch {
+      description = lines.slice(1).join('\n').trim();
+    }
+  }
+  return {
+    description,
+    thumbnail_url: cat?.thumbnail_url || meta.thumbnail_url || '',
+    cover_portfolio_id: cat?.cover_portfolio_id ?? meta.cover_portfolio_id ?? null,
+  };
+};
+
+const buildCategoryPayload = ({ name, slug, description, thumbnail_url, cover_portfolio_id }) => {
+  const cleanDescription = (description || '').trim();
+  const cleanThumb = (thumbnail_url || '').trim();
+  const cleanCoverId = cover_portfolio_id ? Number(cover_portfolio_id) : null;
+  const meta = {};
+  if (cleanThumb) meta.thumbnail_url = cleanThumb;
+  if (cleanCoverId) meta.cover_portfolio_id = cleanCoverId;
+  const metaLine = Object.keys(meta).length ? `${CATEGORY_META_PREFIX}${JSON.stringify(meta)}` : '';
+
+  return {
+    name,
+    slug,
+    description: metaLine ? `${metaLine}${cleanDescription ? `\n${cleanDescription}` : ''}` : (cleanDescription || null),
+    thumbnail_url: cleanThumb || null,
+    cover_portfolio_id: cleanCoverId,
+  };
+};
 
 const WORKED_WITH_LOGOS = [
   {
@@ -1416,7 +1455,7 @@ function PublicSite({ onAdminClick }) {
   const publicCategoryGroupsWithThumbs = publicCategoryGroups.map(group => {
     const groupCategories = categories.filter(c => group.ids.includes(c.id));
     const selectedCoverItem = groupCategories
-      .map(cat => portfolio.find(item => item.id === Number(cat.cover_portfolio_id) && group.ids.includes(item.category_id)))
+      .map(cat => portfolio.find(item => item.id === Number(parseCategoryMeta(cat).cover_portfolio_id) && group.ids.includes(item.category_id)))
       .find(Boolean);
     if (selectedCoverItem) {
       return {
@@ -1427,8 +1466,9 @@ function PublicSite({ onAdminClick }) {
           : null,
       };
     }
-    const catData = groupCategories.find(c => c.thumbnail_url);
-    if (catData?.thumbnail_url) return { ...group, thumb: catData.thumbnail_url, coverVideoUrl: null };
+    const catData = groupCategories.find(c => parseCategoryMeta(c).thumbnail_url);
+    const catThumb = catData ? parseCategoryMeta(catData).thumbnail_url : null;
+    if (catThumb) return { ...group, thumb: catThumb, coverVideoUrl: null };
     const groupItems = portfolio.filter(item => group.ids.includes(item.category_id));
     const heroItem = groupItems.find(item => item.featured && getThumbnail(item)) || groupItems.find(item => getThumbnail(item));
     return { ...group, thumb: heroItem ? getThumbnail(heroItem) : null, coverVideoUrl: null };
@@ -2941,7 +2981,7 @@ function CategoriesManager({ categories, portfolio = [], token, onUpdate }) {
     .filter(item => item.category_id === catId)
     .sort((a, b) => (a.order ?? 0) - (b.order ?? 0) || String(a.title).localeCompare(String(b.title)));
 
-  const coverItemFor = (cat) => portfolio.find(item => item.id === Number(cat.cover_portfolio_id));
+  const coverItemFor = (cat) => portfolio.find(item => item.id === Number(parseCategoryMeta(cat).cover_portfolio_id));
 
   const persistOrder = async (nextList) => {
     setList(nextList);
@@ -2961,7 +3001,7 @@ function CategoriesManager({ categories, portfolio = [], token, onUpdate }) {
     if (!name.trim() || !slug.trim()) { setAddMsg('❌ Both name and slug are required'); return; }
     setAdding(true); setAddMsg('');
     try {
-      const res = await api.createCategory(token, { name: name.trim(), slug: slug.trim() });
+      const res = await api.createCategory(token, buildCategoryPayload({ name: name.trim(), slug: slug.trim() }));
       if (res.id) {
         setAddMsg('✅ Category added!');
         setName(''); setSlug('');
@@ -2979,19 +3019,20 @@ function CategoriesManager({ categories, portfolio = [], token, onUpdate }) {
     setEditId(cat.id);
     setEditName(cat.name);
     setEditSlug(cat.slug);
-    setEditDescription(cat.description || '');
-    setEditThumb(cat.thumbnail_url || '');
-    setEditCoverId(cat.cover_portfolio_id ? String(cat.cover_portfolio_id) : '');
+    const meta = parseCategoryMeta(cat);
+    setEditDescription(meta.description || '');
+    setEditThumb(meta.thumbnail_url || '');
+    setEditCoverId(meta.cover_portfolio_id ? String(meta.cover_portfolio_id) : '');
   };
 
   const saveEdit = async (id) => {
-    const res = await api.updateCategory(token, id, {
+    const res = await api.updateCategory(token, id, buildCategoryPayload({
       name: editName.trim(),
       slug: editSlug.trim(),
       description: editDescription.trim() || null,
       thumbnail_url: editThumb.trim() || null,
       cover_portfolio_id: editCoverId ? Number(editCoverId) : null,
-    });
+    }));
     if (res?.id) {
       setSaved(id); setTimeout(() => setSaved(null), 2000);
       setEditId(null); onUpdate();
@@ -3056,7 +3097,8 @@ function CategoriesManager({ categories, portfolio = [], token, onUpdate }) {
           const previewItem = editId === cat.id
             ? portfolio.find(item => item.id === Number(editCoverId))
             : currentCover;
-          const previewThumb = previewItem ? getThumbnail(previewItem) : cat.thumbnail_url;
+          const catMeta = parseCategoryMeta(cat);
+          const previewThumb = previewItem ? getThumbnail(previewItem) : catMeta.thumbnail_url;
           return (
           <div key={cat.id} className="category-item draggable"
             draggable={editId !== cat.id} onDragStart={() => onDragStart(i)} onDragOver={e => onDragOver(e, i)} onDragEnd={onDragEnd}>
@@ -3091,7 +3133,7 @@ function CategoriesManager({ categories, portfolio = [], token, onUpdate }) {
               <div style={{ flex: 1 }}>
                 <h3>{cat.name} {saved === cat.id && <span style={{ color: '#86efac', fontSize: '0.8rem' }}>✅ Saved</span>}</h3>
                 <p>/{cat.slug}</p>
-                <p>{currentCover ? `Cover: ${currentCover.title}` : cat.thumbnail_url ? 'Manual cover image' : 'Cover: auto-picked'}</p>
+                <p>{currentCover ? `Cover: ${currentCover.title}` : catMeta.thumbnail_url ? 'Manual cover image' : 'Cover: auto-picked'}</p>
               </div>
             )}
 
