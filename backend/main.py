@@ -700,6 +700,14 @@ def create_category(
     db.refresh(db_category)
     return db_category
 
+@app.put("/api/categories/reorder")
+def reorder_categories(data: CategoryReorderRequest, email: str = Depends(verify_token), db: Session = Depends(get_db)):
+    for i, cat_id in enumerate(data.ids):
+        cat = db.query(Category).filter(Category.id == cat_id).first()
+        if cat: cat.order = i
+    db.commit()
+    return {"ok": True}
+
 @app.put("/api/categories/{cat_id}", response_model=CategoryResponse)
 def update_category(cat_id: int, category: CategoryCreate, email: str = Depends(verify_token), db: Session = Depends(get_db)):
     cat = db.query(Category).filter(Category.id == cat_id).first()
@@ -1250,16 +1258,6 @@ def duplicate_portfolio(item_id: int, email: str = Depends(verify_token), db: Se
     )
     db.add(new_item); db.commit(); db.refresh(new_item)
     return new_item
-
-# ==================== CATEGORIES REORDER ====================
-
-@app.put("/api/categories/reorder")
-def reorder_categories(data: CategoryReorderRequest, email: str = Depends(verify_token), db: Session = Depends(get_db)):
-    for i, cat_id in enumerate(data.ids):
-        cat = db.query(Category).filter(Category.id == cat_id).first()
-        if cat: cat.order = i
-    db.commit()
-    return {"ok": True}
 
 # ==================== CHANGE PASSWORD ====================
 

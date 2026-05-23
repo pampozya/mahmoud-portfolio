@@ -44,16 +44,34 @@ const parseCategoryMeta = (cat) => {
     description,
     thumbnail_url: cat?.thumbnail_url || meta.thumbnail_url || '',
     cover_portfolio_id: cat?.cover_portfolio_id ?? meta.cover_portfolio_id ?? null,
+    order: Number.isFinite(Number(meta.order))
+      ? Number(meta.order)
+      : (Number.isFinite(Number(cat?.order)) ? Number(cat.order) : null),
   };
 };
 
-const buildCategoryPayload = ({ name, slug, description, thumbnail_url, cover_portfolio_id }) => {
+const categorySortValue = (cat, fallbackIndex = 0) => {
+  const meta = parseCategoryMeta(cat);
+  return Number.isFinite(Number(meta.order)) ? Number(meta.order) : fallbackIndex;
+};
+
+const sortCategoriesForDisplay = (cats = []) => [...cats]
+  .map((cat, index) => ({ cat, index }))
+  .sort((a, b) => {
+    const orderDiff = categorySortValue(a.cat, a.index) - categorySortValue(b.cat, b.index);
+    return orderDiff || a.index - b.index;
+  })
+  .map(({ cat }) => cat);
+
+const buildCategoryPayload = ({ name, slug, description, thumbnail_url, cover_portfolio_id, order }) => {
   const cleanDescription = (description || '').trim();
   const cleanThumb = (thumbnail_url || '').trim();
   const cleanCoverId = cover_portfolio_id ? Number(cover_portfolio_id) : null;
+  const cleanOrder = Number.isFinite(Number(order)) ? Number(order) : null;
   const meta = {};
   if (cleanThumb) meta.thumbnail_url = cleanThumb;
   if (cleanCoverId) meta.cover_portfolio_id = cleanCoverId;
+  if (cleanOrder !== null) meta.order = cleanOrder;
   const metaLine = Object.keys(meta).length ? `${CATEGORY_META_PREFIX}${JSON.stringify(meta)}` : '';
 
   return {
@@ -1273,7 +1291,7 @@ function PublicSite({ onAdminClick }) {
     api.trackVisit();
     Promise.all([api.getCategories(), api.getPortfolio(), api.getSettings(), api.getTestimonials(), api.getClientLogos().catch(() => [])])
       .then(([cats, items, sett, tests, logos]) => {
-        setCategories(cats || []); setPortfolio(Array.isArray(items) ? items : []);
+        setCategories(sortCategoriesForDisplay(cats || [])); setPortfolio(Array.isArray(items) ? items : []);
         setSettings(sett); setTestimonials(tests || []);
         setClientLogos(mergeWorkedWithLogos(logos));
       }).finally(() => setLoading(false));
@@ -1956,7 +1974,7 @@ function AdminDashboard({ token, onLogout, onBack }) {
     setLoading(true);
     try {
       const [p, c, s] = await Promise.all([api.getPortfolio(), api.getCategories(), api.getSettings()]);
-      setPortfolio(Array.isArray(p) ? p : []); setCategories(c || []); setSettings(s);
+      setPortfolio(Array.isArray(p) ? p : []); setCategories(sortCategoriesForDisplay(c || [])); setSettings(s);
     } catch (err) { console.error(err); } finally { setLoading(false); }
   };
   return (
@@ -2987,7 +3005,22 @@ function CategoriesManager({ categories, portfolio = [], token, onUpdate }) {
     setList(nextList);
     setOrderMsg('Saving order…');
     const res = await api.reorderCategories(token, nextList.map(c => c.id));
-    if (res?.ok) {
+    let saved = res?.ok === true;
+    if (!res?.ok) {
+      const fallback = await Promise.all(nextList.map((cat, index) => {
+        const meta = parseCategoryMeta(cat);
+        return api.updateCategory(token, cat.id, buildCategoryPayload({
+          name: cat.name,
+          slug: cat.slug,
+          description: meta.description,
+          thumbnail_url: meta.thumbnail_url,
+          cover_portfolio_id: meta.cover_portfolio_id,
+          order: index,
+        }));
+      }));
+      saved = fallback.every(item => item?.id);
+    }
+    if (saved) {
       setOrderMsg('✅ Category order saved');
       setTimeout(() => setOrderMsg(''), 2200);
     } else {
@@ -3001,7 +3034,7 @@ function CategoriesManager({ categories, portfolio = [], token, onUpdate }) {
     if (!name.trim() || !slug.trim()) { setAddMsg('❌ Both name and slug are required'); return; }
     setAdding(true); setAddMsg('');
     try {
-      const res = await api.createCategory(token, buildCategoryPayload({ name: name.trim(), slug: slug.trim() }));
+      const res = await api.createCategory(token, buildCategoryPayload({ name: name.trim(), slug: slug.trim(), order: list.length }));
       if (res.id) {
         setAddMsg('✅ Category added!');
         setName(''); setSlug('');
@@ -3032,6 +3065,7 @@ function CategoriesManager({ categories, portfolio = [], token, onUpdate }) {
       description: editDescription.trim() || null,
       thumbnail_url: editThumb.trim() || null,
       cover_portfolio_id: editCoverId ? Number(editCoverId) : null,
+      order: parseCategoryMeta(list.find(cat => cat.id === id)).order ?? list.findIndex(cat => cat.id === id),
     }));
     if (res?.id) {
       setSaved(id); setTimeout(() => setSaved(null), 2000);
