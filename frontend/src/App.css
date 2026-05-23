@@ -147,9 +147,10 @@ body::after {
 .logout-btn { padding: 0.5rem 1.5rem; background: rgba(255,255,255,0.08); color: var(--color-peach); border: 1px solid var(--color-peach); border-radius: 4px; cursor: pointer; font-weight: 600; transition: var(--transition); }
 .logout-btn:hover { background: var(--color-peach); color: var(--color-dark); }
 .admin-nav { display: flex; gap: 0.5rem; background: rgba(15,15,15,0.5); border-bottom: 1px solid rgba(255,255,255,0.08); padding: 0.75rem 1.5rem; overflow-x: auto; }
-.admin-nav button { padding: 0.6rem 1.25rem; background: transparent; color: var(--color-text-muted); border: 1px solid transparent; border-radius: 4px; cursor: pointer; font-weight: 600; font-size: 0.9rem; transition: var(--transition); white-space: nowrap; }
+.admin-nav button { padding: 0.6rem 1.25rem; background: transparent; color: var(--color-text-muted); border: 1px solid transparent; border-radius: 4px; cursor: pointer; font-weight: 600; font-size: 0.9rem; transition: var(--transition); white-space: nowrap; display: inline-flex; align-items: center; gap: 0.45rem; }
 .admin-nav button:hover { color: var(--color-peach); }
 .admin-nav button.active { color: var(--color-dark); background: var(--color-peach); }
+.admin-nav-badge { min-width: 20px; height: 20px; padding: 0 0.35rem; border-radius: 999px; display: inline-flex; align-items: center; justify-content: center; background: #fca5a5; color: #0a0a0a; font-size: 0.7rem; font-weight: 800; line-height: 1; }
 .admin-content { flex: 1; padding: 1.5rem 2rem; overflow-y: auto; }
 .manager-section { background: rgba(20,20,20,0.3); border: 1px solid rgba(255,255,255,0.08); border-radius: 8px; padding: 1.5rem 2rem; margin-bottom: 1.5rem; }
 .manager-section h2 { margin-bottom: 1.25rem; color: var(--color-peach); font-size: 1.4rem; }
@@ -2456,6 +2457,9 @@ a.contact-item:hover { color: var(--color-accent); }
 
 /* ==================== NOTIFICATIONS ==================== */
 .notif-badge { display: inline-flex; align-items: center; justify-content: center; width: 20px; height: 20px; background: #fca5a5; color: #0a0a0a; border-radius: 50%; font-size: 0.7rem; font-weight: 700; margin-left: 0.4rem; }
+.notif-permission-card { display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding: 1rem; margin-bottom: 1rem; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); border-radius: 6px; }
+.notif-permission-card strong { color: var(--color-peach); font-size: 0.92rem; }
+.notif-permission-card p { margin: 0.25rem 0 0; color: var(--color-text-muted); font-size: 0.84rem; line-height: 1.5; }
 .notif-list { display: flex; flex-direction: column; gap: 0.5rem; }
 .notif-item { display: flex; align-items: flex-start; gap: 1rem; padding: 0.85rem 1rem; background: rgba(15,15,15,0.5); border-radius: 6px; border-left: 3px solid var(--color-peach); transition: var(--transition); }
 .notif-item.read { border-left-color: rgba(255,255,255,0.12); opacity: 0.7; }
@@ -2466,6 +2470,10 @@ a.contact-item:hover { color: var(--color-accent); }
 .notif-time { color: rgba(255,255,255,0.25); font-size: 0.75rem; }
 .notif-delete { background: transparent; border: none; color: rgba(255,255,255,0.18); cursor: pointer; font-size: 0.9rem; flex-shrink: 0; transition: color 0.2s; }
 .notif-delete:hover { color: #fca5a5; }
+@media (max-width: 640px) {
+  .notif-permission-card { align-items: flex-start; flex-direction: column; }
+  .notif-permission-card .btn-sm { width: 100%; }
+}
 
 /* ==================== AUTO FRAMES ==================== */
 .auto-frames { margin-top: 0.75rem; }

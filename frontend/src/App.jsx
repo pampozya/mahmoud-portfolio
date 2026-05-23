@@ -22,6 +22,28 @@ const IMAGE_UPLOAD_ACCEPT = 'image/jpeg,image/png,image/webp,image/gif,image/hei
 const isHeicFile = (file) =>
   Boolean(file && (/hei[cf]/i.test(file.type || '') || /\.(heic|heif)$/i.test(file.name || '')));
 
+const canUseBrowserNotifications = () =>
+  typeof window !== 'undefined' && 'Notification' in window && 'serviceWorker' in navigator;
+
+async function showAdminBrowserNotification(notification) {
+  if (!canUseBrowserNotifications() || Notification.permission !== 'granted') return;
+  const title = notification?.title || 'New portfolio notification';
+  const options = {
+    body: notification?.body || 'Open the dashboard to review it.',
+    icon: '/favicon-512.png',
+    badge: '/favicon.png',
+    tag: notification?.id ? `portfolio-notification-${notification.id}` : 'portfolio-notification',
+    data: { url: '/admin' },
+  };
+
+  try {
+    const registration = await navigator.serviceWorker.ready;
+    registration.showNotification(title, options);
+  } catch {
+    try { new Notification(title, options); } catch {}
+  }
+}
+
 const toJpegName = (name = 'image') => {
   const base = name.replace(/\.(heic|heif)$/i, '') || 'image';
   return `${base}.jpg`;
@@ -2047,7 +2069,36 @@ function AdminDashboard({ token, onLogout, onBack }) {
   const [categories, setCategories] = useState([]);
   const [settings, setSettings] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [unreadCount, setUnreadCount] = useState(0);
+  const latestNotificationRef = useRef(Number(localStorage.getItem('latestNotificationId') || 0));
   useEffect(() => { loadData(); }, []);
+
+  const refreshNotifications = useCallback(async (announce = false) => {
+    try {
+      const items = await api.getNotifications(token);
+      const list = Array.isArray(items) ? items : [];
+      const newestId = list.reduce((max, item) => Math.max(max, Number(item.id) || 0), 0);
+      setUnreadCount(list.filter(item => !item.read).length);
+
+      if (announce && latestNotificationRef.current > 0 && newestId > latestNotificationRef.current) {
+        list
+          .filter(item => !item.read && Number(item.id) > latestNotificationRef.current)
+          .sort((a, b) => Number(a.id) - Number(b.id))
+          .forEach(showAdminBrowserNotification);
+      }
+
+      if (newestId > latestNotificationRef.current) {
+        latestNotificationRef.current = newestId;
+        localStorage.setItem('latestNotificationId', String(newestId));
+      }
+    } catch {}
+  }, [token]);
+
+  useEffect(() => {
+    refreshNotifications(false);
+    const interval = setInterval(() => refreshNotifications(true), 45000);
+    return () => clearInterval(interval);
+  }, [refreshNotifications]);
 
   // Enable browser spell check on all admin text fields
   useEffect(() => {
@@ -2073,7 +2124,10 @@ function AdminDashboard({ token, onLogout, onBack }) {
       </header>
       <nav className="admin-nav">
         {[['portfolio','📹 Portfolio'],['categories','📁 Categories'],['testimonials','⭐ Testimonials'],['logos','🏷 Clients'],['deliveries','📦 Deliveries'],['analytics','📊 Analytics'],['notifications','🔔'],['settings','⚙️ Settings']].map(([tab, label]) => (
-          <button key={tab} className={activeTab === tab ? 'active' : ''} onClick={() => setActiveTab(tab)}>{label}</button>
+          <button key={tab} className={activeTab === tab ? 'active' : ''} onClick={() => setActiveTab(tab)}>
+            {label}
+            {tab === 'notifications' && unreadCount > 0 && <span className="admin-nav-badge">{unreadCount}</span>}
+          </button>
         ))}
       </nav>
       <main className="admin-content">
@@ -2084,7 +2138,7 @@ function AdminDashboard({ token, onLogout, onBack }) {
         {activeTab === 'logos' && <ClientLogosManager token={token} />}
         {activeTab === 'deliveries' && <DeliveriesManager token={token} />}
         {activeTab === 'analytics' && <AnalyticsDashboard token={token} />}
-        {activeTab === 'notifications' && <NotificationCenter token={token} />}
+        {activeTab === 'notifications' && <NotificationCenter token={token} onUnreadChange={setUnreadCount} />}
         {activeTab === 'settings' && settings && <SettingsManager settings={settings} token={token} onUpdate={loadData} portfolio={portfolio} />}
       </main>
 
@@ -4082,15 +4136,41 @@ function SettingsManager({ settings, token, onUpdate, portfolio }) {
 
 const NOTIF_ICONS = { like: '❤️', reaction: '😊', contact: '📩', visit: '👁', interested: '🔥' };
 
-function NotificationCenter({ token }) {
+function NotificationCenter({ token, onUnreadChange }) {
   const [notifs, setNotifs] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [permission, setPermission] = useState(canUseBrowserNotifications() ? Notification.permission : 'unsupported');
 
-  const load = () => {
-    api.getNotifications(token).then(setNotifs).catch(() => {}).finally(() => setLoading(false));
+  const load = useCallback(() => {
+    api.getNotifications(token)
+      .then((items) => {
+        const list = Array.isArray(items) ? items : [];
+        const unread = list.filter(n => !n.read).length;
+        setNotifs(list);
+        onUnreadChange?.(unread);
+      })
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  }, [token, onUnreadChange]);
+
+  useEffect(() => {
+    load();
+    const interval = setInterval(load, 45000);
+    return () => clearInterval(interval);
+  }, [load]);
+
+  const enableBrowserAlerts = async () => {
+    if (!canUseBrowserNotifications()) return;
+    const result = await Notification.requestPermission();
+    setPermission(result);
+    if (result === 'granted') {
+      showAdminBrowserNotification({
+        id: 'enabled',
+        title: 'Dashboard notifications enabled',
+        body: 'New portfolio activity can now alert you while this app is open.',
+      });
+    }
   };
-
-  useEffect(() => { load(); }, [token]);
 
   const markRead = async () => {
     await api.markAllRead(token); load();
@@ -4108,6 +4188,18 @@ function NotificationCenter({ token }) {
       <div className="section-header">
         <h2>🔔 Notifications {unread > 0 && <span className="notif-badge">{unread}</span>}</h2>
         {unread > 0 && <button className="btn-secondary btn-sm" onClick={markRead}>Mark all read</button>}
+      </div>
+      <div className="notif-permission-card">
+        <div>
+          <strong>Browser alerts</strong>
+          <p>
+            {permission === 'granted' && 'Enabled for this device while the portfolio app or dashboard is open.'}
+            {permission === 'default' && 'Enable alerts on this device for new inquiries, reactions, reviews, and hot leads.'}
+            {permission === 'denied' && 'Blocked in this browser. Enable notifications from site settings to receive alerts here.'}
+            {permission === 'unsupported' && 'Not supported in this browser.'}
+          </p>
+        </div>
+        {permission === 'default' && <button className="btn-primary btn-sm" onClick={enableBrowserAlerts}>Enable alerts</button>}
       </div>
       {loading ? <p>Loading…</p> : notifs.length === 0 ? <p className="state-text">No notifications yet.</p> : (
         <div className="notif-list">
