@@ -12,6 +12,7 @@ const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:8000/api';
 const BASE_URL = process.env.REACT_APP_BASE_URL || '';
 const PUBLIC_ASSET_URL = process.env.PUBLIC_URL || '.';
 const LOGO_ASSET_VERSION = '20260523-real';
+const SHARE_CARD_VERSION = 'fit-v2';
 const HERO_PORTFOLIO_ORDER = -10000;
 const NARRATIVES_CATEGORY_SLUG = 'narratives';
 const NARRATIVES_CATEGORY_ALIASES = ['cinematic-videos', 'cinematic-interviews'];
@@ -552,7 +553,8 @@ function getThumbnail(item) {
 
 function getPortfolioShareUrl(item) {
   if (!item?.id) return window.location.href;
-  const version = String(item.updated_at || item.thumbnail_url || item.id).replace(/[^A-Za-z0-9_-]/g, '');
+  const baseVersion = item.updated_at || item.thumbnail_url || item.id;
+  const version = `${String(baseVersion).replace(/[^A-Za-z0-9_-]/g, '')}-${SHARE_CARD_VERSION}`;
   return `${window.location.origin}/share/${item.id}${version ? `?v=${version}` : ''}`;
 }
 
@@ -561,7 +563,8 @@ function getPortfolioShareImageUrl(item) {
   if (!item?.id || !fallback || typeof window === 'undefined') return fallback;
   const isLocal = /^(localhost|127\.0\.0\.1|\[::1\])$/.test(window.location.hostname);
   if (isLocal) return fallback;
-  const version = String(item.updated_at || item.thumbnail_url || item.id).replace(/[^A-Za-z0-9_-]/g, '');
+  const baseVersion = item.updated_at || item.thumbnail_url || item.id;
+  const version = `${String(baseVersion).replace(/[^A-Za-z0-9_-]/g, '')}-${SHARE_CARD_VERSION}`;
   return `${window.location.origin}/share-image/${item.id}.jpg${version ? `?v=${version}` : ''}`;
 }
 
@@ -882,10 +885,6 @@ function HeroMasthead({ settings, heroImg, siteTitle, featuredItem, isAr }) {
     const next = document.querySelector('#portfolio') || document.querySelector('section + section');
     if (next) next.scrollIntoView({ behavior: 'smooth', block: 'start' });
   };
-
-  if (!settings) {
-    return <section className="hero" ref={sectionRef}><div className="hero-vignette" /></section>;
-  }
 
   const titleParts = (siteTitle || 'Mahmoud Adel').trim().split(/\s+/);
   const firstName = titleParts[0] || '';

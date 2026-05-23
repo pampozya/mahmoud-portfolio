@@ -69,6 +69,26 @@ function emit_fallback(string $fallbackImage): void {
     http_response_code(404);
 }
 
+function parse_ratio(?string $ratio): ?array {
+    if (!$ratio) return null;
+    if (preg_match('/([0-9.]+)\s*[:x\/]\s*([0-9.]+)/i', $ratio, $m)) {
+        $w = (float)$m[1];
+        $h = (float)$m[2];
+        if ($w > 0 && $h > 0) return [$w, $h];
+    }
+    return null;
+}
+
+function target_dimensions(?array $item, int $srcW, int $srcH): array {
+    $ratio = parse_ratio((string)($item['aspect_ratio'] ?? ''));
+    $aspect = $ratio ? ($ratio[0] / $ratio[1]) : ($srcW / max(1, $srcH));
+
+    if ($aspect < 0.8) return [1080, 1920];   // 9:16 / portrait reels
+    if ($aspect > 1.95) return [1200, 514];   // 21:9
+    if ($aspect > 1.2) return [1200, 675];    // 16:9 / landscape reels
+    return [1200, 1200];                      // square or near-square
+}
+
 $rawId = $_GET['item'] ?? $_GET['id'] ?? '';
 $itemId = filter_var($rawId, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]);
 if (!$itemId) {
@@ -96,10 +116,9 @@ if (!$source) {
     exit;
 }
 
-$targetW = 1200;
-$targetH = 630;
 $srcW = imagesx($source);
 $srcH = imagesy($source);
+[$targetW, $targetH] = target_dimensions($item, $srcW, $srcH);
 $canvas = imagecreatetruecolor($targetW, $targetH);
 
 // Blurred cover background from the exact selected thumbnail.

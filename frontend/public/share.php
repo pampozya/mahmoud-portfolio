@@ -6,6 +6,7 @@ $apiUrl = 'https://lensmania-api.onrender.com/api';
 $fallbackImage = $siteUrl . '/og-image.png?v=20260520';
 $fallbackTitle = 'Mahmoud Adel - Videographer';
 $fallbackDescription = 'Professional Videographer based in Dubai, UAE.';
+$shareCardVersion = 'fit-v2';
 
 function esc(string $value): string {
     return htmlspecialchars($value, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
@@ -67,6 +68,26 @@ function http_json(string $url): ?array {
     return is_array($data) ? $data : null;
 }
 
+function parse_ratio(?string $ratio): ?array {
+    if (!$ratio) return null;
+    if (preg_match('/([0-9.]+)\s*[:x\/]\s*([0-9.]+)/i', $ratio, $m)) {
+        $w = (float)$m[1];
+        $h = (float)$m[2];
+        if ($w > 0 && $h > 0) return [$w, $h];
+    }
+    return null;
+}
+
+function share_image_dimensions(?array $item): array {
+    $ratio = parse_ratio((string)($item['aspect_ratio'] ?? ''));
+    if (!$ratio) return [1200, 675];
+    $aspect = $ratio[0] / $ratio[1];
+    if ($aspect < 0.8) return [1080, 1920];
+    if ($aspect > 1.95) return [1200, 514];
+    if ($aspect > 1.2) return [1200, 675];
+    return [1200, 1200];
+}
+
 $rawId = $_GET['item'] ?? $_GET['id'] ?? '';
 $itemId = filter_var($rawId, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]);
 $item = null;
@@ -98,7 +119,12 @@ if ($item) {
         $description = 'Selected portfolio reel by Mahmoud Adel.';
     }
     $version = preg_replace('/[^A-Za-z0-9_-]/', '', (string)($_GET['v'] ?? ($item['updated_at'] ?? '')));
-    $image = $siteUrl . '/share-image/' . (int)$item['id'] . '.jpg' . ($version ? '?v=' . $version : '');
+    $imageVersion = $version;
+    if ($imageVersion === '' || substr($imageVersion, -strlen($shareCardVersion)) !== $shareCardVersion) {
+        $imageVersion = trim($imageVersion . '-' . $shareCardVersion, '-');
+    }
+    $image = $siteUrl . '/share-image/' . (int)$item['id'] . '.jpg' . ($imageVersion ? '?v=' . $imageVersion : '');
+    [$imageWidth, $imageHeight] = share_image_dimensions($item);
     $humanUrl = $siteUrl . '/?item=' . (int)$item['id'];
     $shareUrl = $siteUrl . '/share/' . (int)$item['id'] . ($version ? '?v=' . $version : '');
 }
