@@ -1424,14 +1424,16 @@ function PublicSite({ onAdminClick }) {
     }
   }, [settings?.ga_tracking_id]);
 
-  // Scroll-triggered fade-ins — fire as section enters viewport (not before)
+  // Scroll-triggered fade-ins — reveal once and stay visible even as sections grow.
   useEffect(() => {
-    const obs = new IntersectionObserver((entries) => {
+    const obs = new IntersectionObserver((entries, observer) => {
       entries.forEach(e => {
-        if (e.isIntersecting) e.target.classList.add('visible');
-        else e.target.classList.remove('visible');
+        if (e.isIntersecting) {
+          e.target.classList.add('visible');
+          observer.unobserve(e.target);
+        }
       });
-    }, { threshold: 0.05, rootMargin: '0px' });
+    }, { threshold: 0, rootMargin: '0px 0px -12% 0px' });
     document.querySelectorAll('.fade-in-section').forEach(el => obs.observe(el));
     // Reveal anything already on-screen at load (top of page) so it's not stuck hidden
     requestAnimationFrame(() => {
@@ -1487,8 +1489,12 @@ function PublicSite({ onAdminClick }) {
     if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
     const cards = document.querySelectorAll('.portfolio-masonry .video-card');
     if (!cards.length) return;
+    if (isMobileDevice) {
+      gsap.set(cards, { opacity: 1, y: 0, clearProps: 'transform' });
+      return;
+    }
     gsap.fromTo(cards, { opacity: 0, y: 22 }, { opacity: 1, y: 0, duration: 0.55, ease: 'power3.out', stagger: 0.06 });
-  }, [portfolio, sort, activeCategory]);
+  }, [portfolio, sort, activeCategory, isMobileDevice]);
 
   // Scroll progress bar — direct scroll listener
   useEffect(() => {
@@ -1740,7 +1746,7 @@ function PublicSite({ onAdminClick }) {
                     onClick={() => setActiveCategory(cat.slug)}
                     style={cat.thumb ? { '--category-thumb': `url(${cat.thumb})` } : undefined}
                   >
-                    {cat.coverVideoUrl && (
+                    {cat.coverVideoUrl && !isMobileDevice && (
                       <video
                         className="category-preview-video"
                         src={cat.coverVideoUrl}
@@ -1805,7 +1811,7 @@ function PublicSite({ onAdminClick }) {
                     onMouseLeave={() => setHoveredVideo(null)}
                   >
                     <div className="card-thumb" style={{ aspectRatio: (item.aspect_ratio || '16:9').replace(':', '/'), width: '100%', position: 'relative', overflow: 'hidden' }}>
-                      {isDirect && isMobileDevice && (
+                      {isDirect && isMobileDevice ? (
                         thumb ? (
                           <img src={thumb} alt={item.title} loading="lazy" className="card-mobile-poster" />
                         ) : (
@@ -1814,17 +1820,6 @@ function PublicSite({ onAdminClick }) {
                             {platform && <span style={{ fontSize: '0.7rem', color: platform.color, fontWeight: 700, opacity: 0.8 }}>{platform.label}</span>}
                           </div>
                         )
-                      )}
-                      {isDirect && isMobileDevice ? (
-                        <video
-                          src={resolveUrl(item.video_url, 'video')}
-                          poster={thumb || undefined}
-                          muted loop playsInline preload={thumb ? 'metadata' : 'auto'}
-                          className="card-mobile-video"
-                          onLoadedData={e => e.currentTarget.classList.add('is-ready')}
-                          onCanPlay={e => e.currentTarget.classList.add('is-ready')}
-                          style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }}
-                        />
                       ) : isDirect && isHovered ? (
                         <video src={resolveUrl(item.video_url, 'video')} autoPlay muted loop playsInline preload="metadata" className="card-hover-video" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }} onLoadedData={e => { e.target.playbackRate = 1.5; }} />
                       ) : thumb ? (

@@ -2558,6 +2558,31 @@ a.contact-item:hover { color: var(--color-accent); }
   .claude-fab { left: 1rem; }
 }
 
+@media (max-width: 768px) {
+  .fade-in-section {
+    opacity: 1;
+    transform: none;
+  }
+
+  .category-preview-video,
+  .card-mobile-video {
+    display: none !important;
+  }
+
+  .category-preview-card.has-video::before {
+    background:
+      linear-gradient(135deg, rgba(10,10,10,0.34), rgba(10,10,10,0.82)),
+      var(--category-thumb, linear-gradient(135deg, rgba(234,234,234,0.04), rgba(234,234,234,0.01)));
+    background-size: cover;
+    background-position: center;
+  }
+
+  .portfolio-masonry .video-card {
+    opacity: 1 !important;
+    transform: none !important;
+  }
+}
+
 /* ==================== VIDEO CARD ADDITIONS ==================== */
 .view-count-badge {
   position: absolute;
