@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import './App.css';
 import jsPDF from 'jspdf';
 import QRCode from 'qrcode';
@@ -10,6 +10,86 @@ gsap.registerPlugin(ScrollTrigger);
 
 const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:8000/api';
 const BASE_URL = process.env.REACT_APP_BASE_URL || '';
+const PUBLIC_ASSET_URL = process.env.PUBLIC_URL || '.';
+const LOGO_ASSET_VERSION = '20260523-real';
+const HERO_PORTFOLIO_ORDER = -10000;
+const NARRATIVES_CATEGORY_SLUG = 'narratives';
+const NARRATIVES_CATEGORY_ALIASES = ['cinematic-videos', 'cinematic-interviews'];
+
+const isNarrativesCategory = (catOrSlug) => {
+  const slug = typeof catOrSlug === 'string' ? catOrSlug : catOrSlug?.slug;
+  return NARRATIVES_CATEGORY_ALIASES.includes((slug || '').toLowerCase());
+};
+
+const isActivePublicCategory = (group, activeCategory) =>
+  group.slug === activeCategory || (group.aliases || []).includes(activeCategory);
+
+const isHeroPortfolioItem = (item) => Number(item?.order) === HERO_PORTFOLIO_ORDER;
+
+const WORKED_WITH_LOGOS = [
+  {
+    id: 'worked-with-dubai-police',
+    name: 'Dubai Police',
+    image_url: `${PUBLIC_ASSET_URL}/client-dubai-police.svg?v=${LOGO_ASSET_VERSION}`,
+    link_url: 'https://www.dubaipolice.gov.ae/',
+  },
+  {
+    id: 'worked-with-dubai-municipality',
+    name: 'Dubai Municipality',
+    image_url: `${PUBLIC_ASSET_URL}/client-dubai-municipality.svg?v=${LOGO_ASSET_VERSION}`,
+    link_url: 'https://www.dm.gov.ae/',
+  },
+  {
+    id: 'worked-with-dubai-civil-defence',
+    name: 'Dubai Civil Defence',
+    image_url: `${PUBLIC_ASSET_URL}/client-dubai-civil-defence.png?v=${LOGO_ASSET_VERSION}`,
+    link_url: 'https://www.dcd.gov.ae/',
+  },
+  {
+    id: 'worked-with-dubai-media-office',
+    name: 'Dubai Media Office',
+    image_url: `${PUBLIC_ASSET_URL}/client-dubai-media-office.png?v=${LOGO_ASSET_VERSION}`,
+    link_url: 'https://mediaoffice.ae/',
+  },
+  {
+    id: 'worked-with-moonlight-clinic',
+    name: 'Moonlight Clinic',
+  },
+  {
+    id: 'worked-with-infrafit-clinic',
+    name: 'Infrafit Clinic',
+  },
+  {
+    id: 'worked-with-doctor-style-clinic',
+    name: 'Doctor Style Clinic',
+  },
+  {
+    id: 'worked-with-r-define-clinic',
+    name: 'R Define Clinic',
+  },
+  {
+    id: 'worked-with-be-well-clinic',
+    name: 'Be Well Clinic',
+  },
+  {
+    id: 'worked-with-dr-hanadi',
+    name: 'Dr Hanadi',
+  },
+];
+
+const mergeWorkedWithLogos = (logos) => {
+  const dynamicLogos = Array.isArray(logos) ? logos : [];
+  const dynamicNames = new Set(
+    dynamicLogos
+      .map((logo) => (logo?.name || '').trim().toLowerCase())
+      .filter(Boolean)
+  );
+
+  return [
+    ...dynamicLogos,
+    ...WORKED_WITH_LOGOS.filter((logo) => !dynamicNames.has(logo.name.toLowerCase())),
+  ];
+};
 
 // Keep Render free tier warm — ping every 4 minutes
 setInterval(() => fetch(`${API_URL}/health`).catch(() => {}), 4 * 60 * 1000);
@@ -779,7 +859,7 @@ function CinematicBrief({ portfolio, settings, siteDesc, isAr }) {
     <section className="cinematic-brief fade-in-section" aria-label="Portfolio briefing">
       <div className="cinematic-brief-inner">
         <div className="brief-copy">
-          <span className="brief-kicker">{isAr ? 'ملخص بصري' : 'Director-ready portfolio'}</span>
+          <span className="brief-kicker">{isAr ? 'ملخص بصري' : 'Selected cinematic work'}</span>
           <h2>{siteDesc || (isAr ? 'تصوير فيديو احترافي' : 'Cinematic video work for brands, people, and places.')}</h2>
           <p>
             {isAr
@@ -811,8 +891,8 @@ function SpotlightSection({ item, categories, onOpen, isAr }) {
   const sectionRef = useRef(null);
   const videoRef = useRef(null);
   const rawCat = categories.find(c => c.id === item.category_id);
-  const cat = rawCat && ['cinematic-interviews', 'cinematic-videos'].includes(rawCat.slug)
-    ? { ...rawCat, name: 'Cinematic Videos' }
+  const cat = rawCat && isNarrativesCategory(rawCat)
+    ? { ...rawCat, name: 'Narratives' }
     : rawCat;
   const thumb = getThumbnail(item);
   const year = item.created_at ? new Date(item.created_at).getFullYear() : null;
@@ -1152,11 +1232,11 @@ function PublicSite({ onAdminClick }) {
 
   useEffect(() => {
     api.trackVisit();
-    Promise.all([api.getCategories(), api.getPortfolio(), api.getSettings(), api.getTestimonials(), api.getClientLogos()])
+    Promise.all([api.getCategories(), api.getPortfolio(), api.getSettings(), api.getTestimonials(), api.getClientLogos().catch(() => [])])
       .then(([cats, items, sett, tests, logos]) => {
         setCategories(cats || []); setPortfolio(Array.isArray(items) ? items : []);
         setSettings(sett); setTestimonials(tests || []);
-        setClientLogos(Array.isArray(logos) ? logos : []);
+        setClientLogos(mergeWorkedWithLogos(logos));
       }).finally(() => setLoading(false));
   }, []);
 
@@ -1311,19 +1391,26 @@ function PublicSite({ onAdminClick }) {
   });
 
   const publicCategoryGroups = categories.reduce((groups, cat) => {
-    const isCinematic = ['cinematic-videos', 'cinematic-interviews'].includes(cat.slug);
-    if (isCinematic) {
-      const existing = groups.find(group => group.slug === 'cinematic-videos');
+    if (isNarrativesCategory(cat)) {
+      const existing = groups.find(group => group.slug === NARRATIVES_CATEGORY_SLUG);
       if (existing) existing.ids.push(cat.id);
-      else groups.push({ id: 'cinematic-videos', ids: [cat.id], name: 'Cinematic Videos', slug: 'cinematic-videos' });
+      else groups.push({
+        id: NARRATIVES_CATEGORY_SLUG,
+        ids: [cat.id],
+        name: 'Narratives',
+        slug: NARRATIVES_CATEGORY_SLUG,
+        aliases: NARRATIVES_CATEGORY_ALIASES,
+      });
       return groups;
     }
     groups.push({ id: cat.id, ids: [cat.id], name: cat.name, slug: cat.slug });
     return groups;
-  }, []);
-  const activeGroup = publicCategoryGroups.find(group =>
-    group.slug === activeCategory || (activeCategory === 'cinematic-interviews' && group.slug === 'cinematic-videos')
-  );
+  }, []).sort((a, b) => {
+    if (a.slug === NARRATIVES_CATEGORY_SLUG) return -1;
+    if (b.slug === NARRATIVES_CATEGORY_SLUG) return 1;
+    return 0;
+  });
+  const activeGroup = publicCategoryGroups.find(group => isActivePublicCategory(group, activeCategory));
   const filteredItems = !activeGroup ? sortedPortfolio
     : sortedPortfolio.filter(item => activeGroup.ids.includes(item.category_id));
   const categoryCounts = portfolio.reduce((counts, item) => {
@@ -1347,6 +1434,11 @@ function PublicSite({ onAdminClick }) {
   const siteTitle = isAr && settings?.site_title_ar ? settings.site_title_ar : (settings?.site_title || 'Mahmoud Adel');
   const siteDesc = isAr && settings?.site_description_ar ? settings.site_description_ar : (settings?.site_description || 'Professional Videographer');
   const heroImg = settings?.hero_image ? resolveUrl(settings.hero_image) : '/hero.jpg';
+  const heroPortfolioItem =
+    portfolio.find(p => isHeroPortfolioItem(p) && p.video_type === 'direct' && p.video_url) ||
+    portfolio.find(p => p.featured && p.video_type === 'direct' && p.video_url) ||
+    portfolio.find(p => isHeroPortfolioItem(p)) ||
+    portfolio.find(p => p.featured);
   const showreelEmbed = getShowreelEmbed(settings?.showreel_url);
 
   const handleLike = (e, item) => {
@@ -1423,7 +1515,7 @@ function PublicSite({ onAdminClick }) {
         settings={settings}
         heroImg={heroImg}
         siteTitle={siteTitle}
-        featuredItem={portfolio.find(p => p.featured && p.video_type === 'direct' && p.video_url) || portfolio.find(p => p.featured)}
+        featuredItem={heroPortfolioItem}
         isAr={isAr}
       />
 
@@ -1435,15 +1527,18 @@ function PublicSite({ onAdminClick }) {
       />
 
       {clientLogos.length > 0 && (
-        <section className="client-logos-bar fade-in-section" aria-label="Trusted by">
-          <div className="client-logos-label">{isAr ? 'موثوق به من قبل' : 'TRUSTED BY'}</div>
+        <section className="client-logos-bar fade-in-section" aria-label={isAr ? 'عملت مع' : 'Worked with'}>
+          <div className="client-logos-label">{isAr ? 'عملت مع' : 'WORKED WITH'}</div>
           <div className="client-logos-marquee">
             <div className="client-logos-track">
               {[...clientLogos, ...clientLogos].map((logo, i) => {
-                const img = <img src={resolveUrl(logo.image_url)} alt={logo.name} title={logo.name} loading="lazy" />;
+                const content = logo.image_url
+                  ? <img src={resolveUrl(logo.image_url)} alt={logo.name} title={logo.name} loading="lazy" />
+                  : <span className="client-logo-text">{logo.name}</span>;
+                const className = logo.image_url ? 'client-logo' : 'client-logo client-logo--text';
                 return logo.link_url
-                  ? <a key={`${logo.id}-${i}`} href={logo.link_url} target="_blank" rel="noopener noreferrer" className="client-logo">{img}</a>
-                  : <div key={`${logo.id}-${i}`} className="client-logo">{img}</div>;
+                  ? <a key={`${logo.id}-${i}`} href={logo.link_url} target="_blank" rel="noopener noreferrer" className={className}>{content}</a>
+                  : <div key={`${logo.id}-${i}`} className={className}>{content}</div>;
               })}
             </div>
           </div>
@@ -1495,7 +1590,7 @@ function PublicSite({ onAdminClick }) {
                   return (
                   <button
                     key={cat.id}
-                    className={(activeCategory === cat.slug || (activeCategory === 'cinematic-interviews' && cat.slug === 'cinematic-videos')) ? 'category-preview-card active' : 'category-preview-card'}
+                    className={isActivePublicCategory(cat, activeCategory) ? 'category-preview-card active' : 'category-preview-card'}
                     onClick={() => setActiveCategory(cat.slug)}
                     style={cat.thumb ? { '--category-thumb': `url(${cat.thumb})` } : undefined}
                   >
@@ -2020,6 +2115,55 @@ function parseCollaborators(raw) {
   return raw.split(',').map(h => ({ handle: h.trim(), role: '' })).filter(c => c.handle);
 }
 
+const COLLABORATOR_LIBRARY_KEY = 'lensmania_collaborator_library';
+
+function normalizeCollaborator(c) {
+  if (!c || typeof c !== 'object') return null;
+  const handle = (c.handle || c.name || '').trim();
+  const role = (c.role || '').trim();
+  const url = (c.url || '').trim();
+  if (!handle && !url) return null;
+  return { handle, role, url };
+}
+
+function collaboratorKey(c) {
+  const normalized = normalizeCollaborator(c);
+  if (!normalized) return '';
+  return `${normalized.handle}|${normalized.role}|${normalized.url}`.toLowerCase();
+}
+
+function collaboratorLabel(c) {
+  const normalized = normalizeCollaborator(c);
+  if (!normalized) return '';
+  return [normalized.handle, normalized.role].filter(Boolean).join(' — ') || normalized.url;
+}
+
+function mergeCollaboratorOptions(...groups) {
+  const seen = new Set();
+  const merged = [];
+  groups.flat().forEach(c => {
+    const normalized = normalizeCollaborator(c);
+    const key = collaboratorKey(normalized);
+    if (!key || seen.has(key)) return;
+    seen.add(key);
+    merged.push(normalized);
+  });
+  return merged.sort((a, b) => collaboratorLabel(a).localeCompare(collaboratorLabel(b)));
+}
+
+function readSavedCollaborators() {
+  try {
+    const parsed = JSON.parse(localStorage.getItem(COLLABORATOR_LIBRARY_KEY) || '[]');
+    return Array.isArray(parsed) ? mergeCollaboratorOptions(parsed) : [];
+  } catch {
+    return [];
+  }
+}
+
+function saveCollaboratorLibrary(collaborators) {
+  localStorage.setItem(COLLABORATOR_LIBRARY_KEY, JSON.stringify(mergeCollaboratorOptions(collaborators)));
+}
+
 function collabLinkHref(c) {
   if (c.url) return c.url;
   const clean = (c.handle || '').replace('@', '');
@@ -2034,19 +2178,37 @@ function collabPlatformLabel(c) {
   return '↗';
 }
 
-function CollaboratorEditor({ value, onChange }) {
+function CollaboratorEditor({ value, onChange, savedCollaborators = [], onRemember }) {
   const list = parseCollaborators(value);
+  const reusableCollaborators = mergeCollaboratorOptions(savedCollaborators)
+    .filter(c => !list.some(existing => collaboratorKey(existing) === collaboratorKey(c)));
   const [handle, setHandle] = useState('');
   const [role, setRole] = useState('');
   const [url, setUrl] = useState('');
+  const [selectedSaved, setSelectedSaved] = useState('');
 
   const update = (newList) => onChange(JSON.stringify(newList));
+
+  const addCollaborator = (collaborator, remember = true) => {
+    const normalized = normalizeCollaborator(collaborator);
+    if (!normalized) return;
+    if (list.some(existing => collaboratorKey(existing) === collaboratorKey(normalized))) return;
+    update([...list, normalized]);
+    if (remember && onRemember) onRemember(normalized);
+  };
 
   const add = () => {
     if (!handle.trim()) return;
     const h = handle.trim().startsWith('@') ? handle.trim() : `@${handle.trim()}`;
-    update([...list, { handle: h, role: role.trim(), url: url.trim() }]);
+    addCollaborator({ handle: h, role, url });
     setHandle(''); setRole(''); setUrl('');
+  };
+
+  const reuseSaved = (key) => {
+    const selected = reusableCollaborators.find(c => collaboratorKey(c) === key);
+    if (!selected) return;
+    addCollaborator(selected, false);
+    setSelectedSaved('');
   };
 
   const remove = (i) => update(list.filter((_, j) => j !== i));
@@ -2055,12 +2217,29 @@ function CollaboratorEditor({ value, onChange }) {
     <div className="collab-editor">
       {list.map((c, i) => (
         <div key={i} className="collab-row">
-          <span className="collab-handle">{c.handle}</span>
+          <span className="collab-handle">{c.handle || c.name || c.url}</span>
           {c.role && <span className="collab-role-tag">{c.role}</span>}
           {c.url && <span className="collab-role-tag" style={{ color: 'var(--color-accent)', fontSize: '0.7rem' }}>{collabPlatformLabel(c)}</span>}
           <button type="button" className="collab-remove" onClick={() => remove(i)}>✕</button>
         </div>
       ))}
+      {reusableCollaborators.length > 0 && (
+        <select
+          className="collab-reuse-select"
+          value={selectedSaved}
+          onChange={e => {
+            setSelectedSaved(e.target.value);
+            reuseSaved(e.target.value);
+          }}
+        >
+          <option value="">Reuse saved collaborator…</option>
+          {reusableCollaborators.map(c => (
+            <option key={collaboratorKey(c)} value={collaboratorKey(c)}>
+              {collaboratorLabel(c)}
+            </option>
+          ))}
+        </select>
+      )}
       <div className="collab-add-row" style={{ flexWrap: 'wrap', gap: '0.5rem' }}>
         <input
           type="text"
@@ -2094,12 +2273,140 @@ function CollaboratorEditor({ value, onChange }) {
 
 // ==================== PORTFOLIO MANAGER ====================
 
-const EMPTY_FORM = { category_id: '', title: '', description: 'Cinematic social media reel', video_url: '', video_type: 'youtube', embed_code: '', thumbnail_url: '', featured: false, featured_focal_x: 50, featured_focal_y: 50, order: 0, aspect_ratio: '16:9', collaborators: '', bts_photos: '[]', seo_title: '', seo_description: '' };
+const EMPTY_FORM = { category_id: '', title: '', description: 'Cinematic social media reel', video_url: '', video_type: 'youtube', embed_code: '', thumbnail_url: '', featured: false, use_in_hero: false, featured_focal_x: 50, featured_focal_y: 50, order: 0, aspect_ratio: '16:9', collaborators: '', bts_photos: '[]', seo_title: '', seo_description: '' };
+
+async function ensureVideoMetadata(video) {
+  if (Number.isFinite(video.duration) && video.duration > 0 && video.videoWidth) return;
+  await new Promise((resolve, reject) => {
+    const done = () => { cleanup(); resolve(); };
+    const fail = () => { cleanup(); reject(new Error('Video metadata unavailable.')); };
+    const cleanup = () => {
+      video.removeEventListener('loadedmetadata', done);
+      video.removeEventListener('loadeddata', done);
+      video.removeEventListener('error', fail);
+      clearTimeout(timer);
+    };
+    const timer = setTimeout(fail, 6000);
+    video.addEventListener('loadedmetadata', done);
+    video.addEventListener('loadeddata', done);
+    video.addEventListener('error', fail);
+    video.load?.();
+  });
+}
+
+async function seekVideoFrame(video, time) {
+  await ensureVideoMetadata(video);
+  const safeTime = Math.max(0, Math.min(video.duration - 0.08, time));
+  await new Promise((resolve, reject) => {
+    const done = () => requestAnimationFrame(() => { cleanup(); resolve(); });
+    const fail = () => { cleanup(); reject(new Error('Could not read this video frame.')); };
+    const cleanup = () => {
+      video.removeEventListener('seeked', done);
+      video.removeEventListener('error', fail);
+      clearTimeout(timer);
+    };
+    const timer = setTimeout(done, 1200);
+    video.addEventListener('seeked', done, { once: true });
+    video.addEventListener('error', fail, { once: true });
+    video.currentTime = safeTime;
+  });
+}
+
+function captureVideoCanvas(video, maxWidth = 900) {
+  const width = Math.min(video.videoWidth || maxWidth, maxWidth);
+  const height = Math.max(1, Math.round(width * (video.videoHeight || width) / (video.videoWidth || width)));
+  const canvas = document.createElement('canvas');
+  canvas.width = width;
+  canvas.height = height;
+  canvas.getContext('2d').drawImage(video, 0, 0, width, height);
+  return canvas;
+}
+
+function scoreThumbnailFrame(canvas) {
+  const ctx = canvas.getContext('2d');
+  const { data, width, height } = ctx.getImageData(0, 0, canvas.width, canvas.height);
+  let mean = 0, variance = 0, saturation = 0, gradient = 0, centerGradient = 0;
+  let dark = 0, blown = 0, skin = 0, samples = 0, centerSamples = 0;
+
+  for (let y = 1; y < height - 1; y += 2) {
+    for (let x = 1; x < width - 1; x += 2) {
+      const idx = (y * width + x) * 4;
+      const r = data[idx], g = data[idx + 1], b = data[idx + 2];
+      const max = Math.max(r, g, b), min = Math.min(r, g, b);
+      const gray = 0.299 * r + 0.587 * g + 0.114 * b;
+      const rightIdx = idx + 4;
+      const downIdx = idx + (width * 4);
+      const rightGray = 0.299 * data[rightIdx] + 0.587 * data[rightIdx + 1] + 0.114 * data[rightIdx + 2];
+      const downGray = 0.299 * data[downIdx] + 0.587 * data[downIdx + 1] + 0.114 * data[downIdx + 2];
+      const edge = Math.abs(gray - rightGray) + Math.abs(gray - downGray);
+      const isCenter = x > width * 0.25 && x < width * 0.75 && y > height * 0.22 && y < height * 0.78;
+
+      mean += gray;
+      variance += gray * gray;
+      saturation += max ? (max - min) / max : 0;
+      gradient += edge;
+      if (isCenter) { centerGradient += edge; centerSamples++; }
+      if (gray < 18) dark++;
+      if (gray > 238) blown++;
+      if (r > 95 && g > 40 && b > 20 && r > g && r > b && Math.abs(r - g) > 14) skin++;
+      samples++;
+    }
+  }
+
+  mean /= samples || 1;
+  const std = Math.sqrt(Math.max(0, (variance / (samples || 1)) - (mean * mean)));
+  const exposure = 1 - Math.min(1, Math.abs(mean - 128) / 128);
+  const sharpnessScore = Math.min(1, (gradient / (samples || 1)) / 46);
+  const centerScore = Math.min(1, (centerGradient / (centerSamples || 1)) / 52);
+  const contrastScore = Math.min(1, std / 70);
+  const saturationScore = Math.min(1, (saturation / (samples || 1)) / 0.42);
+  const skinBoost = Math.min(0.1, (skin / (samples || 1)) * 1.8);
+  const exposurePenalty = Math.min(0.35, (dark / (samples || 1)) * 0.5 + (blown / (samples || 1)) * 0.45);
+
+  return (sharpnessScore * 0.34) + (contrastScore * 0.22) + (exposure * 0.18) +
+    (saturationScore * 0.12) + (centerScore * 0.12) + skinBoost - exposurePenalty;
+}
+
+async function extractSmartThumbnailFrames(video, onProgress) {
+  await ensureVideoMetadata(video);
+  const originalTime = video.currentTime || 0;
+  const duration = video.duration;
+  const sampleCount = Math.min(24, Math.max(12, Math.round(duration / 2)));
+  const candidates = Array.from({ length: sampleCount }, (_, i) => 0.06 + ((i / Math.max(1, sampleCount - 1)) * 0.88));
+  const scored = [];
+
+  for (let i = 0; i < candidates.length; i++) {
+    const pct = candidates[i];
+    await seekVideoFrame(video, duration * pct);
+    scored.push({ pct, score: scoreThumbnailFrame(captureVideoCanvas(video, 360)) });
+    onProgress?.(8 + Math.round(((i + 1) / candidates.length) * 66));
+  }
+
+  const selected = [];
+  const sorted = [...scored].sort((a, b) => b.score - a.score);
+  const minGap = sampleCount >= 20 ? 0.07 : 0.09;
+  sorted.forEach(frame => {
+    if (selected.length < 6 && selected.every(existing => Math.abs(existing.pct - frame.pct) >= minGap)) selected.push(frame);
+  });
+  sorted.forEach(frame => {
+    if (selected.length < 6 && !selected.includes(frame)) selected.push(frame);
+  });
+
+  const frames = [];
+  for (let i = 0; i < selected.length; i++) {
+    await seekVideoFrame(video, duration * selected[i].pct);
+    frames.push(captureVideoCanvas(video, 900).toDataURL('image/jpeg', 0.82));
+    onProgress?.(74 + Math.round(((i + 1) / selected.length) * 24));
+  }
+  await seekVideoFrame(video, originalTime).catch(() => {});
+  return frames;
+}
 
 function PortfolioManager({ portfolio, categories, token, onUpdate, settings }) {
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState(EMPTY_FORM);
   const [editId, setEditId] = useState(null);
+  const [savedCollaborators, setSavedCollaborators] = useState(readSavedCollaborators);
   const [adminSort, setAdminSort] = useState('order');
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(null);
@@ -2112,6 +2419,18 @@ function PortfolioManager({ portfolio, categories, token, onUpdate, settings }) 
   const videoPreviewRef = useRef(null);
   const thumbFetchTimer = useRef(null);
   const set = (patch) => setForm(prev => ({ ...prev, ...patch }));
+  const collaboratorOptions = useMemo(() => {
+    const usedCollaborators = portfolio.flatMap(item => parseCollaborators(item.collaborators));
+    return mergeCollaboratorOptions(usedCollaborators, savedCollaborators);
+  }, [portfolio, savedCollaborators]);
+
+  const rememberCollaborator = (collaborator) => {
+    setSavedCollaborators(prev => {
+      const next = mergeCollaboratorOptions(prev, [collaborator]);
+      saveCollaboratorLibrary(next);
+      return next;
+    });
+  };
 
   const captureFrame = async () => {
     const video = videoPreviewRef.current; if (!video) return;
@@ -2175,8 +2494,22 @@ function PortfolioManager({ portfolio, categories, token, onUpdate, settings }) 
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    const payload = { ...form, category_id: parseInt(form.category_id), bts_photos: JSON.stringify(btsPhotos) };
+    const { use_in_hero, ...formPayload } = form;
+    const payload = {
+      ...formPayload,
+      category_id: parseInt(form.category_id),
+      bts_photos: JSON.stringify(btsPhotos),
+      featured: form.featured || use_in_hero,
+      order: use_in_hero ? HERO_PORTFOLIO_ORDER : (Number(form.order) === HERO_PORTFOLIO_ORDER ? 0 : Number(form.order || 0)),
+    };
     try {
+      if (use_in_hero) {
+        await Promise.all(
+          portfolio
+            .filter(item => isHeroPortfolioItem(item) && item.id !== editId)
+            .map(item => api.updatePortfolio(token, item.id, { order: 0 }))
+        );
+      }
       if (editId) await api.updatePortfolio(token, editId, payload);
       else await api.createPortfolio(token, payload);
       cancelForm(); onUpdate();
@@ -2186,7 +2519,7 @@ function PortfolioManager({ portfolio, categories, token, onUpdate, settings }) 
   const openEdit = (item) => {
     const bts = item.bts_photos ? JSON.parse(item.bts_photos) : [];
     setBtsPhotos(bts);
-    setForm({ category_id: item.category_id, title: item.title, description: item.description || '', video_url: item.video_url || '', video_type: item.video_type || 'youtube', embed_code: item.embed_code || '', thumbnail_url: item.thumbnail_url || '', featured: item.featured, featured_focal_x: item.featured_focal_x ?? 50, featured_focal_y: item.featured_focal_y ?? 50, order: item.order || 0, aspect_ratio: item.aspect_ratio || '16:9', collaborators: item.collaborators || '', bts_photos: item.bts_photos || '[]', seo_title: item.seo_title || '', seo_description: item.seo_description || '' });
+    setForm({ category_id: item.category_id, title: item.title, description: item.description || '', video_url: item.video_url || '', video_type: item.video_type || 'youtube', embed_code: item.embed_code || '', thumbnail_url: item.thumbnail_url || '', featured: item.featured, use_in_hero: isHeroPortfolioItem(item), featured_focal_x: item.featured_focal_x ?? 50, featured_focal_y: item.featured_focal_y ?? 50, order: item.order || 0, aspect_ratio: item.aspect_ratio || '16:9', collaborators: item.collaborators || '', bts_photos: item.bts_photos || '[]', seo_title: item.seo_title || '', seo_description: item.seo_description || '' });
     setEditId(item.id); setShowForm(true); setUploadStatus('');
   };
 
@@ -2244,6 +2577,18 @@ function PortfolioManager({ portfolio, categories, token, onUpdate, settings }) 
           <select value={form.video_type} onChange={e => set({ video_type: e.target.value, video_url: '', embed_code: '' })}>
             {Object.entries(PLATFORMS).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
           </select>
+
+          <label className="featured-label hero-featured-label">
+            <input
+              type="checkbox"
+              checked={form.use_in_hero}
+              onChange={e => set({ use_in_hero: e.target.checked, ...(e.target.checked ? { featured: true } : {}) })}
+            />
+            🏠 Use this video in hero section
+          </label>
+          <p className="hero-featured-hint">
+            Only one portfolio item can be the hero. Direct uploaded videos play as the hero background; external links use their thumbnail.
+          </p>
 
           {needsUrl && (
             <>
@@ -2318,18 +2663,21 @@ function PortfolioManager({ portfolio, categories, token, onUpdate, settings }) 
                     <button type="button" className="btn-capture" onClick={captureFrame} disabled={uploading}>📸 Capture Current Frame</button>
                     <button type="button" className="btn-capture" onClick={async () => {
                       const video = videoPreviewRef.current; if (!video) return;
-                      // 6 evenly-spaced positions between 5% and 95% of duration
-                      const durations = Array.from({length: 6}, (_, i) => 0.05 + (i * 0.18));
-                      const frames = [];
-                      for (const pct of durations) {
-                        video.currentTime = video.duration * pct;
-                        await new Promise(r => setTimeout(r, 350));
-                        const c = document.createElement('canvas'); c.width = video.videoWidth; c.height = video.videoHeight;
-                        c.getContext('2d').drawImage(video, 0, 0);
-                        frames.push(c.toDataURL('image/jpeg', 0.8));
+                      setUploading(true); setUploadStatus('');
+                      setUploadFilename('Fast AI scanning frames…'); setUploadProgress(5);
+                      try {
+                        const frames = await extractSmartThumbnailFrames(video, p => setUploadProgress(p));
+                        setAutoFrames(frames);
+                        setUploadFilename(`⚡ Fast AI picked ${frames.length} strong frames`);
+                        setUploadProgress(100);
+                        setUploadStatus('done');
+                      } catch (e) {
+                        setUploadFilename(`❌ Could not analyze frames: ${e.message}`);
+                        setUploadStatus('error');
+                      } finally {
+                        setUploading(false);
                       }
-                      setAutoFrames(frames);
-                    }} disabled={uploading}>🎞 Extract 6 Frames</button>
+                    }} disabled={uploading}>⚡ AI Pick 6 Frames</button>
                     <button type="button" className="btn-capture" style={{ background: 'rgba(255,255,255,0.08)', borderColor: 'var(--color-peach)' }} onClick={async () => {
                       const video = videoPreviewRef.current; if (!video) return;
                       setUploading(true); setUploadStatus('');
@@ -2361,7 +2709,7 @@ function PortfolioManager({ portfolio, categories, token, onUpdate, settings }) 
                         setUploadStatus('error');
                       }
                       setUploading(false);
-                    }} disabled={uploading}>✦ AI Pick Best Frame</button>
+                    }} disabled={uploading}>☁ Cloud AI Pick Best</button>
                   </div>
                   {autoFrames.length > 0 && (
                     <div className="auto-frames">
@@ -2458,6 +2806,8 @@ function PortfolioManager({ portfolio, categories, token, onUpdate, settings }) 
           <CollaboratorEditor
             value={form.collaborators}
             onChange={val => set({ collaborators: val })}
+            savedCollaborators={collaboratorOptions}
+            onRemember={rememberCollaborator}
           />
 
           <label className="field-label">SEO Title (for Google)</label>
@@ -2520,6 +2870,7 @@ function PortfolioManager({ portfolio, categories, token, onUpdate, settings }) 
                 <div className="item-meta">
                   <span className="type-badge">{PLATFORMS[item.video_type]?.label || item.video_type}</span>
                   <span className="type-badge">{item.aspect_ratio}</span>
+                  {isHeroPortfolioItem(item) && <span>🏠</span>}
                   {item.featured && <span>⭐</span>}
                   {settings?.reel_of_month_id === item.id && <span>🎬</span>}
                 </div>

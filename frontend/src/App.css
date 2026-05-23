@@ -186,6 +186,20 @@ body::after {
 .field-label { display: block; color: var(--color-peach); font-size: 0.85rem; font-weight: 600; margin-bottom: 0.4rem; margin-top: 0.25rem; }
 .featured-label { display: flex; align-items: center; gap: 0.75rem; color: var(--color-text-muted); cursor: pointer; margin-bottom: 1.5rem; font-size: 0.95rem; }
 .featured-label input[type="checkbox"] { width: auto; cursor: pointer; accent-color: var(--color-peach); }
+.hero-featured-label {
+  margin: 0 0 0.35rem;
+  padding: 0.7rem 0.85rem;
+  border: 1px solid rgba(212,184,150,0.2);
+  border-radius: 6px;
+  background: rgba(212,184,150,0.06);
+  color: var(--color-peach);
+}
+.hero-featured-hint {
+  color: var(--color-text-muted);
+  font-size: 0.78rem;
+  line-height: 1.45;
+  margin: -0.1rem 0 0.9rem;
+}
 .section-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.25rem; flex-wrap: wrap; gap: 1rem; }
 .settings-group-title { color: var(--color-peach); font-size: 1rem; margin: 2rem 0 1rem; padding-bottom: 0.5rem; border-bottom: 1px solid rgba(255,255,255,0.1); }
 /* THEME COLOR PICKER */
@@ -795,9 +809,26 @@ body::after {
 .client-logo img {
   height: 100%;
   max-height: 50px;
+  max-width: 220px;
   width: auto;
   object-fit: contain;
   display: block;
+}
+.client-logo--text {
+  filter: none;
+  opacity: 0.52;
+}
+.client-logo--text:hover {
+  opacity: 0.95;
+}
+.client-logo-text {
+  color: var(--color-light);
+  font-family: 'Manrope', sans-serif;
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  white-space: nowrap;
 }
 @keyframes logos-scroll {
   from { transform: translateX(0); }
@@ -806,7 +837,8 @@ body::after {
 @media (max-width: 768px) {
   .client-logos-track { gap: 2.5rem; animation-duration: 25s; }
   .client-logo { height: 36px; }
-  .client-logo img { max-height: 36px; }
+  .client-logo img { max-height: 36px; max-width: 170px; }
+  .client-logo-text { font-size: 0.7rem; }
 }
 
 /* SPOTLIGHT — cinema "now playing" frame */
@@ -2463,6 +2495,11 @@ a.contact-item:hover { color: var(--color-accent); }
 .collab-role-tag { color: var(--color-text-muted); font-size: 0.78rem; flex: 1; }
 .collab-remove { background: transparent; border: none; color: rgba(252,165,165,0.5); cursor: pointer; font-size: 0.8rem; margin-left: auto; transition: color 0.2s; }
 .collab-remove:hover { color: #fca5a5; }
+.collab-reuse-select {
+  margin-bottom: 0.15rem !important;
+  border-color: rgba(212,184,150,0.22) !important;
+  background: rgba(212,184,150,0.07) !important;
+}
 .collab-add-row { display: flex; gap: 0.5rem; align-items: center; }
 .collab-add-row input { padding: 0.55rem 0.75rem; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.12); color: var(--color-peach); border-radius: 4px; font-size: 0.85rem; font-family: inherit; }
 .collab-add-row input::placeholder { color: var(--color-text-muted); }
