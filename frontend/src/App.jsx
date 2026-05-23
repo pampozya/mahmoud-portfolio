@@ -1103,6 +1103,13 @@ function SpotlightSection({ item, categories, onOpen, isAr }) {
 
 function VideoPlayer({ url, poster }) {
   const [error, setError] = useState(false);
+  const [started, setStarted] = useState(false);
+  const videoRef = useRef(null);
+  const startVideo = (e) => {
+    e.stopPropagation();
+    setStarted(true);
+    videoRef.current?.play?.().catch(() => {});
+  };
   return error ? (
     <div className="no-video" style={{ flexDirection: 'column', gap: '0.75rem', padding: '2rem', textAlign: 'center' }}>
       <div style={{ fontSize: '2rem' }}>⚠️</div>
@@ -1112,19 +1119,29 @@ function VideoPlayer({ url, poster }) {
       </p>
     </div>
   ) : (
-    <video
-      key={url}
-      controls
-      playsInline
-      preload="metadata"
-      poster={poster || undefined}
-      style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', background: '#000' }}
-      onError={() => setError(true)}
-    >
-      <source src={url} type="video/mp4" />
-      <source src={url} type="video/webm" />
-      <source src={url} type="video/quicktime" />
-    </video>
+    <>
+      <video
+        ref={videoRef}
+        key={url}
+        controls
+        playsInline
+        preload="metadata"
+        poster={poster || undefined}
+        style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', background: '#000' }}
+        onPlay={() => setStarted(true)}
+        onError={() => setError(true)}
+      >
+        <source src={url} type="video/mp4" />
+        <source src={url} type="video/webm" />
+        <source src={url} type="video/quicktime" />
+      </video>
+      {poster && !started && (
+        <button type="button" className="video-poster-overlay" onClick={startVideo} aria-label="Play video">
+          <img src={poster} alt="" />
+          <span aria-hidden="true">▶</span>
+        </button>
+      )}
+    </>
   );
 }
 
