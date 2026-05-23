@@ -1,4 +1,4 @@
-# Mahmoud Dessoki Portfolio - Full Stack Setup Guide
+# Mahmoud Adel Portfolio - Full Stack Setup Guide
 
 ## 📋 Project Structure
 
@@ -300,4 +300,4 @@ For issues or questions, refer to:
 
 ---
 
-**Built with ❤️ for Mahmoud Dessoki Portfolio**
+**Built with ❤️ for Mahmoud Adel Portfolio**

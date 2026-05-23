@@ -777,7 +777,7 @@ function HeroMasthead({ settings, heroImg, siteTitle, featuredItem, isAr }) {
     return <section className="hero" ref={sectionRef}><div className="hero-vignette" /></section>;
   }
 
-  const titleParts = (siteTitle || 'Mahmoud Dessoki').trim().split(/\s+/);
+  const titleParts = (siteTitle || 'Mahmoud Adel').trim().split(/\s+/);
   const firstName = titleParts[0] || '';
   const lastName = titleParts.slice(1).join(' ');
 

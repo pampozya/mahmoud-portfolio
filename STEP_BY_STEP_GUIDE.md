@@ -1,5 +1,5 @@
 # 📚 Complete Step-by-Step Guide
-## Mahmoud Dessoki Full-Stack Portfolio Setup
+## Mahmoud Adel Full-Stack Portfolio Setup
 
 ---
 
@@ -259,7 +259,7 @@ Click **Login**
 
 1. Click **⚙️ Settings** tab
 2. Fill in your information:
-   - **Site Title:** Mahmoud Dessoki
+   - **Site Title:** Mahmoud Adel
    - **Site Description:** Professional Cinematographer & Videographer
    - **Email:** info@lensmania.ae
    - **Phone:** +971 XX XXX XXXX

@@ -1,5 +1,5 @@
 """
-Mahmoud Dessoki Portfolio - FastAPI Backend
+Mahmoud Adel Portfolio - FastAPI Backend
 Full-stack portfolio management system with admin dashboard
 """
 
@@ -52,7 +52,7 @@ _translate_cache = {}
 
 # Create FastAPI app
 app = FastAPI(
-    title="Mahmoud Dessoki Portfolio API",
+    title="Mahmoud Adel Portfolio API",
     description="Portfolio management system with admin dashboard",
     version="1.0.0"
 )
@@ -164,7 +164,7 @@ class Settings(Base):
     __tablename__ = "settings"
     
     id = Column(Integer, primary_key=True, index=True)
-    site_title = Column(String, default="Mahmoud Dessoki")
+    site_title = Column(String, default="Mahmoud Adel")
     site_description = Column(Text)
     email = Column(String)
     phone = Column(String, nullable=True)
@@ -830,7 +830,7 @@ def get_settings(db: Session = Depends(get_db)):
     settings = db.query(Settings).first()
     if not settings:
         settings = Settings(
-            site_title="Mahmoud Dessoki",
+            site_title="Mahmoud Adel",
             site_description="Professional Cinematographer & Videographer",
             email="info@lensmania.ae"
         )
@@ -1803,7 +1803,7 @@ async def translate_text(data: TranslateRequest, request: Request):
 def root():
     """Root endpoint"""
     return {
-        "message": "Mahmoud Dessoki Portfolio API",
+        "message": "Mahmoud Adel Portfolio API",
         "docs": "/docs",
         "openapi": "/openapi.json"
     }

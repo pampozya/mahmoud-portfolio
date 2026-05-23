@@ -1,4 +1,4 @@
-# 🎬 Mahmoud Dessoki - Full Stack Portfolio
+# 🎬 Mahmoud Adel - Full Stack Portfolio
 
 A complete full-stack portfolio website with admin dashboard for managing videography work.
 
@@ -290,7 +290,7 @@ Ready to extend? Here are ideas:
 
 ## 📜 License
 
-Built for Mahmoud Dessoki (@mahmoud.diido)
+Built for Mahmoud Adel (@mahmoud.diido)
 
 ---
 
