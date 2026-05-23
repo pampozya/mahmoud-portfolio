@@ -2388,6 +2388,86 @@ a.contact-item:hover { color: var(--color-accent); }
   }
 }
 
+@media (max-width: 768px) {
+  .portfolio-section.fade-in-section,
+  .portfolio-section.fade-in-section.visible {
+    opacity: 1 !important;
+    transform: none !important;
+  }
+
+  .portfolio-section {
+    min-height: 60vh;
+    background: var(--color-dark);
+    overflow: visible;
+  }
+
+  .portfolio-section .section-inner {
+    opacity: 1 !important;
+    transform: none !important;
+    visibility: visible !important;
+  }
+
+  .category-preview-shell {
+    position: relative;
+    top: auto;
+    z-index: 2;
+    overflow: visible;
+    background: var(--color-dark);
+    animation: none;
+    mask-image: none;
+    -webkit-mask-image: none;
+  }
+
+  .category-preview-shell::before,
+  .category-preview-shell::after {
+    display: none;
+  }
+
+  .category-preview-rail {
+    display: flex;
+    grid-auto-flow: unset;
+    grid-auto-columns: unset;
+    overflow-x: auto;
+    mask-image: none;
+    -webkit-mask-image: none;
+  }
+
+  .category-preview-card {
+    flex: 0 0 min(78vw, 260px);
+    min-width: 0;
+  }
+
+  .portfolio-masonry {
+    columns: auto !important;
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 2.4rem;
+  }
+
+  .portfolio-masonry .video-card {
+    break-inside: auto;
+    display: flex !important;
+    margin-bottom: 0;
+    opacity: 1 !important;
+    transform: none !important;
+    visibility: visible !important;
+  }
+
+  .portfolio-masonry .card-thumb {
+    max-height: none;
+    min-height: 220px;
+  }
+
+  .portfolio-masonry .card-thumb img,
+  .portfolio-masonry .card-mobile-poster {
+    position: absolute !important;
+    inset: 0 !important;
+    width: 100% !important;
+    height: 100% !important;
+    object-fit: cover;
+  }
+}
+
 /* ==================== QR MODAL ==================== */
 .qr-modal { background: var(--color-maroon); border: 1px solid rgba(255,255,255,0.12); border-radius: 8px; padding: 2rem; text-align: center; position: relative; width: 320px; }
 .qr-modal h3 { color: var(--color-peach); margin-bottom: 0.5rem; }
