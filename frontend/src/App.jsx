@@ -556,6 +556,15 @@ function getPortfolioShareUrl(item) {
   return `${window.location.origin}/share/${item.id}${version ? `?v=${version}` : ''}`;
 }
 
+function getPortfolioShareImageUrl(item) {
+  const fallback = getThumbnail(item);
+  if (!item?.id || !fallback || typeof window === 'undefined') return fallback;
+  const isLocal = /^(localhost|127\.0\.0\.1|\[::1\])$/.test(window.location.hostname);
+  if (isLocal) return fallback;
+  const version = String(item.updated_at || item.thumbnail_url || item.id).replace(/[^A-Za-z0-9_-]/g, '');
+  return `${window.location.origin}/share-image/${item.id}.jpg${version ? `?v=${version}` : ''}`;
+}
+
 function getAspectPadding(ratio) {
   const map = { '16:9': '56.25%', '9:16': '177.78%', '4:3': '75%', '1:1': '100%', '21:9': '42.86%' };
   return map[ratio] || '56.25%';
@@ -1128,6 +1137,7 @@ function VideoModal({ item, onClose, lang }) {
   const directUrl = item.video_type === 'direct' ? resolveUrl(item.video_url, 'video') : null;
   const isEmbed = item.video_type === 'embed';
   const padding = getAspectPadding(item.aspect_ratio || '16:9');
+  const modalPoster = getPortfolioShareImageUrl(item);
   const bts = item.bts_photos ? JSON.parse(item.bts_photos) : [];
   const collabs = parseCollaborators(item.collaborators);
   const [btsIndex, setBtsIndex] = useState(null);
@@ -1176,7 +1186,7 @@ function VideoModal({ item, onClose, lang }) {
               </div>
             )}
             {!isInstagram && embedUrl && <iframe src={embedUrl} title={item.title} frameBorder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowFullScreen style={{ position: 'absolute', inset: 0, width: '100%', height: '100%' }} />}
-            {directUrl && <VideoPlayer url={directUrl} poster={getThumbnail(item)} />}
+            {directUrl && <VideoPlayer url={directUrl} poster={modalPoster} />}
             {isEmbed && item.embed_code && <div dangerouslySetInnerHTML={{ __html: item.embed_code }} style={{ position: 'absolute', inset: 0 }} />}
             {!isInstagram && !embedUrl && !directUrl && !isEmbed && <div className="no-video">{item.video_url ? <a href={item.video_url} target="_blank" rel="noreferrer" className="btn-primary" style={{ textDecoration: 'none' }}>Watch on {PLATFORMS[item.video_type]?.label || 'Platform'} ↗</a> : 'No video'}</div>}
           </div>
