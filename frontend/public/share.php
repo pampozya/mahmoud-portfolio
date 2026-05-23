@@ -11,6 +11,14 @@ function esc(string $value): string {
     return htmlspecialchars($value, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
 }
 
+function clean_text(string $value, int $limit = 220): string {
+    $value = trim(preg_replace('/\s+/', ' ', strip_tags($value)));
+    if (function_exists('mb_strlen') && function_exists('mb_substr')) {
+        return mb_strlen($value) > $limit ? rtrim(mb_substr($value, 0, $limit - 1)) . '…' : $value;
+    }
+    return strlen($value) > $limit ? rtrim(substr($value, 0, $limit - 1)) . '...' : $value;
+}
+
 function absolute_url(?string $url, string $siteUrl): ?string {
     if (!$url) return null;
     if (preg_match('/^https?:\/\//i', $url)) return $url;
@@ -78,20 +86,21 @@ if ($itemId) {
 $title = $fallbackTitle;
 $description = $fallbackDescription;
 $image = $fallbackImage;
+$imageWidth = 1200;
+$imageHeight = 630;
 $humanUrl = $siteUrl . '/';
 $shareUrl = $siteUrl . '/';
 
 if ($item) {
-    $title = trim((string)($item['title'] ?? '')) ?: $fallbackTitle;
-    $description = trim((string)($item['description'] ?? ''));
+    $title = clean_text((string)($item['title'] ?? ''), 90) ?: $fallbackTitle;
+    $description = clean_text((string)($item['seo_description'] ?? '') ?: (string)($item['description'] ?? ''));
     if ($description === '' || preg_match('/^cinematic social media reel\.?$/i', $description)) {
         $description = 'Selected portfolio reel by Mahmoud Adel.';
     }
-    $image = absolute_url((string)($item['thumbnail_url'] ?? ''), $siteUrl)
-        ?: youtube_thumbnail((string)($item['video_url'] ?? ''))
-        ?: $fallbackImage;
+    $version = preg_replace('/[^A-Za-z0-9_-]/', '', (string)($_GET['v'] ?? ($item['updated_at'] ?? '')));
+    $image = $siteUrl . '/share-image/' . (int)$item['id'] . '.jpg' . ($version ? '?v=' . $version : '');
     $humanUrl = $siteUrl . '/?item=' . (int)$item['id'];
-    $shareUrl = $siteUrl . '/share/' . (int)$item['id'];
+    $shareUrl = $siteUrl . '/share/' . (int)$item['id'] . ($version ? '?v=' . $version : '');
 }
 ?>
 <!doctype html>
@@ -109,6 +118,10 @@ if ($item) {
     <meta property="og:description" content="<?= esc($description) ?>">
     <meta property="og:image" content="<?= esc($image) ?>">
     <meta property="og:image:secure_url" content="<?= esc($image) ?>">
+    <meta property="og:image:type" content="image/jpeg">
+    <meta property="og:image:width" content="<?= esc((string)$imageWidth) ?>">
+    <meta property="og:image:height" content="<?= esc((string)$imageHeight) ?>">
+    <meta property="og:image:alt" content="<?= esc($title) ?>">
     <meta property="og:site_name" content="Mahmoud Adel Portfolio">
 
     <meta name="twitter:card" content="summary_large_image">

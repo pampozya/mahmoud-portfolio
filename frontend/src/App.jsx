@@ -552,7 +552,8 @@ function getThumbnail(item) {
 
 function getPortfolioShareUrl(item) {
   if (!item?.id) return window.location.href;
-  return `${window.location.origin}/share/${item.id}`;
+  const version = String(item.updated_at || item.thumbnail_url || item.id).replace(/[^A-Za-z0-9_-]/g, '');
+  return `${window.location.origin}/share/${item.id}${version ? `?v=${version}` : ''}`;
 }
 
 function getAspectPadding(ratio) {
