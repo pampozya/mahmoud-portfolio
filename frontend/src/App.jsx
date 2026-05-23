@@ -1092,7 +1092,7 @@ function SpotlightSection({ item, categories, onOpen, isAr }) {
 
 // ==================== VIDEO PLAYER ====================
 
-function VideoPlayer({ url }) {
+function VideoPlayer({ url, poster }) {
   const [error, setError] = useState(false);
   return error ? (
     <div className="no-video" style={{ flexDirection: 'column', gap: '0.75rem', padding: '2rem', textAlign: 'center' }}>
@@ -1107,6 +1107,8 @@ function VideoPlayer({ url }) {
       key={url}
       controls
       playsInline
+      preload="metadata"
+      poster={poster || undefined}
       style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', background: '#000' }}
       onError={() => setError(true)}
     >
@@ -1174,7 +1176,7 @@ function VideoModal({ item, onClose, lang }) {
               </div>
             )}
             {!isInstagram && embedUrl && <iframe src={embedUrl} title={item.title} frameBorder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowFullScreen style={{ position: 'absolute', inset: 0, width: '100%', height: '100%' }} />}
-            {directUrl && <VideoPlayer url={directUrl} />}
+            {directUrl && <VideoPlayer url={directUrl} poster={getThumbnail(item)} />}
             {isEmbed && item.embed_code && <div dangerouslySetInnerHTML={{ __html: item.embed_code }} style={{ position: 'absolute', inset: 0 }} />}
             {!isInstagram && !embedUrl && !directUrl && !isEmbed && <div className="no-video">{item.video_url ? <a href={item.video_url} target="_blank" rel="noreferrer" className="btn-primary" style={{ textDecoration: 'none' }}>Watch on {PLATFORMS[item.video_type]?.label || 'Platform'} ↗</a> : 'No video'}</div>}
           </div>
