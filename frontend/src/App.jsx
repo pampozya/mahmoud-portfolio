@@ -823,6 +823,9 @@ function HeroMasthead({ settings, heroImg, siteTitle, featuredItem, isAr }) {
     : null;
   const fallbackImg = featuredItem ? (getThumbnail(featuredItem) || heroImg) : heroImg;
   const heroCollaborators = featuredItem ? parseCollaborators(featuredItem.collaborators) : [];
+  const heroFocalX = featuredItem?.featured_focal_x ?? 50;
+  const heroFocalY = featuredItem?.featured_focal_y ?? 50;
+  const heroMediaStyle = { objectPosition: `${heroFocalX}% ${heroFocalY}%` };
 
   // GSAP parallax drift on the media layer as the hero scrolls past
   // (disabled on touch / small screens — iOS URL-bar resize fights it and weaker GPUs jank)
@@ -893,9 +896,10 @@ function HeroMasthead({ settings, heroImg, siteTitle, featuredItem, isAr }) {
             preload="metadata"
             poster={fallbackImg}
             aria-hidden="true"
+            style={heroMediaStyle}
           />
         ) : (
-          <img src={fallbackImg} alt="" aria-hidden="true" />
+          <img src={fallbackImg} alt="" aria-hidden="true" style={heroMediaStyle} />
         )}
       </div>
       <div className="hero-vignette" aria-hidden="true" />

@@ -609,7 +609,7 @@ body::after {
   :root { --fs-hero: clamp(2.75rem, 17vw, 5rem); }
   .hero { min-height: 100svh; background: #000; }
   .hero-media { inset: 0; width: 100%; height: 100%; transform: none !important; }
-  .hero-media video, .hero-media img { object-fit: contain; background: #000; }
+  .hero-media video, .hero-media img { object-fit: cover; background: #000; }
   .hero-frame { padding: 5.5rem 1.25rem 2rem; grid-template-rows: auto 1fr auto; gap: 0; }
   .hero-topline { font-size: 0.6rem; letter-spacing: 0.16em; flex-wrap: wrap; gap: 0.6rem; }
   .hero-name-wrap { gap: 0.4rem; }
@@ -2536,7 +2536,8 @@ a.contact-item:hover { color: var(--color-accent); }
   .section-title { font-size: 1.5rem; }
   .testimonials-grid { grid-template-columns: 1fr; }
   .header-nav { gap: 0.5rem; }
-  .header-nav a { font-size: 0.8rem; }
+  .header-nav a { font-size: 0.62rem; letter-spacing: 0.16em; }
+  .admin-link { min-height: 34px; padding: 0.4rem 0.55rem; font-size: 0.56rem; letter-spacing: 0.14em; }
   .card-btns { gap: 0.25rem; }
   .card-like-btn, .card-share-btn, .reaction-trigger { width: 38px; min-width: 38px; height: 38px; min-height: 38px; padding: 0; font-size: 0.75rem; }
   .category-preview-shell { top: 58px; margin-left: -0.5rem; margin-right: -0.5rem; }
