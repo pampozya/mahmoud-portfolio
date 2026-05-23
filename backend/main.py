@@ -472,6 +472,26 @@ class PortfolioResponse(BaseModel):
     created_at: datetime
     updated_at: datetime
 
+    @field_validator("views", "likes", "order", mode="before")
+    @classmethod
+    def default_ints(cls, value):
+        return 0 if value is None else value
+
+    @field_validator("video_type", mode="before")
+    @classmethod
+    def default_video_type(cls, value):
+        return value or "youtube"
+
+    @field_validator("aspect_ratio", mode="before")
+    @classmethod
+    def default_aspect_ratio(cls, value):
+        return value or "16:9"
+
+    @field_validator("featured", mode="before")
+    @classmethod
+    def default_featured(cls, value):
+        return False if value is None else value
+
     class Config:
         from_attributes = True
 
@@ -552,6 +572,16 @@ class SettingsResponse(BaseModel):
     color_background: Optional[str]
     color_surface: Optional[str]
     color_text: Optional[str]
+
+    @field_validator("maintenance_mode", mode="before")
+    @classmethod
+    def default_maintenance_mode(cls, value):
+        return False if value is None else value
+
+    @field_validator("booking_enabled", "available_for_booking", mode="before")
+    @classmethod
+    def default_booking_flags(cls, value):
+        return True if value is None else value
 
     class Config:
         from_attributes = True

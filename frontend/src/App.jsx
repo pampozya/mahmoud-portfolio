@@ -1362,7 +1362,13 @@ function PublicSite({ onAdminClick }) {
 
   useEffect(() => {
     api.trackVisit();
-    Promise.all([api.getCategories(), api.getPortfolio(), api.getSettings(), api.getTestimonials(), api.getClientLogos().catch(() => [])])
+    Promise.all([
+      api.getCategories().catch(() => []),
+      api.getPortfolio().catch(() => []),
+      api.getSettings().catch(() => null),
+      api.getTestimonials().catch(() => []),
+      api.getClientLogos().catch(() => []),
+    ])
       .then(([cats, items, sett, tests, logos]) => {
         setCategories(sortCategoriesForDisplay(cats || [])); setPortfolio(Array.isArray(items) ? items : []);
         setSettings(sett); setTestimonials(tests || []);
@@ -1799,12 +1805,24 @@ function PublicSite({ onAdminClick }) {
                     onMouseLeave={() => setHoveredVideo(null)}
                   >
                     <div className="card-thumb" style={{ aspectRatio: (item.aspect_ratio || '16:9').replace(':', '/'), width: '100%', position: 'relative', overflow: 'hidden' }}>
+                      {isDirect && isMobileDevice && (
+                        thumb ? (
+                          <img src={thumb} alt={item.title} loading="lazy" className="card-mobile-poster" />
+                        ) : (
+                          <div className="thumb-placeholder card-mobile-poster">
+                            <span style={{ fontSize: '2rem', marginBottom: '0.25rem' }}>▶</span>
+                            {platform && <span style={{ fontSize: '0.7rem', color: platform.color, fontWeight: 700, opacity: 0.8 }}>{platform.label}</span>}
+                          </div>
+                        )
+                      )}
                       {isDirect && isMobileDevice ? (
                         <video
                           src={resolveUrl(item.video_url, 'video')}
                           poster={thumb || undefined}
-                          muted loop playsInline preload="none"
+                          muted loop playsInline preload={thumb ? 'metadata' : 'auto'}
                           className="card-mobile-video"
+                          onLoadedData={e => e.currentTarget.classList.add('is-ready')}
+                          onCanPlay={e => e.currentTarget.classList.add('is-ready')}
                           style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }}
                         />
                       ) : isDirect && isHovered ? (

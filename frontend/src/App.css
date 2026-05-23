@@ -1293,6 +1293,23 @@ body::after {
 .video-card:hover .card-thumb { border-color: var(--color-accent); box-shadow: 0 18px 60px rgba(0,0,0,0.32); }
 .card-thumb img,
 .card-thumb video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; display: block; transition: transform 1.2s var(--ease-cinematic), filter 0.8s var(--ease-cinematic); filter: grayscale(0.25) contrast(1.05); }
+.card-mobile-poster {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: flex;
+  background: linear-gradient(135deg, rgba(234,234,234,0.08), rgba(200,168,106,0.12)), #050505;
+}
+.card-mobile-video {
+  z-index: 1;
+  opacity: 0;
+  background: transparent;
+  transition: opacity 0.35s var(--ease-cinematic), transform 1.2s var(--ease-cinematic), filter 0.8s var(--ease-cinematic);
+}
+.card-mobile-video.is-ready { opacity: 1; }
 .video-card:hover .card-thumb img,
 .video-card:hover .card-thumb video { transform: scale(1.05); filter: grayscale(0) contrast(1); }
 .thumb-placeholder { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; }
