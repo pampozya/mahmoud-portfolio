@@ -515,6 +515,11 @@ function getThumbnail(item) {
   return null;
 }
 
+function getPortfolioShareUrl(item) {
+  if (!item?.id) return window.location.href;
+  return `${window.location.origin}/share/${item.id}`;
+}
+
 function getAspectPadding(ratio) {
   const map = { '16:9': '56.25%', '9:16': '177.78%', '4:3': '75%', '1:1': '100%', '21:9': '42.86%' };
   return map[ratio] || '56.25%';
@@ -1530,7 +1535,7 @@ function PublicSite({ onAdminClick }) {
 
   const handleShare = (e, item) => {
     e.stopPropagation();
-    const url = `${window.location.origin}/?item=${item.id}`;
+    const url = getPortfolioShareUrl(item);
     if (navigator.share) { navigator.share({ title: item.title, url }); }
     else { navigator.clipboard.writeText(url); }
   };
@@ -1916,7 +1921,7 @@ function PublicSite({ onAdminClick }) {
 
       <CookieConsent lang={lang} />
       {selectedItem && <VideoModal item={selectedItem} onClose={() => setSelectedItem(null)} lang={lang} />}
-      {qrItem && <QRModal url={qrItem.video_url || window.location.href} title={qrItem.title} onClose={() => setQrItem(null)} />}
+      {qrItem && <QRModal url={getPortfolioShareUrl(qrItem)} title={qrItem.title} onClose={() => setQrItem(null)} />}
     </div>
   );
 }
