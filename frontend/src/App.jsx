@@ -902,13 +902,13 @@ function HeroMasthead({ settings, heroImg, siteTitle, featuredItem, isAr }) {
             loop
             playsInline
             preload="metadata"
-            poster={fallbackImg}
+            poster={fallbackImg || undefined}
             aria-hidden="true"
             style={heroMediaStyle}
           />
-        ) : (
+        ) : fallbackImg ? (
           <img src={fallbackImg} alt="" aria-hidden="true" style={heroMediaStyle} />
-        )}
+        ) : null}
       </div>
       <div className="hero-vignette" aria-hidden="true" />
       <div className="hero-frame">
@@ -1585,7 +1585,7 @@ function PublicSite({ onAdminClick }) {
 
   const siteTitle = isAr && settings?.site_title_ar ? settings.site_title_ar : (settings?.site_title || 'Mahmoud Adel');
   const siteDesc = isAr && settings?.site_description_ar ? settings.site_description_ar : (settings?.site_description || 'Professional Videographer');
-  const heroImg = settings?.hero_image ? resolveUrl(settings.hero_image) : '/hero.jpg';
+  const heroImg = settings?.hero_image ? resolveUrl(settings.hero_image) : '';
   const heroPortfolioItem =
     portfolio.find(p => isHeroPortfolioItem(p) && p.video_type === 'direct' && p.video_url) ||
     portfolio.find(p => p.featured && p.video_type === 'direct' && p.video_url) ||
