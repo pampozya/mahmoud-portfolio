@@ -16,6 +16,23 @@ const HERO_PORTFOLIO_ORDER = -10000;
 const NARRATIVES_CATEGORY_SLUG = 'narratives';
 const NARRATIVES_CATEGORY_ALIASES = ['cinematic-videos', 'cinematic-interviews'];
 const CATEGORY_META_PREFIX = '__lensmania_category_meta__:';
+const IMAGE_UPLOAD_ACCEPT = 'image/jpeg,image/png,image/webp,image/gif,image/heic,image/heif,.heic,.heif';
+
+const isHeicFile = (file) =>
+  Boolean(file && (/hei[cf]/i.test(file.type || '') || /\.(heic|heif)$/i.test(file.name || '')));
+
+const toJpegName = (name = 'image') => {
+  const base = name.replace(/\.(heic|heif)$/i, '') || 'image';
+  return `${base}.jpg`;
+};
+
+async function prepareImageUploadFile(file) {
+  if (!isHeicFile(file)) return file;
+  const { default: heic2any } = await import('heic2any');
+  const converted = await heic2any({ blob: file, toType: 'image/jpeg', quality: 0.92 });
+  const blob = Array.isArray(converted) ? converted[0] : converted;
+  return new File([blob], toJpegName(file.name), { type: 'image/jpeg', lastModified: file.lastModified });
+}
 
 const isNarrativesCategory = (catOrSlug) => {
   const slug = typeof catOrSlug === 'string' ? catOrSlug : catOrSlug?.slug;
@@ -2556,6 +2573,13 @@ function PortfolioManager({ portfolio, categories, token, onUpdate, settings }) 
     setUploadFilename(file.name); setUploadProgress(0);
 
     try {
+      if (isHeicFile(file)) {
+        setUploadFilename(`Converting ${file.name} to JPEG…`);
+        setUploadProgress(1);
+        file = await prepareImageUploadFile(file);
+        setUploadFilename(file.name);
+        setUploadProgress(0);
+      }
       // R2 upload — no client-side compression, full original quality preserved.
       const res = await api.uploadFile(token, file, p => setUploadProgress(Math.max(1, p)));
       if (res.url) { set({ [field]: res.url }); setUploadProgress(100); setUploadStatus('done'); }
@@ -2567,10 +2591,17 @@ function PortfolioManager({ portfolio, categories, token, onUpdate, settings }) 
   };
 
   const handleClientLogoUpload = async (e) => {
-    const file = e.target.files[0]; if (!file) return;
+    let file = e.target.files[0]; if (!file) return;
     setUploading(true); setUploadStatus('');
     setUploadFilename(file.name); setUploadProgress(0);
     try {
+      if (isHeicFile(file)) {
+        setUploadFilename(`Converting ${file.name} to JPEG…`);
+        setUploadProgress(1);
+        file = await prepareImageUploadFile(file);
+        setUploadFilename(file.name);
+        setUploadProgress(0);
+      }
       const res = await api.uploadFile(token, file, p => setUploadProgress(Math.max(1, p)));
       if (res.url) {
         setClientLogoForm(prev => ({ ...prev, image_url: res.url }));
@@ -2589,10 +2620,17 @@ function PortfolioManager({ portfolio, categories, token, onUpdate, settings }) 
     let succeeded = 0; let failed = 0;
     try {
       for (let i = 0; i < files.length; i++) {
-        const file = files[i];
+        let file = files[i];
         setUploadFilename(`(${i + 1}/${files.length}) ${file.name}`);
         setUploadProgress(0);
         try {
+          if (isHeicFile(file)) {
+            setUploadFilename(`(${i + 1}/${files.length}) Converting ${file.name} to JPEG…`);
+            setUploadProgress(1);
+            file = await prepareImageUploadFile(file);
+            setUploadFilename(`(${i + 1}/${files.length}) ${file.name}`);
+            setUploadProgress(0);
+          }
           const res = await api.uploadFile(token, file, p => setUploadProgress(p));
           if (res.url) { urls.push(res.url); succeeded++; }
           else { failed++; }
@@ -2884,7 +2922,7 @@ function PortfolioManager({ portfolio, categories, token, onUpdate, settings }) 
           </p>
           <div className="upload-area">
             <label className="upload-label">
-              <input type="file" accept="image/jpeg,image/png,image/webp,image/gif" onChange={e => handleUpload(e, 'thumbnail_url')} disabled={uploading} />
+              <input type="file" accept={IMAGE_UPLOAD_ACCEPT} onChange={e => handleUpload(e, 'thumbnail_url')} disabled={uploading} />
               <span>Choose thumbnail…</span>
             </label>
             {form.thumbnail_url && form.thumbnail_url !== '' && (
@@ -2917,7 +2955,7 @@ function PortfolioManager({ portfolio, categories, token, onUpdate, settings }) 
           <label className="field-label">BTS Photos (Behind the Scenes)</label>
           <div className="upload-area">
             <label className="upload-label">
-              <input type="file" accept="image/*" multiple onChange={handleBtsUpload} disabled={uploading} />
+              <input type="file" accept={`image/*,${IMAGE_UPLOAD_ACCEPT}`} multiple onChange={handleBtsUpload} disabled={uploading} />
               <span>Choose BTS photos…</span>
             </label>
             {btsPhotos.length > 0 && (
@@ -2961,7 +2999,7 @@ function PortfolioManager({ portfolio, categories, token, onUpdate, settings }) 
             />
             <div className="upload-area">
               <label className="upload-label">
-                <input type="file" accept="image/png,image/svg+xml,image/jpeg,image/webp" onChange={handleClientLogoUpload} disabled={uploading} />
+                <input type="file" accept={`image/png,image/svg+xml,image/jpeg,image/webp,image/heic,image/heif,.heic,.heif`} onChange={handleClientLogoUpload} disabled={uploading} />
                 <span>{clientLogoForm.image_url ? 'Replace client logo…' : 'Upload client logo…'}</span>
               </label>
               {clientLogoForm.image_url && (
