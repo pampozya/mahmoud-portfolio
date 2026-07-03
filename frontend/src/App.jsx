@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import DOMPurify from 'dompurify';
 import './App.css';
 import jsPDF from 'jspdf';
 import QRCode from 'qrcode';
@@ -12,6 +13,8 @@ const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:8000/api';
 const BASE_URL = process.env.REACT_APP_BASE_URL || '';
 const PUBLIC_ASSET_URL = process.env.PUBLIC_URL || '.';
 const LOGO_ASSET_VERSION = '20260523-real';
+const BRAND_LOGO_VERSION = '20260524-monogram';
+const BRAND_LOGO_WHITE_SRC = `/logo-white.svg?v=${BRAND_LOGO_VERSION}`;
 const SHARE_CARD_VERSION = 'fit-v2';
 const HERO_PORTFOLIO_ORDER = -10000;
 const NARRATIVES_CATEGORY_SLUG = 'narratives';
@@ -233,6 +236,8 @@ const api = {
     fetch(`${API_URL}/portfolio/${id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` }, body: JSON.stringify(data) }).then(r => r.json()),
   deletePortfolio: (token, id) =>
     fetch(`${API_URL}/portfolio/${id}`, { method: 'DELETE', headers: { Authorization: `Bearer ${token}` } }).then(r => r.json()),
+  reorderPortfolio: (token, ids) =>
+    fetch(`${API_URL}/portfolio/reorder`, { method: 'PUT', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` }, body: JSON.stringify({ ids }) }).then(r => r.json()),
   duplicatePortfolio: (token, id) =>
     fetch(`${API_URL}/portfolio/${id}/duplicate`, { method: 'POST', headers: { Authorization: `Bearer ${token}` } }).then(r => r.json()),
   likePortfolio: (id) =>
@@ -612,6 +617,57 @@ function UploadProgress({ progress, filename, done, error }) {
   );
 }
 
+function PwaUpdateToast() {
+  const [visible, setVisible] = useState(() => Boolean(window.__portfolioUpdateReady));
+  const [refreshing, setRefreshing] = useState(false);
+
+  useEffect(() => {
+    const onUpdateReady = () => setVisible(true);
+    const syncViewportGap = () => {
+      const gap = Math.max(0, window.innerHeight - document.documentElement.clientHeight);
+      document.documentElement.style.setProperty('--viewport-bottom-offset', `${gap}px`);
+    };
+    syncViewportGap();
+    window.addEventListener('portfolio-sw-update', onUpdateReady);
+    window.addEventListener('resize', syncViewportGap);
+    window.visualViewport?.addEventListener('resize', syncViewportGap);
+    if (window.__portfolioUpdateReady) setVisible(true);
+    return () => {
+      window.removeEventListener('portfolio-sw-update', onUpdateReady);
+      window.removeEventListener('resize', syncViewportGap);
+      window.visualViewport?.removeEventListener('resize', syncViewportGap);
+    };
+  }, []);
+
+  const refresh = async () => {
+    setRefreshing(true);
+    try {
+      const registration = window.__portfolioWaitingRegistration || await navigator.serviceWorker?.getRegistration?.();
+      if (registration?.waiting) {
+        registration.waiting.postMessage({ type: 'SKIP_WAITING' });
+        window.setTimeout(() => window.location.reload(), 3500);
+      } else {
+        window.location.reload();
+      }
+    } catch {
+      window.location.reload();
+    }
+  };
+
+  if (!visible) return null;
+  return (
+    <div className="pwa-update-toast" role="status" aria-live="polite">
+      <div>
+        <strong>Update available</strong>
+        <span>Refresh to load the latest portfolio.</span>
+      </div>
+      <button type="button" onClick={refresh} disabled={refreshing}>
+        {refreshing ? 'Refreshing...' : 'Refresh'}
+      </button>
+    </div>
+  );
+}
+
 // ==================== REACTION PICKER ====================
 
 const REACTIONS = [
@@ -914,62 +970,65 @@ function HeroMasthead({ settings, heroImg, siteTitle, featuredItem, isAr }) {
 
   return (
     <section className="hero" ref={sectionRef} aria-label="Showreel">
-      <div className="hero-media" ref={mediaRef}>
-        {showreelUrl ? (
-          <video
-            ref={videoRef}
-            src={showreelUrl}
-            autoPlay
-            muted
-            loop
-            playsInline
-            preload="metadata"
-            poster={fallbackImg || undefined}
-            aria-hidden="true"
-            style={heroMediaStyle}
-          />
-        ) : fallbackImg ? (
-          <img src={fallbackImg} alt="" aria-hidden="true" style={heroMediaStyle} />
-        ) : null}
-      </div>
-      <div className="hero-vignette" aria-hidden="true" />
-      <div className="hero-frame">
-        <div className="hero-topline">
-          <span className="hero-topline-mark">
-            {settings?.available_for_booking !== false
-              ? (isAr ? 'متاح للحجز' : 'Available for booking')
-              : (isAr ? 'محجوز حالياً' : 'Currently booked')}
-          </span>
+      <div className="hero-panel">
+        <div className="hero-media" ref={mediaRef}>
+          {showreelUrl ? (
+            <video
+              ref={videoRef}
+              src={showreelUrl}
+              autoPlay
+              muted
+              loop
+              playsInline
+              preload="metadata"
+              poster={fallbackImg || undefined}
+              aria-hidden="true"
+              style={heroMediaStyle}
+            />
+          ) : fallbackImg ? (
+            <img src={fallbackImg} alt="" aria-hidden="true" style={heroMediaStyle} />
+          ) : null}
         </div>
+        <div className="hero-vignette" aria-hidden="true" />
+        <div className="hero-frame">
+          <div className="hero-topline">
+            <span className="hero-topline-mark">
+              {settings?.available_for_booking !== false
+                ? (isAr ? 'متاح للحجز' : 'Available for booking')
+                : (isAr ? 'محجوز حالياً' : 'Currently booked')}
+            </span>
+            <img src={BRAND_LOGO_WHITE_SRC} alt="" className="hero-logo-mark" aria-hidden="true" />
+          </div>
 
-        <div className="hero-name-wrap">
-          <h1 className="hero-name">
-            {firstName}
-            {lastName && <span className="hero-name-em">{lastName}</span>}
-          </h1>
-          <span className="hero-rule" aria-hidden="true" />
-        </div>
+          <div className="hero-name-wrap">
+            <h1 className="hero-name">
+              {firstName}
+              {lastName && <span className="hero-name-em">{lastName}</span>}
+            </h1>
+            <span className="hero-rule" aria-hidden="true" />
+          </div>
 
-        <div className="hero-bottomline">
-          <button type="button" className="hero-scroll-cue" onClick={scrollToNext}>
-            <span className="hero-scroll-cue-line" aria-hidden="true" />
-            <span>{isAr ? 'اكتشف الأعمال' : 'Scroll to explore'}</span>
-          </button>
-          {heroCollaborators.length > 0 && (
-            <div className="hero-collaborators" aria-label={isAr ? 'المتعاونون' : 'Project credits'}>
-              <span className="hero-collaborators-label">{isAr ? 'بمشاركة' : 'Credits'}</span>
-              <div className="hero-collaborators-list">
-                {heroCollaborators.map((c, i) => {
-                  const clean = (c.handle || c).replace('@', '');
-                  return (
-                    <a key={i} href={collabLinkHref(c)} target="_blank" rel="noreferrer">
-                      @{clean}{c.role && <span>{c.role}</span>}
-                    </a>
-                  );
-                })}
+          <div className="hero-bottomline">
+            <button type="button" className="hero-scroll-cue" onClick={scrollToNext}>
+              <span className="hero-scroll-cue-line" aria-hidden="true" />
+              <span>{isAr ? 'اكتشف الأعمال' : 'Scroll to explore'}</span>
+            </button>
+            {heroCollaborators.length > 0 && (
+              <div className="hero-collaborators" aria-label={isAr ? 'المتعاونون' : 'Project credits'}>
+                <span className="hero-collaborators-label">{isAr ? 'بمشاركة' : 'Credits'}</span>
+                <div className="hero-collaborators-list">
+                  {heroCollaborators.map((c, i) => {
+                    const clean = (c.handle || c).replace('@', '');
+                    return (
+                      <a key={i} href={collabLinkHref(c)} target="_blank" rel="noreferrer">
+                        @{clean}{c.role && <span>{c.role}</span>}
+                      </a>
+                    );
+                  })}
+                </div>
               </div>
-            </div>
-          )}
+            )}
+          </div>
         </div>
       </div>
     </section>
@@ -988,7 +1047,7 @@ function CinematicBrief({ portfolio, settings, siteDesc, isAr }) {
   ];
 
   return (
-    <section className="cinematic-brief fade-in-section" aria-label="Portfolio briefing">
+    <section className="cinematic-brief" aria-label="Portfolio briefing">
       <div className="cinematic-brief-inner">
         <div className="brief-copy">
           <span className="brief-kicker">{isAr ? 'ملخص بصري' : 'Selected cinematic work'}</span>
@@ -1225,7 +1284,7 @@ function VideoModal({ item, onClose, lang }) {
             )}
             {!isInstagram && embedUrl && <iframe src={embedUrl} title={item.title} frameBorder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowFullScreen style={{ position: 'absolute', inset: 0, width: '100%', height: '100%' }} />}
             {directUrl && <VideoPlayer url={directUrl} poster={modalPoster} />}
-            {isEmbed && item.embed_code && <div dangerouslySetInnerHTML={{ __html: item.embed_code }} style={{ position: 'absolute', inset: 0 }} />}
+            {isEmbed && item.embed_code && <div dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(item.embed_code, { ADD_TAGS: ['iframe'], ADD_ATTR: ['allow', 'allowfullscreen', 'frameborder', 'src'] }) }} style={{ position: 'absolute', inset: 0 }} />}
             {!isInstagram && !embedUrl && !directUrl && !isEmbed && <div className="no-video">{item.video_url ? <a href={item.video_url} target="_blank" rel="noreferrer" className="btn-primary" style={{ textDecoration: 'none' }}>Watch on {PLATFORMS[item.video_type]?.label || 'Platform'} ↗</a> : 'No video'}</div>}
           </div>
         </div>
@@ -1487,6 +1546,76 @@ function PublicSite() {
     };
   }, []);
 
+  // GSAP ScrollTrigger section reveals (Lenis synced above)
+  useEffect(() => {
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    // Hand off ghost-watermark vertical centering to GSAP so x-parallax doesn't clobber it
+    gsap.set('.ghost-watermark', { yPercent: -50 });
+    const ctx = gsap.context(() => {
+      // Cinematic brief — copy stagger then stat cards then routing links
+      gsap.from('.brief-copy > *', {
+        y: 28, opacity: 0, duration: 0.9, stagger: 0.12, ease: 'expo.out',
+        scrollTrigger: { trigger: '.cinematic-brief', start: 'top 82%', toggleActions: 'play none none none' },
+      });
+      gsap.from('.brief-stat', {
+        y: 24, opacity: 0, scale: 0.94, duration: 0.75, stagger: 0.09, ease: 'expo.out',
+        scrollTrigger: { trigger: '.brief-stats', start: 'top 85%', toggleActions: 'play none none none' },
+      });
+      gsap.from('.brief-routing > *', {
+        y: 14, opacity: 0, duration: 0.6, stagger: 0.08, ease: 'power3.out',
+        scrollTrigger: { trigger: '.brief-routing', start: 'top 92%', toggleActions: 'play none none none' },
+      });
+
+      // About — image slides from left, text children stagger up (includes section title)
+      gsap.from('.about-img-wrap', {
+        x: -50, opacity: 0, duration: 1.1, ease: 'expo.out',
+        scrollTrigger: { trigger: '.about-section', start: 'top 78%', toggleActions: 'play none none none' },
+      });
+      gsap.from('.about-text > *', {
+        y: 28, opacity: 0, duration: 0.85, stagger: 0.1, ease: 'expo.out',
+        scrollTrigger: { trigger: '.about-section', start: 'top 78%', toggleActions: 'play none none none' },
+      });
+
+      // Testimonials — title animates; cards render naturally (no opacity gate to avoid async-data timing issues)
+      gsap.from('.testimonials-section .section-title', {
+        y: 28, opacity: 0, duration: 0.85, ease: 'expo.out',
+        scrollTrigger: { trigger: '.testimonials-section', start: 'top 82%', toggleActions: 'play none none none' },
+      });
+
+      // Contact — title, details stagger from left, form fields stagger up
+      gsap.from('.contact-section .section-title', {
+        y: 28, opacity: 0, duration: 0.85, ease: 'expo.out',
+        scrollTrigger: { trigger: '.contact-section', start: 'top 82%', toggleActions: 'play none none none' },
+      });
+      gsap.from('.contact-details > *', {
+        x: -28, opacity: 0, duration: 0.75, stagger: 0.07, ease: 'expo.out',
+        scrollTrigger: { trigger: '.contact-section', start: 'top 78%', toggleActions: 'play none none none' },
+      });
+      gsap.from('.contact-form > *', {
+        y: 20, opacity: 0, duration: 0.6, stagger: 0.06, ease: 'power3.out',
+        scrollTrigger: { trigger: '.contact-section', start: 'top 78%', toggleActions: 'play none none none' },
+      });
+
+      // Ghost watermarks — slow scrub parallax drift left/right as section scrolls past
+      gsap.utils.toArray('.ghost-watermark--left').forEach(el => {
+        gsap.to(el, {
+          x: -60, ease: 'none',
+          scrollTrigger: { trigger: el.closest('section'), start: 'top bottom', end: 'bottom top', scrub: 2 },
+        });
+      });
+      gsap.utils.toArray('.ghost-watermark--right').forEach(el => {
+        gsap.to(el, {
+          x: 60, ease: 'none',
+          scrollTrigger: { trigger: el.closest('section'), start: 'top bottom', end: 'bottom top', scrub: 2 },
+        });
+      });
+    });
+    // Recalculate ScrollTrigger positions after React paints the updated DOM
+    // (needed when testimonials/portfolio load async and cards weren't in the DOM on first run)
+    const rafId = requestAnimationFrame(() => ScrollTrigger.refresh());
+    return () => { cancelAnimationFrame(rafId); ctx.revert(); };
+  }, [portfolio, settings?.about_text, testimonials.length]);
+
   // Mobile card video scroll-play
   const isMobileDevice = useRef(window.matchMedia('(hover: none) and (pointer: coarse)').matches).current;
   useEffect(() => {
@@ -1671,7 +1800,7 @@ function PublicSite() {
       <header className="public-header">
         <div className="header-inner">
           <a href="#top" className="site-logo">
-            <img src="/logo-white.svg" alt={siteTitle} className="header-logo-img" onError={e => { e.target.style.display='none'; e.target.nextSibling.style.display='block'; }} />
+            <img src={BRAND_LOGO_WHITE_SRC} alt={siteTitle} className="header-logo-img" onError={e => { e.target.style.display='none'; e.target.nextSibling.style.display='block'; }} />
             <span style={{ display: 'none' }}>{siteTitle}</span>
           </a>
           <nav className="header-nav">
@@ -1719,7 +1848,7 @@ function PublicSite() {
 
       {portfolio.filter(p => p.featured).length > 0 && (
         <FeaturedCarousel
-          items={[...portfolio].filter(p => p.featured).sort((a, b) => new Date(b.created_at) - new Date(a.created_at)).slice(0, 5)}
+          items={[...portfolio].filter(p => p.featured).sort((a, b) => ((a.order ?? 0) - (b.order ?? 0)) || (new Date(b.created_at) - new Date(a.created_at))).slice(0, 5)}
           onSelect={openItem}
           lang={lang}
         />
@@ -1899,7 +2028,7 @@ function PublicSite() {
       </section>
 
       {settings?.about_text && (
-        <section className="about-section fade-in-section" id="about">
+        <section className="about-section" id="about">
           <span className="ghost-watermark ghost-watermark--left" aria-hidden="true">ABOUT</span>
           <div className="section-inner about-inner">
             {settings.about_image && <div className="about-img-wrap"><img src={resolveUrl(settings.about_image)} alt={siteTitle} className="about-img" /></div>}
@@ -1911,7 +2040,7 @@ function PublicSite() {
         </section>
       )}
 
-      <section className="testimonials-section fade-in-section" id="testimonials">
+      <section className="testimonials-section" id="testimonials">
         <span className="ghost-watermark ghost-watermark--right" aria-hidden="true">REVIEWS</span>
         <div className="section-inner">
           <h2 className="section-title">{isAr ? 'آراء العملاء' : 'Client Reviews'}</h2>
@@ -1936,7 +2065,7 @@ function PublicSite() {
         </div>
       </section>
 
-      <section className="contact-section fade-in-section" id="contact">
+      <section className="contact-section" id="contact">
         <span className="ghost-watermark ghost-watermark--left" aria-hidden="true">CONTACT</span>
         <div className="section-inner">
           <h2 className="section-title">{isAr ? 'تواصل معي' : 'Get In Touch'}</h2>
@@ -1990,7 +2119,7 @@ function PublicSite() {
       <footer className="public-footer">
         <div className="footer-inner">
           <div className="footer-brand">
-            <img src="/logo-white.svg" alt={siteTitle} className="footer-logo" onError={e => { e.target.style.display='none'; e.target.nextSibling.style.display='block'; }} />
+            <img src={BRAND_LOGO_WHITE_SRC} alt={siteTitle} className="footer-logo" onError={e => { e.target.style.display='none'; e.target.nextSibling.style.display='block'; }} />
             <span style={{ display: 'none' }}>{siteTitle}</span>
             <p className="footer-tagline">{siteDesc}</p>
           </div>
@@ -2628,6 +2757,9 @@ function PortfolioManager({ portfolio, categories, token, onUpdate, settings }) 
   const [savedCollaborators, setSavedCollaborators] = useState(readSavedCollaborators);
   const [clientLogoForm, setClientLogoForm] = useState(EMPTY_UPLOAD_CLIENT_LOGO);
   const [adminSort, setAdminSort] = useState('order');
+  const [featuredList, setFeaturedList] = useState([]);
+  const [featuredDragIdx, setFeaturedDragIdx] = useState(null);
+  const [featuredOrderMsg, setFeaturedOrderMsg] = useState('');
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(null);
   const [uploadFilename, setUploadFilename] = useState('');
@@ -2650,6 +2782,51 @@ function PortfolioManager({ portfolio, categories, token, onUpdate, settings }) 
       saveCollaboratorLibrary(next);
       return next;
     });
+  };
+
+  // ---- Featured "Selected Work" drag-reorder (mirrors CategoriesManager) ----
+  useEffect(() => {
+    setFeaturedList(
+      [...portfolio]
+        .filter(p => p.featured && !isHeroPortfolioItem(p))  // exclude the hero item; its order is the special hero sentinel
+        .sort((a, b) => ((a.order ?? 0) - (b.order ?? 0)) || (new Date(b.created_at) - new Date(a.created_at)))
+    );
+  }, [portfolio]);
+
+  const persistFeaturedOrder = async (nextList) => {
+    setFeaturedList(nextList);
+    setFeaturedOrderMsg('Saving order…');
+    const res = await api.reorderPortfolio(token, nextList.map(p => p.id));
+    if (res?.ok) {
+      setFeaturedOrderMsg('✅ Featured order saved');
+      setTimeout(() => setFeaturedOrderMsg(''), 2200);
+      onUpdate();
+    } else {
+      setFeaturedOrderMsg(`❌ ${res?.detail || 'Could not save order'}`);
+    }
+  };
+
+  const onFeaturedDragStart = (i) => setFeaturedDragIdx(i);
+  const onFeaturedDragOver = (e, i) => {
+    e.preventDefault();
+    if (featuredDragIdx === null || featuredDragIdx === i) return;
+    const next = [...featuredList];
+    const [moved] = next.splice(featuredDragIdx, 1);
+    next.splice(i, 0, moved);
+    setFeaturedList(next); setFeaturedDragIdx(i);
+  };
+  const onFeaturedDragEnd = async () => {
+    if (featuredDragIdx === null) return;
+    setFeaturedDragIdx(null);
+    await persistFeaturedOrder(featuredList);
+  };
+  const moveFeatured = async (index, direction) => {
+    const target = index + direction;
+    if (target < 0 || target >= featuredList.length) return;
+    const next = [...featuredList];
+    const [moved] = next.splice(index, 1);
+    next.splice(target, 0, moved);
+    await persistFeaturedOrder(next);
   };
 
   const captureFrame = async () => {
@@ -2756,7 +2933,7 @@ function PortfolioManager({ portfolio, categories, token, onUpdate, settings }) 
       ...formPayload,
       category_id: parseInt(form.category_id),
       bts_photos: JSON.stringify(btsPhotos),
-      featured: form.featured || use_in_hero,
+      featured: form.featured,  // hero is independent of featured — set hero via the checkbox, featured via its own toggle
       order: use_in_hero ? HERO_PORTFOLIO_ORDER : (Number(form.order) === HERO_PORTFOLIO_ORDER ? 0 : Number(form.order || 0)),
     };
     try {
@@ -2849,12 +3026,13 @@ function PortfolioManager({ portfolio, categories, token, onUpdate, settings }) 
             <input
               type="checkbox"
               checked={form.use_in_hero}
-              onChange={e => set({ use_in_hero: e.target.checked, ...(e.target.checked ? { featured: true } : {}) })}
+              onChange={e => set({ use_in_hero: e.target.checked })}
             />
             🏠 Use this video in hero section
           </label>
           <p className="hero-featured-hint">
             Only one portfolio item can be the hero. Direct uploaded videos play as the hero background; external links use their thumbnail.
+            This is independent of “Selected Work” — tick the Featured box below too only if you also want it in the highlights carousel.
           </p>
 
           {needsUrl && (
@@ -3146,6 +3324,36 @@ function PortfolioManager({ portfolio, categories, token, onUpdate, settings }) 
             <button type="button" className="btn-secondary" onClick={cancelForm}>Cancel</button>
           </div>
         </form>
+      )}
+
+      {!showForm && featuredList.length > 0 && (
+        <div className="featured-reorder" style={{ marginBottom: '1.75rem', padding: '1rem', background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 8 }}>
+          <h3 style={{ margin: '0 0 0.35rem' }}>⭐ Selected Work order</h3>
+          <p style={{ color: 'var(--color-text-muted)', fontSize: '0.85rem', margin: '0 0 0.9rem' }}>
+            Drag ⠿ or use ↑ ↓ to set the order of the homepage featured carousel. Only the first 5 appear on the homepage.
+          </p>
+          {featuredOrderMsg && <p className={`upload-status ${featuredOrderMsg.startsWith('✅') ? 'upload-ok' : featuredOrderMsg.startsWith('❌') ? 'upload-err' : ''}`}>{featuredOrderMsg}</p>}
+          <div className="categories-list">
+            {featuredList.map((item, i) => {
+              const thumb = getThumbnail(item);
+              return (
+                <div key={item.id} className="category-item draggable"
+                  draggable onDragStart={() => onFeaturedDragStart(i)} onDragOver={e => onFeaturedDragOver(e, i)} onDragEnd={onFeaturedDragEnd}>
+                  <span className="drag-handle">⠿</span>
+                  {thumb && <img src={thumb} alt="" style={{ width: 64, height: 36, objectFit: 'cover', borderRadius: 4, opacity: i < 5 ? 1 : 0.4 }} />}
+                  <div style={{ flex: 1 }}>
+                    <h3 style={{ margin: 0, fontSize: '0.95rem' }}>{i + 1}. {item.title}</h3>
+                    {i >= 5 && <p style={{ margin: 0, fontSize: '0.75rem', color: 'var(--color-text-muted)' }}>not shown on homepage (rank &gt; 5)</p>}
+                  </div>
+                  <div className="card-actions">
+                    <button type="button" className="btn-secondary btn-sm" onClick={() => moveFeatured(i, -1)} disabled={i === 0}>↑</button>
+                    <button type="button" className="btn-secondary btn-sm" onClick={() => moveFeatured(i, 1)} disabled={i === featuredList.length - 1}>↓</button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
       )}
 
       <div className="portfolio-list">
@@ -4053,6 +4261,12 @@ function SettingsManager({ settings, token, onUpdate, portfolio }) {
           </label>
         </div>
 
+        <h3 className="settings-group-title">🔗 Social Sharing</h3>
+        <p style={{ color: 'rgba(255,255,255,0.45)', fontSize: '0.8rem', marginBottom: '1rem' }}>
+          Image shown when the <strong>main site link</strong> is shared on WhatsApp/Facebook/X. Recommended 1200×630. Leave blank to use the default card. Per-video and review-link share cards are unaffected.
+        </p>
+        {imgUpload('Main link share image', 'og_image')}
+
         <h3 className="settings-group-title">🎨 Theme Colors</h3>
         <p style={{ color: 'rgba(255,255,255,0.45)', fontSize: '0.8rem', marginBottom: '1rem' }}>Customize site colors. Leave blank to use defaults.</p>
         <div className="theme-color-grid">
@@ -4629,7 +4843,7 @@ function DeliveryPage({ deliveryToken }) {
   if (data.locked) return (
     <div style={{ minHeight:'100vh', background:'#080808', display:'flex', alignItems:'center', justifyContent:'center', padding:'2rem' }}>
       <div style={{ background:'#111', border:'1px solid rgba(255,255,255,0.1)', borderRadius:14, padding:'2.5rem', maxWidth:420, width:'100%', textAlign:'center' }}>
-        <img src="/logo.png" alt="" style={{ height:60, marginBottom:'1rem' }} />
+        <img src={BRAND_LOGO_WHITE_SRC} alt="" style={{ height:60, marginBottom:'1rem' }} />
         <div style={{ fontSize:'2rem', marginBottom:'0.5rem' }}>🔒</div>
         <h2 style={{ color:'#d4b896', marginBottom:'0.4rem' }}>Password Protected</h2>
         <p style={{ color:'rgba(255,255,255,0.5)', fontSize:'0.85rem', marginBottom:'1.4rem' }}>
@@ -4650,7 +4864,7 @@ function DeliveryPage({ deliveryToken }) {
     <div style={{ minHeight:'100vh', background:'linear-gradient(180deg,#080808 0%,#111 100%)', padding:'2rem 1rem' }}>
       <div style={{ maxWidth:760, margin:'0 auto' }}>
         <div style={{ textAlign:'center', marginBottom:'2.5rem' }}>
-          <img src="/logo.png" alt="Mahmoud Adel" style={{ height:64, marginBottom:'1rem' }} />
+          <img src={BRAND_LOGO_WHITE_SRC} alt="Mahmoud Adel" style={{ height:64, marginBottom:'1rem' }} />
           <div style={{ display:'inline-block', background:'rgba(212,184,150,0.12)', color:'#d4b896', padding:'0.3rem 0.9rem', borderRadius:999, fontSize:'0.75rem', letterSpacing:'0.08em', textTransform:'uppercase', fontWeight:700, marginBottom:'1rem' }}>
             Client Delivery
           </div>
@@ -4756,18 +4970,33 @@ function App() {
   const qrMode = params.get('qr');
   const normalizedPath = window.location.pathname.replace(/\/+$/, '') || '/';
   const isAdminRoute = normalizedPath === '/admin';
+  useEffect(() => {
+    const manifestLink = document.querySelector('link[rel="manifest"]');
+    if (manifestLink) manifestLink.setAttribute('href', isAdminRoute ? '/manifest-admin.json' : '/manifest.json');
+    const appleTitle = document.querySelector('meta[name="apple-mobile-web-app-title"]');
+    if (appleTitle) appleTitle.setAttribute('content', isAdminRoute ? 'LM Admin' : 'Mahmoud Adel');
+    document.title = isAdminRoute ? 'Lens Mania Admin' : 'Mahmoud Adel - Videographer';
+  }, [isAdminRoute]);
   const goHome = () => { window.location.href = '/'; };
   const handleLogin = (t) => {
     setToken(t);
     if (!isAdminRoute) window.history.replaceState(null, '', '/admin');
   };
   const handleLogout = () => { localStorage.removeItem('token'); setToken(null); };
-  if (qrMode === 'review') return <ReviewQRPage />;
-  if (deliveryToken) return <DeliveryPage deliveryToken={deliveryToken} />;
-  if (reviewToken) return <ReviewPortal reviewToken={reviewToken} />;
-  if (isAdminRoute && !token) return <LoginPage onLogin={handleLogin} onBack={goHome} />;
-  if (isAdminRoute && token) return <AdminDashboard token={token} onLogout={handleLogout} onBack={goHome} />;
-  return <PublicSite />;
+
+  let content = <PublicSite />;
+  if (qrMode === 'review') content = <ReviewQRPage />;
+  else if (deliveryToken) content = <DeliveryPage deliveryToken={deliveryToken} />;
+  else if (reviewToken) content = <ReviewPortal reviewToken={reviewToken} />;
+  else if (isAdminRoute && !token) content = <LoginPage onLogin={handleLogin} onBack={goHome} />;
+  else if (isAdminRoute && token) content = <AdminDashboard token={token} onLogout={handleLogout} onBack={goHome} />;
+
+  return (
+    <>
+      {content}
+      <PwaUpdateToast />
+    </>
+  );
 }
 
 export default App;

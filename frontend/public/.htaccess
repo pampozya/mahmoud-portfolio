@@ -3,6 +3,21 @@ RewriteEngine On
 RewriteBase /
 RewriteRule ^share-image/([0-9]+)\.jpg$ share-image.php?item=$1 [QSA,L]
 RewriteRule ^share/([0-9]+)/?$ share.php?item=$1 [QSA,L]
+
+# Client-review links (/portfolio?review=TOKEN): serve a per-video OG card to
+# social scrapers. review-share.php bounces humans to ?...&og=1, which this rule
+# ignores (so the SPA loads normally — no redirect loop).
+RewriteCond %{QUERY_STRING} (^|&)review=[A-Za-z0-9_-]+
+RewriteCond %{QUERY_STRING} !(^|&)og=1
+RewriteRule ^portfolio/?$ review-share.php [QSA,L]
+
+# MAIN link ("/" and "/index.html"): serve home-og.php so the admin's custom
+# main-link share image (settings.og_image) is injected into the OG tags. It
+# reads index.html from disk and outputs the full SPA inline — no redirect, no
+# loop, humans still get the app. Per-video/review cards are unaffected.
+RewriteRule ^$ home-og.php [L]
+RewriteRule ^index\.html$ home-og.php [L]
+
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
 RewriteRule ^ index.html [QSA,L]

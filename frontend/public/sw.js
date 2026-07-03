@@ -1,11 +1,12 @@
-const CACHE_NAME = 'mahmoud-portfolio-v1';
+const CACHE_NAME = 'mahmoud-portfolio-v20260613-pwa';
 const CORE_ASSETS = [
   '/',
   '/admin',
   '/manifest.json',
-  '/favicon.png',
-  '/favicon-512.png',
-  '/logo-white.svg',
+  '/manifest-admin.json',
+  '/favicon.png?v=20260524-monogram',
+  '/favicon-512.png?v=20260524-monogram',
+  '/logo-white.svg?v=20260524-monogram',
   '/offline.html'
 ];
 
@@ -13,7 +14,6 @@ self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME)
       .then((cache) => cache.addAll(CORE_ASSETS))
-      .then(() => self.skipWaiting())
   );
 });
 
@@ -25,19 +25,36 @@ self.addEventListener('activate', (event) => {
   );
 });
 
+self.addEventListener('message', (event) => {
+  if (event.data && event.data.type === 'SKIP_WAITING') {
+    self.skipWaiting();
+  }
+});
+
+const shouldBypassCache = (request, url) => (
+  request.headers.has('authorization') ||
+  url.pathname.startsWith('/api/') ||
+  url.pathname.startsWith('/uploads/') ||
+  url.pathname.startsWith('/share/') ||
+  url.pathname.startsWith('/share-image/')
+);
+
 self.addEventListener('fetch', (event) => {
   const request = event.request;
   if (request.method !== 'GET') return;
 
   const url = new URL(request.url);
   if (url.origin !== self.location.origin) return;
+  if (shouldBypassCache(request, url)) return;
 
   if (request.mode === 'navigate') {
     event.respondWith(
       fetch(request)
         .then((response) => {
-          const copy = response.clone();
-          caches.open(CACHE_NAME).then((cache) => cache.put(request, copy));
+          if (response.ok && response.type === 'basic') {
+            const copy = response.clone();
+            caches.open(CACHE_NAME).then((cache) => cache.put(request, copy));
+          }
           return response;
         })
         .catch(() => caches.match(request).then((cached) => cached || caches.match('/offline.html')))
@@ -48,7 +65,7 @@ self.addEventListener('fetch', (event) => {
   event.respondWith(
     caches.match(request).then((cached) => {
       const network = fetch(request).then((response) => {
-        if (response.ok) {
+        if (response.ok && response.type === 'basic') {
           const copy = response.clone();
           caches.open(CACHE_NAME).then((cache) => cache.put(request, copy));
         }

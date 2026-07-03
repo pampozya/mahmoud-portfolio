@@ -2,7 +2,7 @@
 declare(strict_types=1);
 
 $siteUrl = 'https://portfolio.lensmania.ae';
-$apiUrl = 'https://lensmania-api.onrender.com/api';
+$apiUrl = 'https://mahmoud-portfolio-api.pampozya.workers.dev/api';
 $fallbackImage = __DIR__ . '/og-image.png';
 
 function http_body(string $url): ?string {
@@ -89,22 +89,33 @@ function target_dimensions(?array $item, int $srcW, int $srcH): array {
     return [1200, 1200];                      // square or near-square
 }
 
-$rawId = $_GET['item'] ?? $_GET['id'] ?? '';
-$itemId = filter_var($rawId, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]);
-if (!$itemId) {
-    emit_fallback($fallbackImage);
-    exit;
-}
-
-$items = http_json($apiUrl . '/portfolio');
+// Resolve the item by published id (?item=) OR by review token (?review=); the
+// review path lets client-review share cards work even for unpublished items.
+$reviewToken = preg_replace('/[^A-Za-z0-9_-]/', '', (string)($_GET['review'] ?? ''));
 $item = null;
-if (is_array($items)) {
-    foreach ($items as $candidate) {
-        if ((int)($candidate['id'] ?? 0) === (int)$itemId) {
-            $item = $candidate;
-            break;
+if ($reviewToken !== '') {
+    $data = http_json($apiUrl . '/review/' . rawurlencode($reviewToken));
+    if (is_array($data) && isset($data['portfolio']) && is_array($data['portfolio'])) {
+        $item = $data['portfolio'];
+    }
+} else {
+    $rawId = $_GET['item'] ?? $_GET['id'] ?? '';
+    $itemId = filter_var($rawId, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]);
+    if ($itemId) {
+        $items = http_json($apiUrl . '/portfolio');
+        if (is_array($items)) {
+            foreach ($items as $candidate) {
+                if ((int)($candidate['id'] ?? 0) === (int)$itemId) {
+                    $item = $candidate;
+                    break;
+                }
+            }
         }
     }
+}
+if (!$item) {
+    emit_fallback($fallbackImage);
+    exit;
 }
 
 $sourceUrl = $item
@@ -141,8 +152,28 @@ $fitX = (int) (($targetW - $fitW) / 2);
 $fitY = (int) (($targetH - $fitH) / 2);
 imagecopyresampled($canvas, $source, $fitX, $fitY, 0, 0, $fitW, $fitH, $srcW, $srcH);
 
+// --- name branding overlay ("MAHMOUD ADEL") ---
+$fontFile = __DIR__ . '/assets/brand-font.ttf';
+if (function_exists('imagettftext') && is_file($fontFile)) {
+    // Bottom gradient scrim so the name stays legible over any frame.
+    $scrimH = max(60, (int)($targetH * 0.24));
+    for ($y = 0; $y < $scrimH; $y++) {
+        $a = 127 - (int)(95 * ($y / $scrimH)); // fade to darker at the very bottom
+        $col = imagecolorallocatealpha($canvas, 0, 0, 0, $a);
+        imagefilledrectangle($canvas, 0, $targetH - $scrimH + $y, $targetW, $targetH - $scrimH + $y + 1, $col);
+    }
+    $name = 'MAHMOUD ADEL';
+    $fontSize = max(20, (int)round($targetW * 0.040));
+    $pad = (int)round($targetW * 0.035);
+    $baseline = $targetH - $pad;
+    $shadow = imagecolorallocatealpha($canvas, 0, 0, 0, 55);
+    $gold = imagecolorallocate($canvas, 200, 168, 106); // #c8a86a brand gold
+    imagettftext($canvas, $fontSize, 0, $pad + 2, $baseline + 2, $shadow, $fontFile, $name);
+    imagettftext($canvas, $fontSize, 0, $pad, $baseline, $gold, $fontFile, $name);
+}
+
 header('Content-Type: image/jpeg');
 header('Cache-Control: public, max-age=3600');
-imagejpeg($canvas, null, 82);
+imagejpeg($canvas, null, 90);
 imagedestroy($source);
 imagedestroy($canvas);

@@ -1,9 +1,9 @@
 {
-  "name": "Mahmoud Adel Portfolio",
-  "short_name": "Mahmoud",
-  "description": "Mahmoud Adel's portfolio and admin dashboard.",
-  "id": "/",
-  "start_url": "/",
+  "name": "Lens Mania Portfolio Admin",
+  "short_name": "LM Admin",
+  "description": "Mobile dashboard for portfolio uploads, client reviews, deliveries, and analytics.",
+  "id": "/admin",
+  "start_url": "/admin",
   "scope": "/",
   "display": "standalone",
   "display_override": ["standalone", "browser"],
@@ -27,14 +27,14 @@
   ],
   "shortcuts": [
     {
-      "name": "Open Portfolio",
+      "name": "Portfolio Items",
       "short_name": "Portfolio",
-      "url": "/",
+      "url": "/admin",
       "icons": [{ "src": "/favicon.png?v=20260524-monogram", "sizes": "192x192", "type": "image/png" }]
     },
     {
-      "name": "Open Dashboard",
-      "short_name": "Dashboard",
+      "name": "Analytics",
+      "short_name": "Analytics",
       "url": "/admin",
       "icons": [{ "src": "/favicon.png?v=20260524-monogram", "sizes": "192x192", "type": "image/png" }]
     }
