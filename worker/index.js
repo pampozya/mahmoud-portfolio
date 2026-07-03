@@ -3,36 +3,52 @@
 //   - POST /r2            → R2 presigned PUT URL (new)
 // All endpoints verify JWT from Render backend.
 
-const CORS = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Methods': 'POST, OPTIONS',
-  'Access-Control-Allow-Headers': 'Authorization, Content-Type',
-};
+const ALLOWED_SIGN_ORIGINS = [
+  'https://portfolio.lensmania.ae',
+  'https://portfolio.alaaelshami.com',
+  'https://portfolio.yousefkandel.com',
+  'http://localhost:3000',
+  'http://localhost:5173',
+  'http://127.0.0.1:3000',
+  'http://127.0.0.1:5173',
+];
+
+function corsHeaders(origin) {
+  const allowed = ALLOWED_SIGN_ORIGINS.includes(origin) ? origin : ALLOWED_SIGN_ORIGINS[0];
+  return {
+    'Access-Control-Allow-Origin': allowed,
+    'Access-Control-Allow-Methods': 'POST, OPTIONS',
+    'Access-Control-Allow-Headers': 'Authorization, Content-Type',
+    'Vary': 'Origin',
+  };
+}
 
 export default {
   async fetch(request, env) {
-    if (request.method === 'OPTIONS') return new Response(null, { headers: CORS });
-    if (request.method !== 'POST') return json({ error: 'Method not allowed' }, 405);
+    const origin = request.headers.get('Origin') || '';
+    if (request.method === 'OPTIONS') return new Response(null, { headers: corsHeaders(origin) });
+    if (request.method !== 'POST') return json({ error: 'Method not allowed' }, 405, origin);
 
     const auth = request.headers.get('Authorization') || '';
-    if (!auth.startsWith('Bearer ')) return json({ error: 'Missing auth' }, 401);
+    if (!auth.startsWith('Bearer ')) return json({ error: 'Missing auth' }, 401, origin);
 
+    let payload;
     try {
-      await verifyJWT(auth.substring(7), env.JWT_SECRET);
+      payload = await verifyJWT(auth.substring(7), env.JWT_SECRET);
     } catch (e) {
-      return json({ error: 'Invalid token: ' + e.message }, 401);
+      return json({ error: 'Invalid token: ' + e.message }, 401, origin);
     }
 
     const url = new URL(request.url);
     if (url.pathname === '/r2' || url.pathname.startsWith('/r2/')) {
-      return await handleR2Sign(request, env);
+      return await handleR2Sign(request, env, payload, origin);
     }
-    return await handleCloudinarySign(env);
+    return await handleCloudinarySign(env, origin);
   },
 };
 
 // ----- Cloudinary (unchanged) -----
-async function handleCloudinarySign(env) {
+async function handleCloudinarySign(env, origin) {
   const timestamp = Math.floor(Date.now() / 1000);
   const folder = 'lensmania';
   const public_id = crypto.randomUUID();
@@ -41,7 +57,7 @@ async function handleCloudinarySign(env) {
     cloud_name: env.CLOUDINARY_CLOUD_NAME,
     api_key: env.CLOUDINARY_API_KEY,
     timestamp, folder, public_id, signature,
-  });
+  }, 200, origin);
 }
 
 async function cloudinarySign(params, apiSecret) {
@@ -50,15 +66,32 @@ async function cloudinarySign(params, apiSecret) {
   return Array.from(new Uint8Array(hash)).map(b => b.toString(16).padStart(2, '0')).join('');
 }
 
+// Per-site upload namespacing. The site is derived from the VERIFIED JWT's `sub`
+// (admin email) — distinct domain per site, so it can't be spoofed by Origin and
+// needs no frontend change. Known sites get a friendly slug; any future site falls
+// back to its email domain. This makes every uploaded object self-identifying, so a
+// shared bucket can never again be mis-attributed (see the 2026-06 Yousef incident).
+const SITE_SLUGS = {
+  'lensmania.ae': 'mahmoud',
+  'allaportfolio.lensmania.ae': 'alaa',
+  'portfolio.yousefkandel.com': 'yousef',
+};
+function sitePrefixFromEmail(sub) {
+  const domain = (sub && sub.includes('@')) ? sub.split('@')[1].toLowerCase().trim() : '';
+  if (!domain) return 'shared';
+  return SITE_SLUGS[domain] || domain.replace(/[^a-z0-9.\-]/g, '') || 'shared';
+}
+
 // ----- R2 presigned PUT URL -----
-async function handleR2Sign(request, env) {
+async function handleR2Sign(request, env, payload, origin) {
   let body;
   try { body = await request.json(); } catch { body = {}; }
 
   const filename = (body.filename || 'upload').trim();
   const safeBase = filename.replace(/[^\w.\-]/g, '_').slice(-60);
   const ext = (safeBase.split('.').pop() || 'bin').toLowerCase().slice(0, 6);
-  const objectKey = `videos/${Date.now()}-${crypto.randomUUID().slice(0, 8)}.${ext}`;
+  const site = sitePrefixFromEmail(payload && payload.sub);
+  const objectKey = `${site}/videos/${Date.now()}-${crypto.randomUUID().slice(0, 8)}.${ext}`;
 
   const uploadUrl = await signR2PutUrl({
     accountId: env.R2_ACCOUNT_ID,
@@ -71,7 +104,7 @@ async function handleR2Sign(request, env) {
 
   const publicUrl = `${env.R2_PUBLIC_URL.replace(/\/$/, '')}/${objectKey}`;
 
-  return json({ uploadUrl, publicUrl, objectKey });
+  return json({ uploadUrl, publicUrl, objectKey }, 200, origin);
 }
 
 // ----- S3 v4 query-string (presigned) PUT URL signer -----
@@ -149,10 +182,10 @@ function bytesToHex(bytes) {
 }
 
 // ----- Shared -----
-function json(data, status = 200) {
+function json(data, status = 200, origin = '') {
   return new Response(JSON.stringify(data), {
     status,
-    headers: { 'Content-Type': 'application/json', ...CORS },
+    headers: { 'Content-Type': 'application/json', ...corsHeaders(origin) },
   });
 }
 
