@@ -10,7 +10,7 @@ echo "🚀 Deploying to portfolio.lensmania.ae..."
 
 # Step 1: Push code to GitHub
 echo "📤 Pushing to GitHub..."
-git add .
+git add .gitignore frontend backend
 git commit -m "Deploy - $(date '+%Y-%m-%d %H:%M')" || echo "✓ No changes"
 git push origin main
 
