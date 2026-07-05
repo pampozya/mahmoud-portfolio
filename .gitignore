@@ -1,4 +1,8 @@
 # Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.venv/
 backend/venv/
 backend/__pycache__/
 backend/*.pyc
@@ -10,6 +14,13 @@ backend/.env
 frontend/node_modules/
 frontend/build/
 frontend/.env
+frontend/.env.production
+
+# Gemini Video Studio
+gemini-video-studio/node_modules/
+gemini-video-studio/.env
+gemini-video-studio/data/
+gemini-video-studio/public/outputs/
 
 # Cloudflare Worker
 worker/node_modules/
@@ -23,6 +34,32 @@ finance/.backups/
 
 # Local one-off tools
 drive-uploader/
+
+# Binance trader local secrets/state
+binance-trader/.env
+binance-trader/.venv/
+binance-trader/state/
+binance-trader/logs/
+binance-trader/.pytest_cache/
+
+# Editor / tooling
+.vscode/
+.opencode/
+opencode.jsonc
+PROJECT_INDEX.md
+
+# Cloudflare wrangler local state
+.wrangler/
+
+# Unrelated local scratch/side projects
+_shared_apks/
+backup-worker/
+color-engine/
+mg-obd-link/
+scripts/
+tmp_color/
+video-ai/
+local-ai-image-generator/
 
 # OS
 .DS_Store

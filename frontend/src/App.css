@@ -1385,21 +1385,21 @@ body::after {
   inset: auto 0 0;
   height: 3px;
   z-index: -1;
-  background: linear-gradient(90deg, var(--color-accent), transparent);
+  background: linear-gradient(90deg, rgba(234,234,234,0.8), transparent);
   opacity: 0;
   transition: opacity 0.4s var(--ease-cinematic);
 }
 .category-preview-card:hover {
   background: var(--glass-bg-hover);
-  border-color: rgba(200,168,106,0.3);
+  border-color: rgba(234,234,234,0.3);
   transform: translateY(-2px);
   box-shadow: 0 12px 48px rgba(0,0,0,0.5), inset 0 1px 0 var(--glass-highlight);
 }
 .category-preview-card.active {
-  background: var(--glass-bg-active);
-  border-color: var(--color-accent);
+  background: rgba(234,234,234,0.1);
+  border-color: rgba(234,234,234,0.7);
   transform: translateY(-2px);
-  box-shadow: 0 0 20px rgba(200,168,106,0.15), inset 0 0 10px rgba(200,168,106,0.05), inset 0 1px 0 var(--glass-highlight);
+  box-shadow: 0 0 20px rgba(234,234,234,0.12), inset 0 0 10px rgba(234,234,234,0.05), inset 0 1px 0 var(--glass-highlight);
 }
 .category-preview-card:hover::before,
 .category-preview-card.active::before {
@@ -1424,11 +1424,124 @@ body::after {
 }
 .category-preview-card.active span,
 .category-preview-card.active .category-preview-index {
-  color: var(--color-accent);
+  color: var(--color-peach);
 }
 .category-preview-index {
   color: var(--color-accent);
   font-variant-numeric: tabular-nums;
+}
+/* COMMERCIAL & HEALTHCARE RAIL — curated horizontal scroll-snap showcase */
+.commercial-rail-section {
+  padding-bottom: 1rem;
+}
+.commercial-rail-shell {
+  position: relative;
+  overflow: hidden;
+  margin-top: 1.5rem;
+}
+.commercial-rail-shell::before,
+.commercial-rail-shell::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  z-index: 2;
+  width: clamp(28px, 7vw, 86px);
+  pointer-events: none;
+}
+.commercial-rail-shell::before {
+  left: 0;
+  background: linear-gradient(90deg, var(--color-dark), transparent);
+  opacity: 0.45;
+}
+.commercial-rail-shell::after {
+  right: 0;
+  background: linear-gradient(90deg, transparent, color-mix(in srgb, var(--color-dark) 96%, transparent) 72%);
+}
+.commercial-rail {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(260px, 320px);
+  gap: 1rem;
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding: 0.25rem max(0.75rem, var(--safe-right)) 1.25rem max(0.75rem, var(--safe-left));
+  scrollbar-width: none;
+  scroll-snap-type: x proximity;
+  mask-image: linear-gradient(90deg, transparent 0, #000 16px, #000 calc(100% - 24px), transparent 100%);
+  -webkit-mask-image: linear-gradient(90deg, transparent 0, #000 16px, #000 calc(100% - 24px), transparent 100%);
+}
+.commercial-rail::-webkit-scrollbar { display: none; }
+.commercial-rail-card {
+  position: relative;
+  isolation: isolate;
+  aspect-ratio: 4/5;
+  border: 1.5px solid var(--glass-border);
+  border-radius: 18px;
+  background: var(--glass-bg-strong);
+  -webkit-backdrop-filter: blur(24px) saturate(200%);
+  backdrop-filter: blur(24px) saturate(200%);
+  box-shadow: 0 12px 48px rgba(0,0,0,0.48), inset 0 1px 1px var(--glass-highlight), inset 0 -1px 0 rgba(0,0,0,0.2);
+  color: var(--color-text-muted);
+  cursor: pointer;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  align-items: flex-start;
+  gap: 0.5rem;
+  padding: 1.1rem;
+  text-align: left;
+  scroll-snap-align: start;
+  transition: transform 0.4s var(--ease-cinematic), box-shadow 0.4s var(--ease-cinematic);
+}
+.commercial-rail-card::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -2;
+  background:
+    linear-gradient(0deg, rgba(10,10,10,0.9), rgba(10,10,10,0.15) 55%),
+    var(--category-thumb, linear-gradient(135deg, rgba(234,234,234,0.04), rgba(234,234,234,0.01)));
+  background-size: cover;
+  background-position: center;
+  transform: scale(1.02);
+  transition: transform 0.8s var(--ease-cinematic);
+}
+.commercial-rail-video {
+  position: absolute;
+  inset: 0;
+  z-index: -3;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.commercial-rail-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 16px 56px rgba(0,0,0,0.55), inset 0 1px 0 var(--glass-highlight);
+}
+.commercial-rail-card:hover::before {
+  transform: scale(1.08);
+}
+.commercial-rail-meta {
+  display: flex;
+  gap: 0.4rem;
+}
+.commercial-rail-tag {
+  font-size: 0.66rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+  background: rgba(10,10,10,0.5);
+  border: 1px solid var(--glass-border);
+  border-radius: 999px;
+  padding: 0.3rem 0.6rem;
+}
+.commercial-rail-title {
+  color: var(--color-peach);
+  font-size: 1.02rem;
+  line-height: 1.3;
+  text-shadow: 0 2px 18px rgba(0,0,0,0.65);
 }
 /* PORTFOLIO GRID — premium editorial cards */
 .video-card {

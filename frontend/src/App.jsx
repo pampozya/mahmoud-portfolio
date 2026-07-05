@@ -1179,6 +1179,64 @@ function SpotlightSection({ item, categories, onOpen, isAr }) {
   );
 }
 
+// ==================== COMMERCIAL & HEALTHCARE RAIL ====================
+
+const COMMERCIAL_HEALTHCARE_IDS = [45, 46, 44, 42, 47, 22];
+
+function CommercialHealthcareSection({ portfolio, categories, onOpen, isAr }) {
+  const items = COMMERCIAL_HEALTHCARE_IDS
+    .map(id => portfolio.find(p => p.id === id))
+    .filter(Boolean);
+  if (items.length === 0) return null;
+
+  return (
+    <section className="commercial-rail-section fade-in-section" aria-label={isAr ? 'شركاء طبيون وتجاريون' : 'Commercial & Healthcare Partners'}>
+      <span className="ghost-watermark ghost-watermark--left" aria-hidden="true">CLINICS</span>
+      <div className="section-inner">
+        <h2 className="section-title">{isAr ? 'شركاء طبيون وتجاريون' : 'Commercial & Healthcare Partners'}</h2>
+        <p className="section-intro">
+          {isAr ? 'أعمال مختارة مع أبرز العيادات والعلامات التجارية.' : 'Curated films for leading clinics, brands, and events.'}
+        </p>
+      </div>
+      <div className="commercial-rail-shell">
+        <div className="commercial-rail" aria-label={isAr ? 'أعمال مختارة' : 'Featured commercial work'}>
+          {items.map(item => {
+            const cat = categories.find(c => c.id === item.category_id);
+            const thumb = getThumbnail(item);
+            const isDirect = item.video_type === 'direct' && item.video_url;
+            return (
+              <button
+                key={item.id}
+                type="button"
+                className="commercial-rail-card"
+                onClick={() => onOpen(item)}
+                style={thumb ? { '--category-thumb': `url(${thumb})` } : undefined}
+              >
+                {isDirect && (
+                  <video
+                    className="commercial-rail-video"
+                    src={resolveUrl(item.video_url, 'video')}
+                    poster={thumb || undefined}
+                    autoPlay
+                    muted
+                    loop
+                    playsInline
+                    preload="metadata"
+                  />
+                )}
+                <span className="commercial-rail-meta">
+                  {cat && <span className="commercial-rail-tag">{cat.name}</span>}
+                </span>
+                <strong className="commercial-rail-title">{item.title}</strong>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+    </section>
+  );
+}
+
 // ==================== VIDEO PLAYER ====================
 
 function VideoPlayer({ url, poster }) {
@@ -1846,17 +1904,36 @@ function PublicSite() {
         </section>
       )}
 
-      {portfolio.filter(p => p.featured).length > 0 && (
-        <FeaturedCarousel
-          items={[...portfolio].filter(p => p.featured).sort((a, b) => ((a.order ?? 0) - (b.order ?? 0)) || (new Date(b.created_at) - new Date(a.created_at))).slice(0, 5)}
-          onSelect={openItem}
-          lang={lang}
-        />
-      )}
-
       {reelOfMonth && (
         <SpotlightSection item={reelOfMonth} categories={categories} onOpen={openItem} isAr={isAr} />
       )}
+
+      <section className="testimonials-section" id="testimonials">
+        <span className="ghost-watermark ghost-watermark--right" aria-hidden="true">REVIEWS</span>
+        <div className="section-inner">
+          <h2 className="section-title">{isAr ? 'آراء العملاء' : 'Client Reviews'}</h2>
+          {testimonials.length > 0 && (
+            <div className="testimonials-grid">
+              {testimonials.map(t => (
+                <div key={t.id} className="testimonial-card">
+                  <div className="testimonial-stars">{'★'.repeat(t.rating)}{'☆'.repeat(5 - t.rating)}</div>
+                  <p className="testimonial-text">"{t.text}"</p>
+                  <div className="testimonial-author">
+                    {t.photo_url && <img src={resolveUrl(t.photo_url)} alt={t.name} className="testimonial-photo" />}
+                    <div>
+                      <div className="testimonial-name">{t.name}</div>
+                      {t.role && <div className="testimonial-role">{t.role}</div>}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+          <LeaveReviewForm lang={lang} isAr={isAr} />
+        </div>
+      </section>
+
+      <CommercialHealthcareSection portfolio={portfolio} categories={categories} onOpen={openItem} isAr={isAr} />
 
       <section className="portfolio-section fade-in-section" id="portfolio">
         <span className="ghost-watermark ghost-watermark--right" aria-hidden="true">WORK</span>
@@ -1886,8 +1963,11 @@ function PublicSite() {
                   <strong>{isAr ? 'الكل' : 'All work'}</strong>
                   <span>{portfolio.length} {isAr ? 'عمل' : portfolio.length === 1 ? 'project' : 'projects'}</span>
                 </button>
-                {publicCategoryGroupsWithThumbs.map((cat, index) => {
-                  const count = cat.ids.reduce((sum, id) => sum + (categoryCounts[id] || 0), 0);
+                {publicCategoryGroupsWithThumbs
+                  .map(cat => ({ ...cat, count: cat.ids.reduce((sum, id) => sum + (categoryCounts[id] || 0), 0) }))
+                  .filter(cat => cat.count > 0)
+                  .map((cat, index) => {
+                  const { count } = cat;
                   return (
                   <button
                     key={cat.id}
@@ -2039,31 +2119,6 @@ function PublicSite() {
           </div>
         </section>
       )}
-
-      <section className="testimonials-section" id="testimonials">
-        <span className="ghost-watermark ghost-watermark--right" aria-hidden="true">REVIEWS</span>
-        <div className="section-inner">
-          <h2 className="section-title">{isAr ? 'آراء العملاء' : 'Client Reviews'}</h2>
-          {testimonials.length > 0 && (
-            <div className="testimonials-grid">
-              {testimonials.map(t => (
-                <div key={t.id} className="testimonial-card">
-                  <div className="testimonial-stars">{'★'.repeat(t.rating)}{'☆'.repeat(5 - t.rating)}</div>
-                  <p className="testimonial-text">"{t.text}"</p>
-                  <div className="testimonial-author">
-                    {t.photo_url && <img src={resolveUrl(t.photo_url)} alt={t.name} className="testimonial-photo" />}
-                    <div>
-                      <div className="testimonial-name">{t.name}</div>
-                      {t.role && <div className="testimonial-role">{t.role}</div>}
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-          <LeaveReviewForm lang={lang} isAr={isAr} />
-        </div>
-      </section>
 
       <section className="contact-section" id="contact">
         <span className="ghost-watermark ghost-watermark--left" aria-hidden="true">CONTACT</span>
