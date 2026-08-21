@@ -570,7 +570,7 @@ const WEB_VIDEO_VARIANTS = {
 
 // Preserve these records in the admin/database, but do not advertise projects
 // whose original Cloudinary video and thumbnail assets are no longer available.
-const UNAVAILABLE_PUBLIC_PORTFOLIO_IDS = new Set([13, 14]);
+const UNAVAILABLE_PUBLIC_PORTFOLIO_IDS = new Set([3, 9, 10, 13, 14, 20, 21, 23, 24, 26, 27]);
 
 function resolveUrl(url, type = 'auto') {
   if (!url) return null;
