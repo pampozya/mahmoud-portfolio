@@ -1004,28 +1004,25 @@ function HeroMasthead({ settings, heroImg, siteTitle, featuredItem, isAr, suspen
         </div>
         <div className="hero-vignette" aria-hidden="true" />
         <div className="hero-frame">
-          <div className="hero-topline">
-            <span className="hero-topline-mark">
-              {settings?.available_for_booking !== false
-                ? (isAr ? 'متاح للحجز' : 'Available for booking')
-                : (isAr ? 'محجوز حالياً' : 'Currently booked')}
-            </span>
-            <img src={BRAND_LOGO_WHITE_SRC} alt="" className="hero-logo-mark" aria-hidden="true" />
-          </div>
-
           <div className="hero-name-wrap">
             <h1 className="hero-name">
               {firstName}
               {lastName && <span className="hero-name-em">{lastName}</span>}
             </h1>
+            <p className="hero-role">{isAr ? 'مدير تصوير ومصور سينمائي' : 'Cinematographer & Director'}</p>
             <span className="hero-rule" aria-hidden="true" />
           </div>
 
           <div className="hero-bottomline">
-            <button type="button" className="hero-scroll-cue" onClick={scrollToNext}>
-              <span className="hero-scroll-cue-line" aria-hidden="true" />
-              <span>{isAr ? 'اكتشف الأعمال' : 'Scroll to explore'}</span>
+            <button type="button" className="hero-primary-cta" onClick={scrollToNext}>
+              <span className="hero-primary-cta-icon" aria-hidden="true">▶</span>
+              <span>{isAr ? 'الأعمال المختارة' : 'Selected Work'}</span>
             </button>
+            <span className="hero-availability">
+              {settings?.available_for_booking !== false
+                ? (isAr ? 'متاح للمشاريع — دبي' : `Available for projects — ${settings?.location || 'Dubai'}`)
+                : (isAr ? 'محجوز حالياً — دبي' : `Currently booked — ${settings?.location || 'Dubai'}`)}
+            </span>
             {heroCollaborators.length > 0 && (
               <div className="hero-collaborators" aria-label={isAr ? 'المتعاونون' : 'Project credits'}>
                 <span className="hero-collaborators-label">{isAr ? 'بمشاركة' : 'Credits'}</span>
@@ -1142,7 +1139,7 @@ function SpotlightSection({ item, categories, onOpen, isAr, suspendPlayback = fa
   return (
     <section className="spotlight-section" ref={sectionRef} aria-label="Reel of the month">
       <div className="spotlight-header">
-        <span className="spotlight-chapter">03 — {isAr ? 'في الواجهة' : 'Spotlight'}</span>
+        <span className="spotlight-chapter">02 — {isAr ? 'في الواجهة' : 'Spotlight'}</span>
         <span className="spotlight-now-playing">{isAr ? '— يعرض الآن —' : '— Now Playing —'}</span>
       </div>
       <button
@@ -1195,6 +1192,7 @@ function SpotlightSection({ item, categories, onOpen, isAr, suspendPlayback = fa
 // ==================== COMMERCIAL & HEALTHCARE RAIL ====================
 
 const COMMERCIAL_HEALTHCARE_IDS = [45, 46, 44, 42, 47, 22];
+const INITIAL_VISIBLE_PROJECTS = 15;
 
 function CommercialHealthcareSection({ portfolio, categories, onOpen, isAr }) {
   const items = COMMERCIAL_HEALTHCARE_IDS
@@ -1232,6 +1230,9 @@ function CommercialHealthcareSection({ portfolio, categories, onOpen, isAr }) {
             );
           })}
         </div>
+        <span className="commercial-rail-cue" aria-hidden="true">
+          {isAr ? 'اسحب للاستكشاف' : 'Drag to explore'} <span>→</span>
+        </span>
       </div>
     </section>
   );
@@ -1498,6 +1499,7 @@ function PublicSite() {
   const [hoveredVideo, setHoveredVideo] = useState(null);
   const [clientLogos, setClientLogos] = useState([]);
   const [activeSection, setActiveSection] = useState('');
+  const [visibleProjectCount, setVisibleProjectCount] = useState(INITIAL_VISIBLE_PROJECTS);
 
   useEffect(() => {
     api.trackVisit();
@@ -1627,15 +1629,17 @@ function PublicSite() {
         scrollTrigger: { trigger: '.brief-routing', start: 'top 92%', toggleActions: 'play none none none' },
       });
 
-      // About — image slides from left, text children stagger up (includes section title)
-      gsap.from('.about-img-wrap', {
-        x: -50, opacity: 0, duration: 1.1, ease: 'expo.out',
-        scrollTrigger: { trigger: '.about-section', start: 'top 78%', toggleActions: 'play none none none' },
-      });
-      gsap.from('.about-text > *', {
-        y: 28, opacity: 0, duration: 0.85, stagger: 0.1, ease: 'expo.out',
-        scrollTrigger: { trigger: '.about-section', start: 'top 78%', toggleActions: 'play none none none' },
-      });
+      // About is optional; only register animations when the section exists.
+      if (document.querySelector('.about-section')) {
+        gsap.from('.about-img-wrap', {
+          x: -50, opacity: 0, duration: 1.1, ease: 'expo.out',
+          scrollTrigger: { trigger: '.about-section', start: 'top 78%', toggleActions: 'play none none none' },
+        });
+        gsap.from('.about-text > *', {
+          y: 28, opacity: 0, duration: 0.85, stagger: 0.1, ease: 'expo.out',
+          scrollTrigger: { trigger: '.about-section', start: 'top 78%', toggleActions: 'play none none none' },
+        });
+      }
 
       // Testimonials — title animates; cards render naturally (no opacity gate to avoid async-data timing issues)
       gsap.from('.testimonials-section .section-title', {
@@ -1706,7 +1710,7 @@ function PublicSite() {
       return;
     }
     gsap.fromTo(cards, { opacity: 0, y: 22 }, { opacity: 1, y: 0, duration: 0.55, ease: 'power3.out', stagger: 0.06 });
-  }, [portfolio, sort, activeCategory, isMobileDevice]);
+  }, [portfolio, sort, activeCategory, visibleProjectCount, isMobileDevice]);
 
   // Scroll progress bar — direct scroll listener
   useEffect(() => {
@@ -1763,6 +1767,12 @@ function PublicSite() {
   const activeGroup = publicCategoryGroups.find(group => isActivePublicCategory(group, activeCategory));
   const filteredItems = !activeGroup ? sortedPortfolio
     : sortedPortfolio.filter(item => activeGroup.ids.includes(item.category_id));
+  const visiblePortfolioItems = filteredItems.slice(0, visibleProjectCount);
+  const remainingProjectCount = Math.max(0, filteredItems.length - visiblePortfolioItems.length);
+
+  useEffect(() => {
+    setVisibleProjectCount(INITIAL_VISIBLE_PROJECTS);
+  }, [activeCategory, sort]);
   const categoryCounts = portfolio.reduce((counts, item) => {
     counts[item.category_id] = (counts[item.category_id] || 0) + 1;
     return counts;
@@ -1856,7 +1866,7 @@ function PublicSite() {
   );
 
   return (
-    <div id="top" className="public-site" dir="auto">
+    <div id="top" className={`public-site${settings?.about_text ? ' has-about' : ''}`} dir="auto">
       <div className="scroll-progress" aria-hidden="true" />
       <header className="public-header">
         <div className="header-inner">
@@ -1911,31 +1921,6 @@ function PublicSite() {
       {reelOfMonth && (
         <SpotlightSection item={reelOfMonth} categories={categories} onOpen={openItem} isAr={isAr} suspendPlayback={Boolean(selectedItem)} />
       )}
-
-      <section className="testimonials-section" id="testimonials">
-        <span className="ghost-watermark ghost-watermark--right" aria-hidden="true">REVIEWS</span>
-        <div className="section-inner">
-          <h2 className="section-title">{isAr ? 'آراء العملاء' : 'Client Reviews'}</h2>
-          {testimonials.length > 0 && (
-            <div className="testimonials-grid">
-              {testimonials.map(t => (
-                <div key={t.id} className="testimonial-card">
-                  <div className="testimonial-stars">{'★'.repeat(t.rating)}{'☆'.repeat(5 - t.rating)}</div>
-                  <p className="testimonial-text">"{t.text}"</p>
-                  <div className="testimonial-author">
-                    {t.photo_url && <img src={resolveUrl(t.photo_url)} alt={t.name} className="testimonial-photo" />}
-                    <div>
-                      <div className="testimonial-name">{t.name}</div>
-                      {t.role && <div className="testimonial-role">{t.role}</div>}
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-          <LeaveReviewForm lang={lang} isAr={isAr} />
-        </div>
-      </section>
 
       <CommercialHealthcareSection portfolio={portfolio} categories={categories} onOpen={openItem} isAr={isAr} />
 
@@ -2014,8 +1999,9 @@ function PublicSite() {
               <p>{isAr ? 'جرّب فئة أخرى أو عد لاحقاً.' : 'Try another category, or come back for the next edit.'}</p>
             </div>
           ) : (
+            <>
             <div className="portfolio-masonry">
-              {filteredItems.map(item => {
+              {visiblePortfolioItems.map(item => {
                 const thumb = getThumbnail(item);
                 const liked = likedItems[item.id];
                 const platform = PLATFORMS[item.video_type || detectPlatform(item.video_url)];
@@ -2095,6 +2081,24 @@ function PublicSite() {
                 );
               })}
             </div>
+            {remainingProjectCount > 0 && (
+              <div className="portfolio-load-more-wrap">
+                <button
+                  type="button"
+                  className="portfolio-load-more"
+                  onClick={() => setVisibleProjectCount(count => count + INITIAL_VISIBLE_PROJECTS)}
+                >
+                  <span>{isAr ? 'عرض المزيد' : 'Load More Work'}</span>
+                  <span className="portfolio-load-more-count">+{Math.min(INITIAL_VISIBLE_PROJECTS, remainingProjectCount)}</span>
+                </button>
+                <span className="portfolio-count-status">
+                  {isAr
+                    ? `${visiblePortfolioItems.length} من ${filteredItems.length}`
+                    : `Showing ${visiblePortfolioItems.length} of ${filteredItems.length} projects`}
+                </span>
+              </div>
+            )}
+            </>
           )}
         </div>
       </section>
@@ -2111,6 +2115,31 @@ function PublicSite() {
           </div>
         </section>
       )}
+
+      <section className="testimonials-section" id="testimonials">
+        <span className="ghost-watermark ghost-watermark--right" aria-hidden="true">REVIEWS</span>
+        <div className="section-inner">
+          <h2 className="section-title">{isAr ? 'آراء العملاء' : 'Client Reviews'}</h2>
+          {testimonials.length > 0 && (
+            <div className="testimonials-grid">
+              {testimonials.map(t => (
+                <div key={t.id} className="testimonial-card">
+                  <div className="testimonial-stars">{'★'.repeat(t.rating)}{'☆'.repeat(5 - t.rating)}</div>
+                  <p className="testimonial-text">"{t.text}"</p>
+                  <div className="testimonial-author">
+                    {t.photo_url && <img src={resolveUrl(t.photo_url)} alt={t.name} className="testimonial-photo" />}
+                    <div>
+                      <div className="testimonial-name">{t.name}</div>
+                      {t.role && <div className="testimonial-role">{t.role}</div>}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+          <LeaveReviewForm lang={lang} isAr={isAr} />
+        </div>
+      </section>
 
       <section className="contact-section" id="contact">
         <span className="ghost-watermark ghost-watermark--left" aria-hidden="true">CONTACT</span>
