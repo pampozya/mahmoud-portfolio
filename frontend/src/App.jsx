@@ -561,8 +561,16 @@ function getShowreelEmbed(url) {
   return null;
 }
 
+const WEB_VIDEO_VARIANTS = {
+  'https://pub-534146b836b546889e3727f44f5adb93.r2.dev/mahmoud/videos/1781700105152-fb5756a9.mp4':
+    'https://pub-534146b836b546889e3727f44f5adb93.r2.dev/mahmoud/videos/1781700105152-fb5756a9-web.mp4',
+  'https://pub-534146b836b546889e3727f44f5adb93.r2.dev/mahmoud/videos/1783530234780-ac7665c5.mp4':
+    'https://pub-534146b836b546889e3727f44f5adb93.r2.dev/mahmoud/videos/1783530234780-ac7665c5-web.mp4',
+};
+
 function resolveUrl(url, type = 'auto') {
   if (!url) return null;
+  if (type === 'video' && WEB_VIDEO_VARIANTS[url]) return WEB_VIDEO_VARIANTS[url];
   if (url.startsWith('/')) return `${BASE_URL}${url}`;
   // Serve Cloudinary videos at original quality (no q_auto compression). R2 URLs pass through as-is.
   return url;
@@ -903,7 +911,7 @@ function CookieConsent({ lang }) {
 
 // ==================== HERO — SILENT SHOWREEL MASTHEAD ====================
 
-function HeroMasthead({ settings, heroImg, siteTitle, featuredItem, isAr }) {
+function HeroMasthead({ settings, heroImg, siteTitle, featuredItem, isAr, suspendPlayback = false }) {
   const sectionRef = useRef(null);
   const mediaRef = useRef(null);
   const videoRef = useRef(null);
@@ -911,6 +919,7 @@ function HeroMasthead({ settings, heroImg, siteTitle, featuredItem, isAr }) {
   const showreelUrl = featuredItem && featuredItem.video_type === 'direct' && featuredItem.video_url
     ? resolveUrl(featuredItem.video_url, 'video')
     : null;
+  const shouldRenderVideo = Boolean(showreelUrl && !suspendPlayback);
   const fallbackImg = featuredItem ? (getThumbnail(featuredItem) || heroImg) : heroImg;
   const heroCollaborators = featuredItem ? parseCollaborators(featuredItem.collaborators) : [];
   const heroFocalX = featuredItem?.featured_focal_x ?? 50;
@@ -947,7 +956,7 @@ function HeroMasthead({ settings, heroImg, siteTitle, featuredItem, isAr }) {
 
   // Best-effort autoplay (some mobile browsers refuse silent autoplay until interaction)
   useEffect(() => {
-    if (!videoRef.current || !showreelUrl) return;
+    if (!videoRef.current || !shouldRenderVideo) return;
     const v = videoRef.current;
     const tryPlay = () => v.play().catch(() => {});
     tryPlay();
@@ -957,7 +966,7 @@ function HeroMasthead({ settings, heroImg, siteTitle, featuredItem, isAr }) {
       document.removeEventListener('touchstart', tryPlay);
       document.removeEventListener('click', tryPlay);
     };
-  }, [showreelUrl]);
+  }, [shouldRenderVideo]);
 
   const scrollToNext = () => {
     const next = document.querySelector('#portfolio') || document.querySelector('section + section');
@@ -972,7 +981,7 @@ function HeroMasthead({ settings, heroImg, siteTitle, featuredItem, isAr }) {
     <section className="hero" ref={sectionRef} aria-label="Showreel">
       <div className="hero-panel">
         <div className="hero-media" ref={mediaRef}>
-          {showreelUrl ? (
+          {shouldRenderVideo ? (
             <video
               ref={videoRef}
               src={showreelUrl}
@@ -1078,7 +1087,7 @@ function CinematicBrief({ portfolio, settings, siteDesc, isAr }) {
 
 // ==================== SPOTLIGHT (REEL OF THE MONTH) ====================
 
-function SpotlightSection({ item, categories, onOpen, isAr }) {
+function SpotlightSection({ item, categories, onOpen, isAr, suspendPlayback = false }) {
   const sectionRef = useRef(null);
   const videoRef = useRef(null);
   const rawCat = categories.find(c => c.id === item.category_id);
@@ -1138,7 +1147,7 @@ function SpotlightSection({ item, categories, onOpen, isAr }) {
         onClick={() => onOpen(item)}
         aria-label={`Play ${item.title}`}
       >
-        {isDirectVideo ? (
+        {isDirectVideo && !suspendPlayback ? (
           <video
             ref={videoRef}
             key={videoUrl}
@@ -1147,7 +1156,7 @@ function SpotlightSection({ item, categories, onOpen, isAr }) {
             muted
             loop
             playsInline
-            preload="metadata"
+            preload="none"
             className="spotlight-frame-inner spotlight-frame-video"
           />
         ) : (
@@ -1203,7 +1212,6 @@ function CommercialHealthcareSection({ portfolio, categories, onOpen, isAr }) {
           {items.map(item => {
             const cat = categories.find(c => c.id === item.category_id);
             const thumb = getThumbnail(item);
-            const isDirect = item.video_type === 'direct' && item.video_url;
             return (
               <button
                 key={item.id}
@@ -1212,18 +1220,6 @@ function CommercialHealthcareSection({ portfolio, categories, onOpen, isAr }) {
                 onClick={() => onOpen(item)}
                 style={thumb ? { '--category-thumb': `url(${thumb})` } : undefined}
               >
-                {isDirect && (
-                  <video
-                    className="commercial-rail-video"
-                    src={resolveUrl(item.video_url, 'video')}
-                    poster={thumb || undefined}
-                    autoPlay
-                    muted
-                    loop
-                    playsInline
-                    preload="metadata"
-                  />
-                )}
                 <span className="commercial-rail-meta">
                   {cat && <span className="commercial-rail-tag">{cat.name}</span>}
                 </span>
@@ -1876,6 +1872,7 @@ function PublicSite() {
         siteTitle={siteTitle}
         featuredItem={heroPortfolioItem}
         isAr={isAr}
+        suspendPlayback={Boolean(selectedItem)}
       />
 
       <CinematicBrief
@@ -1905,7 +1902,7 @@ function PublicSite() {
       )}
 
       {reelOfMonth && (
-        <SpotlightSection item={reelOfMonth} categories={categories} onOpen={openItem} isAr={isAr} />
+        <SpotlightSection item={reelOfMonth} categories={categories} onOpen={openItem} isAr={isAr} suspendPlayback={Boolean(selectedItem)} />
       )}
 
       <section className="testimonials-section" id="testimonials">
@@ -1971,22 +1968,10 @@ function PublicSite() {
                   return (
                   <button
                     key={cat.id}
-                    className={`${isActivePublicCategory(cat, activeCategory) ? 'category-preview-card active' : 'category-preview-card'}${cat.coverVideoUrl ? ' has-video' : ''}`}
+                    className={isActivePublicCategory(cat, activeCategory) ? 'category-preview-card active' : 'category-preview-card'}
                     onClick={() => setActiveCategory(cat.slug)}
                     style={cat.thumb ? { '--category-thumb': `url(${cat.thumb})` } : undefined}
                   >
-                    {cat.coverVideoUrl && !isMobileDevice && (
-                      <video
-                        className="category-preview-video"
-                        src={cat.coverVideoUrl}
-                        poster={cat.thumb || undefined}
-                        autoPlay
-                        muted
-                        loop
-                        playsInline
-                        preload="metadata"
-                      />
-                    )}
                     <span className="category-preview-index">{String(index + 1).padStart(2, '0')}</span>
                     <strong>{cat.name}</strong>
                     <span>
@@ -2050,8 +2035,8 @@ function PublicSite() {
                             {platform && <span style={{ fontSize: '0.7rem', color: platform.color, fontWeight: 700, opacity: 0.8 }}>{platform.label}</span>}
                           </div>
                         )
-                      ) : isDirect && isHovered ? (
-                        <video src={resolveUrl(item.video_url, 'video')} autoPlay muted loop playsInline preload="metadata" className="card-hover-video" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }} onLoadedData={e => { e.target.playbackRate = 1.5; }} />
+                      ) : isDirect && isHovered && !selectedItem ? (
+                        <video src={resolveUrl(item.video_url, 'video')} autoPlay muted loop playsInline preload="none" className="card-hover-video" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }} onLoadedData={e => { e.target.playbackRate = 1.5; }} />
                       ) : thumb ? (
                         <img src={thumb} alt={item.title} loading="lazy" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
                       ) : (
