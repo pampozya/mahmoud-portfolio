@@ -568,6 +568,10 @@ const WEB_VIDEO_VARIANTS = {
     'https://pub-534146b836b546889e3727f44f5adb93.r2.dev/mahmoud/videos/1783530234780-ac7665c5-web.mp4',
 };
 
+// Preserve these records in the admin/database, but do not advertise projects
+// whose original Cloudinary video and thumbnail assets are no longer available.
+const UNAVAILABLE_PUBLIC_PORTFOLIO_IDS = new Set([13, 14, 22]);
+
 function resolveUrl(url, type = 'auto') {
   if (!url) return null;
   if (type === 'video' && WEB_VIDEO_VARIANTS[url]) return WEB_VIDEO_VARIANTS[url];
@@ -1505,7 +1509,10 @@ function PublicSite() {
       api.getClientLogos().catch(() => []),
     ])
       .then(([cats, items, sett, tests, logos]) => {
-        setCategories(sortCategoriesForDisplay(cats || [])); setPortfolio(Array.isArray(items) ? items : []);
+        const publicItems = Array.isArray(items)
+          ? items.filter(item => !UNAVAILABLE_PUBLIC_PORTFOLIO_IDS.has(Number(item.id)))
+          : [];
+        setCategories(sortCategoriesForDisplay(cats || [])); setPortfolio(publicItems);
         setSettings(sett); setTestimonials(tests || []);
         setClientLogos(mergeWorkedWithLogos(logos));
       }).finally(() => setLoading(false));
