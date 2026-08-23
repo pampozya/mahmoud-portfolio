@@ -1189,50 +1189,77 @@ function SpotlightSection({ item, categories, onOpen, isAr, suspendPlayback = fa
   );
 }
 
-// ==================== COMMERCIAL & HEALTHCARE RAIL ====================
+// ==================== EVENT FILMS RAIL ====================
 
-const COMMERCIAL_HEALTHCARE_IDS = [45, 46, 44, 42, 47, 22];
+const CURATED_EVENT_IDS = [64, 71, 67, 77, 47, 22, 57, 82, 93, 52];
 const INITIAL_VISIBLE_PROJECTS = 15;
 
-function CommercialHealthcareSection({ portfolio, categories, onOpen, isAr }) {
-  const items = COMMERCIAL_HEALTHCARE_IDS
-    .map(id => portfolio.find(p => p.id === id))
-    .filter(Boolean);
+function EventsSection({ portfolio, categories, onOpen, isAr }) {
+  const railRef = useRef(null);
+  const eventCategory = categories.find(category => category.slug === 'events');
+  const eventItems = eventCategory
+    ? portfolio.filter(item => item.category_id === eventCategory.id)
+    : [];
+  const eventItemsById = new Map(eventItems.map(item => [item.id, item]));
+  const curatedItems = CURATED_EVENT_IDS.map(id => eventItemsById.get(id)).filter(Boolean);
+  const curatedIds = new Set(curatedItems.map(item => item.id));
+  const items = [...curatedItems, ...eventItems.filter(item => !curatedIds.has(item.id))].slice(0, 10);
   if (items.length === 0) return null;
 
+  const scrollRail = direction => {
+    const rail = railRef.current;
+    if (!rail) return;
+    rail.scrollBy({ left: direction * Math.max(320, rail.clientWidth * 0.72), behavior: 'smooth' });
+  };
+
   return (
-    <section className="commercial-rail-section fade-in-section" aria-label={isAr ? 'شركاء طبيون وتجاريون' : 'Commercial & Healthcare Partners'}>
-      <span className="ghost-watermark ghost-watermark--left" aria-hidden="true">CLINICS</span>
-      <div className="section-inner">
-        <h2 className="section-title">{isAr ? 'شركاء طبيون وتجاريون' : 'Commercial & Healthcare Partners'}</h2>
-        <p className="section-intro">
-          {isAr ? 'أعمال مختارة مع أبرز العيادات والعلامات التجارية.' : 'Curated films for leading clinics, brands, and events.'}
-        </p>
+    <section className="events-rail-section fade-in-section" aria-labelledby="events-heading">
+      <span className="events-watermark" aria-hidden="true">LIVE</span>
+      <div className="events-rail-header">
+        <div className="events-heading-wrap">
+          <span className="events-eyebrow">{isAr ? 'أفلام الفعاليات' : 'Event films'}</span>
+          <h2 className="events-title" id="events-heading">
+            {isAr ? 'حيث تتحول اللحظة إلى قصة.' : <>Where moments<br /><em>become stories.</em></>}
+          </h2>
+        </div>
+        <div className="events-header-aside">
+          <p>{isAr ? 'طاقة الحدث، الحضور، والتفاصيل — محفوظة في أفلام سينمائية.' : 'Energy, atmosphere, and every defining detail—preserved in cinematic motion.'}</p>
+          <div className="events-rail-controls" aria-label={isAr ? 'التنقل بين أفلام الفعاليات' : 'Event film navigation'}>
+            <button type="button" onClick={() => scrollRail(-1)} aria-label={isAr ? 'السابق' : 'Previous projects'}>←</button>
+            <button type="button" onClick={() => scrollRail(1)} aria-label={isAr ? 'التالي' : 'Next projects'}>→</button>
+          </div>
+        </div>
       </div>
-      <div className="commercial-rail-shell">
-        <div className="commercial-rail" aria-label={isAr ? 'أعمال مختارة' : 'Featured commercial work'}>
-          {items.map(item => {
+      <div className="events-rail-shell">
+        <div className="events-rail" ref={railRef} aria-label={isAr ? 'أفلام فعاليات مختارة' : 'Selected event films'}>
+          {items.map((item, index) => {
             const cat = categories.find(c => c.id === item.category_id);
             const thumb = getThumbnail(item);
             return (
               <button
                 key={item.id}
                 type="button"
-                className="commercial-rail-card"
+                className={`events-rail-card${index === 0 ? ' events-rail-card--lead' : ''}`}
                 onClick={() => onOpen(item)}
-                style={thumb ? { '--category-thumb': `url(${thumb})` } : undefined}
+                style={{ '--event-index': index, ...(thumb ? { '--event-thumb': `url(${thumb})` } : {}) }}
+                aria-label={`${isAr ? 'مشاهدة' : 'Watch'} ${item.title}`}
               >
-                <span className="commercial-rail-meta">
-                  {cat && <span className="commercial-rail-tag">{cat.name}</span>}
+                <span className="events-card-index" aria-hidden="true">{String(index + 1).padStart(2, '0')}</span>
+                <span className="events-card-play" aria-hidden="true">↗</span>
+                <span className="events-card-content">
+                  <span className="events-card-tag">{cat?.name || (isAr ? 'فعاليات' : 'Events')}</span>
+                  <strong className="events-card-title">{item.title}</strong>
+                  <span className="events-card-watch">{isAr ? 'شاهد الفيلم' : 'Watch film'} <span>→</span></span>
                 </span>
-                <strong className="commercial-rail-title">{item.title}</strong>
               </button>
             );
           })}
         </div>
-        <span className="commercial-rail-cue" aria-hidden="true">
-          {isAr ? 'اسحب للاستكشاف' : 'Drag to explore'} <span>→</span>
-        </span>
+        <div className="events-rail-footer" aria-hidden="true">
+          <span>{isAr ? 'اسحب للاستكشاف' : 'Drag to explore'}</span>
+          <span className="events-rail-line" />
+          <span>{String(items.length).padStart(2, '0')} {isAr ? 'أفلام' : 'films'}</span>
+        </div>
       </div>
     </section>
   );
@@ -1922,7 +1949,7 @@ function PublicSite() {
         <SpotlightSection item={reelOfMonth} categories={categories} onOpen={openItem} isAr={isAr} suspendPlayback={Boolean(selectedItem)} />
       )}
 
-      <CommercialHealthcareSection portfolio={portfolio} categories={categories} onOpen={openItem} isAr={isAr} />
+      <EventsSection portfolio={portfolio} categories={categories} onOpen={openItem} isAr={isAr} />
 
       <section className="portfolio-section fade-in-section" id="portfolio">
         <span className="ghost-watermark ghost-watermark--right" aria-hidden="true">WORK</span>
