@@ -91,14 +91,19 @@ function share_image_dimensions(?array $item): array {
 $rawId = $_GET['item'] ?? $_GET['id'] ?? '';
 $itemId = filter_var($rawId, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]);
 $item = null;
+$contentPath = __DIR__ . '/content.json';
 
-if ($itemId) {
-    $items = http_json($apiUrl . '/portfolio');
-    if (is_array($items)) {
-        foreach ($items as $candidate) {
-            if ((int)($candidate['id'] ?? 0) === (int)$itemId) {
-                $item = $candidate;
-                break;
+if ($itemId && file_exists($contentPath)) {
+    $json = @file_get_contents($contentPath);
+    if ($json !== false) {
+        $data = json_decode($json, true);
+        $items = $data['projects'] ?? [];
+        if (is_array($items)) {
+            foreach ($items as $candidate) {
+                if ((int)($candidate['id'] ?? 0) === (int)$itemId) {
+                    $item = $candidate;
+                    break;
+                }
             }
         }
     }
