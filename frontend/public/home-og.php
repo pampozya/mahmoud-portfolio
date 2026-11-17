@@ -9,8 +9,35 @@ declare(strict_types=1);
 // Per-video (share.php) and review-link (review-share.php) cards are untouched.
 // Falls back to the static og-image.png baked into index.html when unset.
 
+$apiUrl = 'https://mahmoud-portfolio-api.pampozya.workers.dev/api';
 $indexPath = __DIR__ . '/index.html';
-$contentPath = __DIR__ . '/content.json';
+
+function http_json(string $url): ?array {
+    if (function_exists('curl_init')) {
+        $ch = curl_init($url);
+        curl_setopt_array($ch, [
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_FOLLOWLOCATION => true,
+            CURLOPT_CONNECTTIMEOUT => 4,
+            CURLOPT_TIMEOUT => 7,
+            CURLOPT_USERAGENT => 'LensmaniaHomeCard/1.0',
+        ]);
+        $body = curl_exec($ch);
+        $status = (int) curl_getinfo($ch, CURLINFO_RESPONSE_CODE);
+        curl_close($ch);
+        if ($body !== false && $status >= 200 && $status < 300) {
+            $data = json_decode($body, true);
+            return is_array($data) ? $data : null;
+        }
+        return null;
+    }
+    $context = stream_context_create(['http' => ['timeout' => 7, 'ignore_errors' => true,
+        'header' => "User-Agent: LensmaniaHomeCard/1.0\r\n"]]);
+    $body = @file_get_contents($url, false, $context);
+    if ($body === false) return null;
+    $data = json_decode($body, true);
+    return is_array($data) ? $data : null;
+}
 
 header('Content-Type: text/html; charset=UTF-8');
 
@@ -24,18 +51,7 @@ if ($html === false) {
 
 // Resolve the custom main-link image, if any.
 $ogImage = '';
-$settings = [];
-
-if (file_exists($contentPath)) {
-    $json = @file_get_contents($contentPath);
-    if ($json !== false) {
-        $data = json_decode($json, true);
-        if (is_array($data) && isset($data['settings']) && is_array($data['settings'])) {
-            $settings = $data['settings'];
-        }
-    }
-}
-
+$settings = http_json($apiUrl . '/settings');
 if (is_array($settings)) {
     $candidate = trim((string)($settings['og_image'] ?? ''));
     // Only accept absolute http(s) URLs (R2 public URL) to avoid breaking the card.
