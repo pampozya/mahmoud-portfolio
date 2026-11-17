@@ -17,6 +17,17 @@ const SHARE_CARD_VERSION = 'fit-v2';
 const HERO_PORTFOLIO_ORDER = -10000;
 const NARRATIVES_CATEGORY_SLUG = 'narratives';
 const NARRATIVES_CATEGORY_ALIASES = ['cinematic-videos', 'cinematic-interviews'];
+// Server-rendered pages (public/seo/): linked from the footer so visitors and crawlers reach them.
+const SERVICE_LINKS = [
+  ['/services/event-videographer-dubai/', 'Event videographer'],
+  ['/services/medical-clinic-videographer-dubai/', 'Clinic videographer'],
+  ['/services/social-media-videographer-dubai/', 'Social media reels'],
+  ['/services/brand-film-videographer-dubai/', 'Brand films'],
+  ['/services/corporate-interview-videographer-dubai/', 'Interviews'],
+  ['/videographer-uae/', 'Across the UAE'],
+  ['/work/', 'All work'],
+  ['/faq/', 'FAQ'],
+];
 const CATEGORY_META_PREFIX = '__lensmania_category_meta__:';
 const IMAGE_UPLOAD_ACCEPT = 'image/jpeg,image/png,image/webp,image/gif,image/heic,image/heif,.heic,.heif';
 
@@ -2270,6 +2281,11 @@ function PublicSite() {
             </div>
           </div>
         </div>
+        <nav className="footer-services" aria-label="Services">
+          <span className="footer-services-label">Services</span>
+          {SERVICE_LINKS.map(([href, label]) => <a key={href} href={href}>{label}</a>)}
+          <a href="/ar/" lang="ar" className="footer-services-ar">العربية</a>
+        </nav>
         <div className="footer-strip">
           <span>© {new Date().getFullYear()} {siteTitle}. {isAr ? 'جميع الحقوق محفوظة' : 'All rights reserved.'}</span>
         </div>
@@ -2336,7 +2352,8 @@ function App() {
     if (manifestLink) manifestLink.setAttribute('href', isAdminRoute ? '/manifest-admin.json' : '/manifest.json');
     const appleTitle = document.querySelector('meta[name="apple-mobile-web-app-title"]');
     if (appleTitle) appleTitle.setAttribute('content', isAdminRoute ? 'LM Admin' : 'Mahmoud Adel');
-    document.title = isAdminRoute ? 'Lens Mania Admin' : 'Mahmoud Adel - Videographer';
+    // The public title comes from the server (home-og.php); only the admin overrides it.
+    if (isAdminRoute) document.title = 'Lens Mania Admin';
   }, [isAdminRoute]);
   const goHome = () => { window.location.href = '/'; };
   const handleLogin = (t) => {

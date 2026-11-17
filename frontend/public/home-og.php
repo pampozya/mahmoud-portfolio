@@ -76,4 +76,14 @@ if ($ogImage !== '') {
     }
 }
 
+// Search and AI readability: a real title and description, language alternates,
+// structured data and a prerendered content block inside #root (React replaces
+// it on mount). Any failure here falls back to the plain shell.
+try {
+    require_once __DIR__ . '/seo/lib.php';
+    $html = seo_apply_home($html);
+} catch (Throwable $e) {
+    // keep the plain shell
+}
+
 echo $html;

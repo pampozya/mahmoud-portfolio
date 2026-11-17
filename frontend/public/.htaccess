@@ -11,6 +11,17 @@ RewriteCond %{QUERY_STRING} (^|&)review=[A-Za-z0-9_-]+
 RewriteCond %{QUERY_STRING} !(^|&)og=1
 RewriteRule ^portfolio/?$ review-share.php [QSA,L]
 
+# Server-rendered pages for search engines and AI crawlers (see seo/).
+RewriteRule ^sitemap\.xml$ seo/sitemap.php [L]
+RewriteRule ^llms\.txt$ seo/llms.php [L]
+RewriteRule ^work/?$ seo/page.php?p=work&lang=en [L]
+RewriteRule ^work/([0-9]+)(-[^/]*)?/?$ seo/work.php?id=$1 [L]
+RewriteRule ^services/([a-z0-9-]+)/?$ seo/page.php?p=$1&lang=en [L]
+RewriteRule ^(videographer-uae|faq)/?$ seo/page.php?p=$1&lang=en [L]
+RewriteRule ^ar/?$ seo/page.php?p=home&lang=ar [L]
+RewriteRule ^ar/services/([a-z0-9-]+)/?$ seo/page.php?p=$1&lang=ar [L]
+RewriteRule ^ar/(videographer-uae|faq)/?$ seo/page.php?p=$1&lang=ar [L]
+
 # MAIN link ("/" and "/index.html"): serve home-og.php so the admin's custom
 # main-link share image (settings.og_image) is injected into the OG tags. It
 # reads index.html from disk and outputs the full SPA inline — no redirect, no

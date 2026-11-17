@@ -1,0 +1,258 @@
+{
+  "ui": {
+    "nav_home": "Portfolio",
+    "nav_work": "All work",
+    "nav_services": "Services",
+    "nav_faq": "FAQ",
+    "nav_contact": "Contact",
+    "cta_whatsapp": "Message on WhatsApp",
+    "cta_call": "Call",
+    "cta_email": "Email",
+    "projects_heading": "Projects in this category",
+    "related_heading": "Related projects",
+    "watch_in_portfolio": "Watch in the portfolio",
+    "all_work_title": "All Video Work | Mahmoud Adel, Videographer in Dubai",
+    "all_work_description": "Every project in Mahmoud Adel's portfolio: events, clinic reels, social media, brand films and interviews, shot in Dubai and across the UAE.",
+    "all_work_h1": "All video work",
+    "all_work_intro": "This page lists every project in my portfolio, grouped by type. It covers events, aesthetic clinics, social media reels, cinematic brand films and interviews, in Arabic and English, in vertical and horizontal formats.",
+    "contact_heading": "Book a shoot",
+    "contact_line": "Send me the date, the location and a short description of what you need, and I will reply with availability and next steps.",
+    "based_in": "Based in Dubai, UAE",
+    "other_services_heading": "Other services",
+    "category_label": "Category",
+    "published_label": "Published",
+    "credits_label": "Credits",
+    "format_label": "Format",
+    "footer_line": "Mahmoud Adel (Lens Mania), freelance videographer and director based in Dubai, UAE."
+  },
+  "home": {
+    "title": "Freelance Videographer in Dubai | Mahmoud Adel",
+    "description": "Mahmoud Adel is a freelance videographer, cinematographer and director in Dubai. Events, clinic reels, social media, brand films and interviews.",
+    "h1": "Freelance videographer in Dubai for events, brands and clinics",
+    "intro": [
+      "I am Mahmoud Adel, a freelance videographer, cinematographer and director based in Dubai, working under the name Lens Mania. I film events, aesthetic clinics, social media reels, cinematic brand films and interviews for businesses and public bodies across the UAE.",
+      "Most of my work is vertical video made for social platforms, with horizontal films where the story needs more room. I work in Arabic and English. I am currently available for bookings, and the easiest way to start is a message with your date, location and a short brief."
+    ],
+    "services_heading": "What I film",
+    "work_heading": "Selected work",
+    "reviews_heading": "What clients say"
+  },
+  "pages": {
+    "event-videographer-dubai": {
+      "title": "Event Videographer in Dubai | Mahmoud Adel",
+      "description": "Event videographer in Dubai for summits, exhibitions, signing ceremonies, graduations and brand activations. Reels and event films in Arabic and English.",
+      "kicker": "Event coverage",
+      "h1": "Event videographer in Dubai",
+      "intro": [
+        "I film events in Dubai and across the UAE for companies, government entities and community organisations. The aim is simple: capture what happened, who was there and why it mattered, then deliver video your team can publish.",
+        "My event work ranges from one-day ceremonies to a multi-day competition, for private companies and public bodies alike. The projects are listed below this text, so you can see how different types of events were filmed, edited and delivered."
+      ],
+      "sections": [
+        {
+          "h2": "What kinds of events I cover",
+          "body": [
+            "My portfolio includes summits and forums, exhibitions such as GITEX coverage for a government entity, signing ceremonies, a graduation ceremony, brand anniversaries and activations, and a record-attempt event. It also includes community drives, career fairs, a ministerial visit and a multi-day tactical competition. Each one had its own pace, and the edit followed it."
+          ]
+        },
+        {
+          "h2": "What to send me before an event",
+          "body": [
+            "Send the event date, the venue and the running order if you have one. Tell me which moments matter most, such as speeches, a signing, an award or a guest arrival, and who the key people are. Let me know where the video will be published, so I can plan for the right format from the start."
+          ]
+        },
+        {
+          "h2": "Formats you receive",
+          "body": [
+            "Most event pieces I deliver are short vertical 9:16 reels for Instagram, TikTok and similar platforms. Where a fuller record is needed, I edit a horizontal 16:9 event film. The portfolio includes event work in both Arabic and English, so the final video can match the language of your audience."
+          ]
+        }
+      ]
+    },
+    "medical-clinic-videographer-dubai": {
+      "title": "Clinic Videographer in Dubai | Mahmoud Adel",
+      "description": "Clinic videographer in Dubai for aesthetic clinics. Treatment reels, product-led reels, doctor introductions and consultation-journey videos.",
+      "kicker": "Aesthetic clinics",
+      "h1": "Clinic videographer in Dubai for aesthetic clinics",
+      "intro": [
+        "I film social video for aesthetic clinics in Dubai. The work shows treatments, products and the people behind the clinic in a calm, clear way, so a future patient understands what to expect before they book.",
+        "Clinic content needs care. Patients, doctors and staff all need to feel at ease on camera, and the result has to look clean and professional. The clinic projects in my portfolio are listed below this text."
+      ],
+      "sections": [
+        {
+          "h2": "What clinic videos I make",
+          "body": [
+            "My medical work includes treatment reels for lip, skin, laser and mesotherapy treatments, product-led reels for clinics, and doctor introductions. It also includes day-in-the-life pieces and consultation-journey videos that follow a patient from the first conversation to the treatment itself. Each type answers a different question a patient might have."
+          ]
+        },
+        {
+          "h2": "How to prepare a clinic shoot",
+          "body": [
+            "Send me the clinic location, a preferred date and the treatments or products you want to feature. Tell me which doctor or staff member will appear, and whether a patient or model has agreed to be filmed. It also helps to share the account where the videos will be posted, so the style fits your existing content."
+          ]
+        },
+        {
+          "h2": "Vertical reels in Arabic or English",
+          "body": [
+            "Almost all clinic content I make is vertical 9:16, built for Instagram and other social platforms where patients discover clinics. Doctor introductions and longer journey pieces can also be edited as horizontal 16:9 films. My portfolio includes work in Arabic and English, so the video can speak to the patients you want to reach."
+          ]
+        }
+      ]
+    },
+    "social-media-videographer-dubai": {
+      "title": "Social Media Videographer in Dubai | Mahmoud Adel",
+      "description": "Social media videographer in Dubai making short vertical reels for restaurants, cafes, retail, apps, tech products and showrooms, in Arabic and English.",
+      "kicker": "Social reels",
+      "h1": "Social media videographer in Dubai",
+      "intro": [
+        "I make short vertical reels for brands in Dubai that want to show up well on Instagram, TikTok and similar platforms. A good reel gets to the point fast, shows the product or place clearly and gives the viewer a reason to keep watching.",
+        "My social work spans food, retail, technology and public sector content, often filmed and edited to suit a specific account and audience. The reels from my portfolio are listed below this text, so you can judge the style and pace for yourself."
+      ],
+      "sections": [
+        {
+          "h2": "Who I make reels for",
+          "body": [
+            "My portfolio includes reels for restaurants and cafés, retail and luxury gifting, apps, food-service companies, an EV showroom, and phone and tech products. It also includes comedy reels made with content creators, a government department update and a community volunteering initiative. The common thread is short, clear video made for a phone screen."
+          ]
+        },
+        {
+          "h2": "What to include in your brief",
+          "body": [
+            "Tell me what you want to promote, where you will post it and who you want to reach. Send the location and a date that suits you. If you have reference reels you like, or a content creator you plan to work with, include them. A short brief like this is enough to start planning."
+          ]
+        },
+        {
+          "h2": "Built for vertical screens",
+          "body": [
+            "Social reels are delivered in vertical 9:16, the format Instagram Reels, TikTok and Stories expect. If you also need a horizontal 16:9 version for a website or a screen, mention it in your brief. My portfolio includes social content in both Arabic and English."
+          ]
+        }
+      ]
+    },
+    "brand-film-videographer-dubai": {
+      "title": "Brand Film Videographer in Dubai | Mahmoud Adel",
+      "description": "Brand film videographer in Dubai making cinematic films for companies and public bodies, from industrial brand films to city portraits and short films.",
+      "kicker": "Cinematic films",
+      "h1": "Brand film videographer in Dubai",
+      "intro": [
+        "A brand film gives a company or organisation room to tell its story properly. I direct and shoot cinematic films in Dubai and across the UAE that show what an organisation does, where it works and the people involved.",
+        "These films take more planning than a reel, from the story to the locations and the people on camera, and the result stays useful for longer. The cinematic projects in my portfolio, including brand films and personal short films, are listed below this text."
+      ],
+      "sections": [
+        {
+          "h2": "What my cinematic work covers",
+          "body": [
+            "My portfolio includes brand films, among them an industrial manufacturing brand film, and films for government and public bodies. It also includes a humanitarian aid mission film, city portraits, an architectural interior showcase and personal short films. One film in the portfolio was shot in Bahrain. Each project started from a clear idea of what the audience should feel and remember."
+          ]
+        },
+        {
+          "h2": "How a brand film starts",
+          "body": [
+            "Start by telling me what the film is for and who will watch it. Share the locations involved, the people who may appear and any dates that are fixed. If you have a script, key messages or reference films, send them too. From there we can agree on the story and plan the shoot."
+          ]
+        },
+        {
+          "h2": "Horizontal films and vertical cut-downs",
+          "body": [
+            "Brand films are usually delivered in horizontal 16:9 for websites, presentations and screens. Where the film will also run on social platforms, shorter vertical 9:16 versions can be planned from the start. My portfolio includes cinematic work in Arabic and English."
+          ]
+        }
+      ]
+    },
+    "corporate-interview-videographer-dubai": {
+      "title": "Corporate Interview Videographer in Dubai | Mahmoud Adel",
+      "description": "Interview videographer in Dubai filming cinematic interviews with executives, doctors and personal stories, in Arabic and English, vertical or horizontal.",
+      "kicker": "Cinematic interviews",
+      "h1": "Corporate interview videographer in Dubai",
+      "intro": [
+        "An interview works when the person on camera feels comfortable and the viewer believes them. I film cinematic interviews in Dubai that let people speak in their own words, with a look that fits the brand or organisation behind them.",
+        "My interview work includes a business leader, a doctor, a charity field story and personal stories told by the people who lived them. Some are in Arabic and some in English. The interview projects from my portfolio are listed below this text, so you can see the range of tone and setting."
+      ],
+      "sections": [
+        {
+          "h2": "Interviews in my portfolio",
+          "body": [
+            "The portfolio includes an executive leadership interview, a charity field story told in Arabic, and a doctor introduction. It also includes a young reader's story and a cultural wedding film built around the people involved. They differ in tone, but each one is about letting a real person tell their story clearly."
+          ]
+        },
+        {
+          "h2": "What to send before an interview",
+          "body": [
+            "Send me who will be interviewed, the location and a preferred date. Share the main topics or questions you want covered, and tell me how the video will be used, for example on a website, LinkedIn or Instagram. If the speaker prefers Arabic or English, let me know early so we can plan around it."
+          ]
+        },
+        {
+          "h2": "Arabic or English, vertical or horizontal",
+          "body": [
+            "My portfolio includes interviews in both Arabic and English. Interviews can be delivered as horizontal 16:9 films for websites and presentations, or as vertical 9:16 pieces for social platforms. If you need both, say so in your brief and I will plan the framing for each from the start."
+          ]
+        }
+      ]
+    },
+    "videographer-uae": {
+      "title": "Videographer in the UAE | Mahmoud Adel, Dubai",
+      "description": "Freelance videographer in the UAE, based in Dubai, with work in Abu Dhabi, Sharjah and Ras Al Khaimah. Events, clinics, social reels and brand films.",
+      "kicker": "Across the UAE",
+      "h1": "Videographer in the UAE, based in Dubai",
+      "intro": [
+        "I am a freelance videographer based in Dubai, and my work is not limited to one city. My portfolio includes projects for clients and locations in Dubai, Abu Dhabi, Sharjah and Ras Al Khaimah, covering events, clinics, social media, brand films and interviews.",
+        "If your organisation works in more than one emirate, you can brief one videographer for all of it and keep the style consistent from city to city. The projects that name another emirate are listed below this text, grouped by place."
+      ],
+      "sections": [
+        {
+          "h2": "Where the work has been",
+          "body": [
+            "I am based in Dubai, where much of my work takes place. My portfolio also includes projects for clients and locations in Abu Dhabi, Sharjah and Ras Al Khaimah, and one film shot in Bahrain. The work covers events, aesthetic clinics, social media reels, cinematic brand films and interviews for companies, public bodies and community initiatives."
+          ]
+        },
+        {
+          "h2": "How to book a shoot outside Dubai",
+          "body": [
+            "Send me the date, the exact location and a short description of what you need. If the project involves more than one site or emirate, list them all in the first message so I can plan the schedule. You can reach me on WhatsApp, by phone, by email or through the contact form on the home page."
+          ]
+        },
+        {
+          "h2": "Formats and languages",
+          "body": [
+            "Most of what I deliver is vertical 9:16 video for social platforms. Longer films and some interviews are delivered in horizontal 16:9. My portfolio includes work in Arabic and English, which suits organisations that speak to audiences in both languages across the UAE."
+          ]
+        }
+      ]
+    }
+  },
+  "faq": {
+    "title": "FAQ | Mahmoud Adel, Freelance Videographer in Dubai",
+    "description": "Answers to common questions about booking Mahmoud Adel, a freelance videographer in Dubai: services, locations, formats, languages and how to get a quote.",
+    "h1": "Frequently asked questions",
+    "intro": "Answers to the questions clients most often ask before booking a shoot.",
+    "items": [
+      {
+        "q": "Who is Mahmoud Adel?",
+        "a": "I am Mahmoud Adel, a freelance videographer, cinematographer and director based in Dubai, UAE. I work under the name Lens Mania. My portfolio covers events, aesthetic clinics, social media reels, cinematic brand films and interviews, plus one music video where I was director of photography."
+      },
+      {
+        "q": "What types of video do you make?",
+        "a": "I film events such as summits, exhibitions, ceremonies and brand activations. I make treatment and doctor videos for aesthetic clinics, short social reels for restaurants, retail, apps and tech products, cinematic brand films for companies and public bodies, and cinematic interviews."
+      },
+      {
+        "q": "Do you work outside Dubai?",
+        "a": "Yes. I am based in Dubai, and my portfolio includes projects for clients and locations in Abu Dhabi, Sharjah and Ras Al Khaimah, as well as one film shot in Bahrain. Send the exact location with your enquiry so I can plan the day."
+      },
+      {
+        "q": "How much does a video cost?",
+        "a": "There is no fixed price list on this site, because every project is different. To get a quote, send me the date, the location, what you want filmed, how many videos you need, the formats and where they will be published. I will reply with a quote based on that brief."
+      },
+      {
+        "q": "Do you deliver vertical videos for Instagram and TikTok?",
+        "a": "Yes. Most of the pieces in my portfolio are vertical 9:16 videos made for social platforms such as Instagram and TikTok. The rest are horizontal 16:9 films, used for websites, presentations and screens. Tell me where the video will be published and I will plan the format around it."
+      },
+      {
+        "q": "Can you make videos in Arabic and English?",
+        "a": "Yes. My portfolio contains work in both Arabic and English, including a charity field story told in Arabic. Let me know the language of your audience and of the people who will speak on camera, so the shoot and edit can be planned around it."
+      },
+      {
+        "q": "How do I book you?",
+        "a": "Message me on WhatsApp or call +971 52 830 0622, email info@lensmania.ae, or use the contact form on the home page. A useful first message includes the date, the location and a short description of what you need. I am currently available for bookings."
+      }
+    ]
+  }
+}
