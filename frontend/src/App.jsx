@@ -1535,7 +1535,7 @@ function PublicSite() {
   const [portfolio, setPortfolio] = useState([]);
   const [testimonials, setTestimonials] = useState([]);
   const [settings, setSettings] = useState(null);
-  const [activeCategory, setActiveCategory] = useState(() => new URLSearchParams(window.location.search).get('cat') || 'all');
+  const [activeCategory, setActiveCategory] = useState(() => new URLSearchParams(window.location.search).get('cat') || NARRATIVES_CATEGORY_SLUG);
   const [sort, setSort] = useState('latest');
   const [selectedItem, setSelectedItem] = useState(null);
   const [likedItems, setLikedItems] = useState(() => JSON.parse(localStorage.getItem('liked_items') || '{}'));
